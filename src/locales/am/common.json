@@ -1,0 +1,59 @@
+{
+  "appName": "ዴሊቨር-አፕ",
+  "adminConsole": "አስተዳዳሪ ኮንሶል",
+  "premiumAdmin": "ፕሪሚየም አድሚን",
+  "driverPanel": "የአሽከርካሪ ፓነል",
+  "language": "ቋንቋ",
+  "darkMode": "ጨለማ ሁነታ",
+  "systemOverview": "የስርዓት እይታ",
+  "systemSubtitle": "በ12 ንቁ ቅርንጫፎች ላይ የቀጥታ አፈጻጸም መረጃ።",
+  "exportReport": "ሪፖርት አውጣ",
+  "newRestaurant": "አዲስ ሬስቶራንት",
+  "adminUser": {
+    "name": "ጁሊያን ካሳብላንካስ",
+    "role": "ሱፐር አድሚን"
+  },
+  "menu": {
+    "overview": "አጠቃላይ እይታ",
+    "management": "አስተዳደር",
+    "analytics": "ክዋኔ እና ትንታኔ",
+    "dashboard": "ዳሽቦርድ",
+    "customerManagement": "ደንበኞች",
+    "restaurantManagement": "ነጋዴዎች",
+    "merchantManagement": "ነጋዴዎች",
+    "categoryManagement": "ምድቦች",
+    "cuisineManagement": "የምግብ ዓይነቶች",
+    "deliveryManagement": "ዴሊቨሪ",
+    "staffManagement": "ሰራተኞች",
+    "orderManagement": "ትዕዛዞች",
+    "finance": "ፋይናንስ",
+    "security": "ደህንነት",
+    "insights": "ግንዛቤ",
+    "settings": "ቅንብሮች",
+    "support": "ድጋፍ"
+  },
+  "dashboardTitle": "ዳሽቦርድ",
+  "dashboardSubtitle": "ንቁ ዴሊቨሪዎችን እና የአሽከርካሪ አፈጻጸምን ይከታተሉ።",
+  "dashboard": {
+    "totalOrders": "ጠቅላላ ትዕዛዞች",
+    "activeBranches": "ንቁ ቅርንጫፎች",
+    "totalStaff": "ጠቅላላ ሰራተኞች",
+    "satisfaction": "እርካታ",
+    "ordersOverTime": "ትዕዛዞች በጊዜ ሂደት",
+    "weekly": "ሳምንታዊ",
+    "monthly": "ወርሃዊ",
+    "topBranches": "ከፍተኛ አፈጻጸም ያላቸው ቅርንጫፎች",
+    "recentOrders": "የቅርብ ጊዜ ትዕዛዞች",
+    "viewHistory": "ታሪክ እይ",
+    "popularItems": "በቅርንጫፎች የተለመዱ",
+    "ordersThisWeek": "በዚህ ሳምንት ትዕዛዞች",
+    "manageGlobalMenu": "ዓለም አቀፍ ሜኑ አስተዳድር",
+    "table": {
+      "orderId": "መለያ",
+      "customer": "ደንበኛ",
+      "branch": "ቅርንጫፍ",
+      "status": "ሁኔታ",
+      "time": "ጊዜ"
+    }
+  }
+}

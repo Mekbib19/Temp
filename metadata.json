@@ -1,0 +1,6 @@
+{
+  "name": "Culinary Curator Admin Console",
+  "description": "Enterprise restaurant portfolio and customer management console for multi-branch culinary brands.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

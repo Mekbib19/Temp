@@ -1,0 +1,59 @@
+{
+  "appName": "Deliver-App",
+  "adminConsole": "Konsolii Admin",
+  "premiumAdmin": "Admin Olaanaa",
+  "driverPanel": "Paanaalii Konkolaachisaa",
+  "language": "Afaan",
+  "darkMode": "Haala Dukkanaa",
+  "systemOverview": "Ilaalcha Sirnaa",
+  "systemSubtitle": "Raawwii yeroo-dhugaa damee hojii socho'an 12 irratti.",
+  "exportReport": "Gabaasa Baasi",
+  "newRestaurant": "Mana Nyaataa Haaraa",
+  "adminUser": {
+    "name": "Julian Casablancas",
+    "role": "Super Admin"
+  },
+  "menu": {
+    "overview": "Waliigala",
+    "management": "Bulchiinsa",
+    "analytics": "Hojii fi Xiinxala",
+    "dashboard": "Daashboordii",
+    "customerManagement": "Maamiltoota",
+    "restaurantManagement": "Daldaltoota",
+    "merchantManagement": "Daldaltoota",
+    "categoryManagement": "Gareewwan",
+    "cuisineManagement": "Gosa Nyaataa",
+    "deliveryManagement": "Geejjiba",
+    "staffManagement": "Hojjettoota",
+    "orderManagement": "Ajajoota",
+    "finance": "Faayinaansii",
+    "security": "Nageenya",
+    "insights": "Hubannoo",
+    "settings": "Qindaa'ina",
+    "support": "Deeggarsa"
+  },
+  "dashboardTitle": "Daashboordii",
+  "dashboardSubtitle": "Ajajoota hojii irra jiran fi raawwii konkolaachisootaa hordofi.",
+  "dashboard": {
+    "totalOrders": "Waliigala Ajajoota",
+    "activeBranches": "Damee Hojii Socho'an",
+    "totalStaff": "Waliigala Hojjettootaa",
+    "satisfaction": "Qulqullina Tajaajilaa",
+    "ordersOverTime": "Ajajoota Yeroo Keessa",
+    "weekly": "Torban torbaniin",
+    "monthly": "Ji'aan",
+    "topBranches": "Damee Hojii Cimaan",
+    "recentOrders": "Ajajoota Dhiheenyaa",
+    "viewHistory": "Seenaa Ilaali",
+    "popularItems": "Wanta Beekamoo Dameewwan Keessa",
+    "ordersThisWeek": "Ajajoota torban kana",
+    "manageGlobalMenu": "Menyu Addunyaa Bulchi",
+    "table": {
+      "orderId": "ID Ajajaa",
+      "customer": "Maamila",
+      "branch": "Damee",
+      "status": "Haala",
+      "time": "Yeroo"
+    }
+  }
+}

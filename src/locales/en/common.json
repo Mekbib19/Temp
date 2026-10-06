@@ -1,0 +1,59 @@
+{
+  "appName": "Deliver-App",
+  "adminConsole": "Admin Console",
+  "premiumAdmin": "Premium Admin",
+  "driverPanel": "Driver Panel",
+  "language": "Language",
+  "darkMode": "Dark Mode",
+  "systemOverview": "System Overview",
+  "systemSubtitle": "Real-time performance across all 12 active branches.",
+  "exportReport": "Export Report",
+  "newRestaurant": "New Restaurant",
+  "adminUser": {
+    "name": "Julian Casablancas",
+    "role": "Super Admin"
+  },
+  "menu": {
+    "overview": "Overview",
+    "management": "Management",
+    "analytics": "Operations & Analytics",
+    "dashboard": "Dashboard",
+    "customerManagement": "Customers",
+    "restaurantManagement": "Merchants",
+    "merchantManagement": "Merchants",
+    "categoryManagement": "Categories",
+    "cuisineManagement": "Cuisines",
+    "deliveryManagement": "Delivery",
+    "staffManagement": "Staff",
+    "orderManagement": "Orders",
+    "finance": "Finance",
+    "security": "Security",
+    "insights": "Insights",
+    "settings": "Settings",
+    "support": "Support"
+  },
+  "dashboardTitle": "Dashboard",
+  "dashboardSubtitle": "Track active deliveries and rider performance.",
+  "dashboard": {
+    "totalOrders": "Total Orders",
+    "activeBranches": "Active Branches",
+    "totalStaff": "Total Staff",
+    "satisfaction": "Satisfaction",
+    "ordersOverTime": "Orders Over Time",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "topBranches": "Top Performing Branches",
+    "recentOrders": "Recent Orders",
+    "viewHistory": "View History",
+    "popularItems": "Popular Across Branches",
+    "ordersThisWeek": "Orders this week",
+    "manageGlobalMenu": "Manage Global Menu",
+    "table": {
+      "orderId": "Order ID",
+      "customer": "Customer",
+      "branch": "Branch",
+      "status": "Status",
+      "time": "Time"
+    }
+  }
+}

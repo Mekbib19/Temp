@@ -1,0 +1,59 @@
+{
+  "appName": "Deliver-App",
+  "adminConsole": "ኣድሚን ኮንሶል",
+  "premiumAdmin": "ፕሪሚየም ኣድሚን",
+  "driverPanel": "ፓነል መራሒ",
+  "language": "ቋንቋ",
+  "darkMode": "ጸልማት ሁነታ",
+  "systemOverview": "ሓፈሻዊ ምርኢት ስርዓት",
+  "systemSubtitle": "ኣብ 12 ንቁሕ ቅርንጫፋት ናይ ቀጥታ ኣፈጻጸም።",
+  "exportReport": "ሪፖርት ኣውጽእ",
+  "newRestaurant": "ሓድሽ ሬስቶራንት",
+  "adminUser": {
+    "name": "Julian Casablancas",
+    "role": "Super Admin"
+  },
+  "menu": {
+    "overview": "ሓፈሻዊ",
+    "management": "ምምሕዳር",
+    "analytics": "ስርሒትን ትንታነን",
+    "dashboard": "ዳሽቦርድ",
+    "customerManagement": "ዓማዊል",
+    "restaurantManagement": "ነጋዶ",
+    "merchantManagement": "ነጋዶ",
+    "categoryManagement": "ምድባት",
+    "cuisineManagement": "ዓይነታት መግቢ",
+    "deliveryManagement": "ዴሊቨሪ",
+    "staffManagement": "ሰራሕተኛታት",
+    "orderManagement": "ትእዛዛት",
+    "finance": "ፋይናንስ",
+    "security": "ደህንነት",
+    "insights": "ግንዛበ",
+    "settings": "ቅንብራት",
+    "support": "ደገፍ"
+  },
+  "dashboardTitle": "ዳሽቦርድ",
+  "dashboardSubtitle": "ንቁሕ ትእዛዛትን ኣፈጻጸም መራሕቲን ተኸታተል።",
+  "dashboard": {
+    "totalOrders": "ጠቕላላ ትእዛዛት",
+    "activeBranches": "ንቁሓት ቅርንጫፋት",
+    "totalStaff": "ጠቕላላ ሰራሕተኛታት",
+    "satisfaction": "ዕግበት",
+    "ordersOverTime": "ትእዛዛት ብግዜ",
+    "weekly": "ሰሙናዊ",
+    "monthly": "ወርሓዊ",
+    "topBranches": "ዝበለጹ ቅርንጫፋት",
+    "recentOrders": "ናይ ቀረባ ትእዛዛት",
+    "viewHistory": "ታሪኽ ርአ",
+    "popularItems": "ኣብ ቅርንጫፋት ዝልሙዳት",
+    "ordersThisWeek": "ትእዛዛት ናይዚ ሰሙን",
+    "manageGlobalMenu": "ዓለም-ለኻዊ ሜኑ ኣመሓድር",
+    "table": {
+      "orderId": "መለለዪ ትእዛዝ",
+      "customer": "ዓሚል",
+      "branch": "ቅርንጫፍ",
+      "status": "ኩነታት",
+      "time": "ግዜ"
+    }
+  }
+}
