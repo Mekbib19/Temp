@@ -600,9 +600,10 @@ const CategoryManagementPage = () => {
         </div>
 
         {/* Categories Table View */}
-        <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+        {filteredCategories.length > 0 ? (
+          <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
               <thead className="border-b border-slate-200 bg-slate-50/90 font-bold uppercase tracking-wider text-slate-700 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-200">
                 <tr>
                   <th scope="col" className="px-5 py-3.5">
@@ -626,8 +627,7 @@ const CategoryManagementPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                {paginatedCategories.length > 0 ? (
-                  paginatedCategories.map((cat, rowIdx) => {
+                {paginatedCategories.map((cat, rowIdx) => {
                     const isExpanded = expandedDescIds.has(cat.id)
                     const isDragging = draggedCatId === cat.id
                     const isOver = dragOverCatId === cat.id
@@ -834,47 +834,48 @@ const CategoryManagementPage = () => {
                         </td>
                       </tr>
                     )
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center">
-                      <div className="mx-auto flex max-w-sm flex-col items-center">
-                        <span className="material-symbols-outlined text-4xl text-slate-300 dark:text-zinc-600">
-                          category
-                        </span>
-                        <p className="mt-2 text-sm font-semibold text-slate-700 dark:text-zinc-300">
-                          No categories found
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
-                          Try adjusting your search terms or filters.
-                        </p>
-                        <div className="mt-4 flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSearchQuery('')
-                              setStatusFilter('all')
-                            }}
-                            className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-200"
-                          >
-                            Reset Filters
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleOpenCreateModal}
-                            className="rounded-xl bg-[#FF6B35] px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#e05624]"
-                          >
-                            Add Category
-                          </button>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-[#FF6B35] ring-1 ring-orange-200/60 dark:bg-orange-950/40 dark:ring-orange-800/40">
+              <span className="material-symbols-outlined text-3xl">search_off</span>
+            </div>
+            <h3 className="mt-4 font-['Plus_Jakarta_Sans'] text-base font-bold text-slate-900 dark:text-zinc-100">
+              No categories found matching criteria
+            </h3>
+            <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-slate-500 dark:text-zinc-400">
+              Try adjusting your search terms or filters.
+            </p>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
+              {(searchQuery || statusFilter !== 'all') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('')
+                    setStatusFilter('all')
+                    setCurrentPage(1)
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                >
+                  <span className="material-symbols-outlined text-sm">refresh</span>
+                  Reset Filters
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleOpenCreateModal}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#e05624]"
+              >
+                <span className="material-symbols-outlined text-sm">add</span>
+                Add Category
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Pagination identical to Brand Directory */}
         {filteredCategories.length > 0 && (

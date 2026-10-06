@@ -526,40 +526,40 @@ const RestaurantManagementPage = () => {
         </div>
 
         {/* Merchant Brands Table View - Fully unified with Category & Cuisine */}
-        <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-slate-200 bg-slate-50/90 font-bold uppercase tracking-wider text-slate-700 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-200">
-                <tr>
-                  <th scope="col" className="px-5 py-3.5">
-                    Order
-                  </th>
-                  <th scope="col" className="px-5 py-3.5">
-                    Merchant
-                  </th>
-                  <th scope="col" className="px-5 py-3.5">
-                    Merchant Type
-                  </th>
-                  <th scope="col" className="px-5 py-3.5">
-                    Locations
-                  </th>
-                  <th scope="col" className="px-5 py-3.5">
-                    Description
-                  </th>
-                  <th scope="col" className="px-5 py-3.5 text-center">
-                    Status
-                  </th>
-                  <th scope="col" className="px-5 py-3.5">
-                    Latest Update
-                  </th>
-                  <th scope="col" className="px-5 py-3.5 text-right">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                {paginatedBrands.length > 0 ? (
-                  paginatedBrands.map((brand, rowIdx) => {
+        {filteredBrands.length > 0 ? (
+          <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="border-b border-slate-200 bg-slate-50/90 font-bold uppercase tracking-wider text-slate-700 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-200">
+                  <tr>
+                    <th scope="col" className="px-5 py-3.5">
+                      Order
+                    </th>
+                    <th scope="col" className="px-5 py-3.5">
+                      Merchant
+                    </th>
+                    <th scope="col" className="px-5 py-3.5">
+                      Merchant Type
+                    </th>
+                    <th scope="col" className="px-5 py-3.5">
+                      Locations
+                    </th>
+                    <th scope="col" className="px-5 py-3.5">
+                      Description
+                    </th>
+                    <th scope="col" className="px-5 py-3.5 text-center">
+                      Status
+                    </th>
+                    <th scope="col" className="px-5 py-3.5">
+                      Latest Update
+                    </th>
+                    <th scope="col" className="px-5 py-3.5 text-right">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                  {paginatedBrands.map((brand, rowIdx) => {
                     const isExpanded = expandedDescIds.has(brand.id)
                     const isDragging = draggedBrandId === brand.id
                     const isOver = dragOverBrandId === brand.id
@@ -779,18 +779,49 @@ const RestaurantManagementPage = () => {
                         </td>
                       </tr>
                     )
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-slate-500 dark:text-zinc-400">
-                      No merchants found matching criteria.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-[#FF6B35] ring-1 ring-orange-200/60 dark:bg-orange-950/40 dark:ring-orange-800/40">
+              <span className="material-symbols-outlined text-3xl">search_off</span>
+            </div>
+            <h3 className="mt-4 font-['Plus_Jakarta_Sans'] text-base font-bold text-slate-900 dark:text-zinc-100">
+              No merchants found matching criteria
+            </h3>
+            <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-slate-500 dark:text-zinc-400">
+              No merchant records match your query or filters. Try adjusting your search keywords or resetting your filter options.
+            </p>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
+              {(searchQuery || statusFilter !== 'all' || typeFilter !== 'all') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('')
+                    setStatusFilter('all')
+                    setTypeFilter('all')
+                    setCurrentPage(1)
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                >
+                  <span className="material-symbols-outlined text-sm">refresh</span>
+                  Clear Filters
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => navigate('/restaurants/new')}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#e0531f]"
+              >
+                <span className="material-symbols-outlined text-sm">add</span>
+                Add Merchant
+              </button>
+            </div>
+          </div>
+        )}
 
         {filteredBrands.length > 0 && (
           <Pagination

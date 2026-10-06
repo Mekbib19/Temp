@@ -224,98 +224,135 @@ const CustomerManagementPage = () => {
         </div>
 
         {/* Customers Table View */}
-        <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/80 font-bold uppercase tracking-wider text-slate-500 dark:border-zinc-800 dark:bg-zinc-800/40 dark:text-zinc-400">
-                  <th className="px-5 py-3.5">Customer ID</th>
-                  <th className="px-5 py-3.5">Name & Profile</th>
-                  <th className="px-5 py-3.5">Email</th>
-                  <th className="px-5 py-3.5">Phone</th>
-                  <th className="px-5 py-3.5">Joined Date</th>
-                  <th className="px-5 py-3.5 text-center">Status</th>
-                  <th className="px-5 py-3.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                {filteredCustomers.map((customer) => (
-                  <tr key={customer.id} className="group transition-colors hover:bg-slate-50/70 dark:hover:bg-zinc-800/40">
-                    <td className="whitespace-nowrap px-5 py-4 font-mono font-bold text-slate-400 dark:text-zinc-500">
-                      {customer.id}
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        {customer.avatar ? (
-                          <img src={customer.avatar} alt={customer.name} className="h-9 w-9 rounded-full object-cover ring-2 ring-slate-100 dark:ring-zinc-800" />
-                        ) : (
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
-                            {customer.initials}
-                          </div>
-                        )}
-                        <div className="flex flex-col">
-                          <span className="font-['Plus_Jakarta_Sans'] font-bold text-slate-900 transition-colors group-hover:text-[#FF6B35] dark:text-zinc-100">
-                            {customer.name}
-                          </span>
-                          <span className="text-[11px] text-slate-400 dark:text-zinc-500">{customer.profile}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-4 text-slate-600 dark:text-zinc-300">{customer.email}</td>
-                    <td className="whitespace-nowrap px-5 py-4 font-medium text-slate-600 dark:text-zinc-300">{customer.phone}</td>
-                    <td className="whitespace-nowrap px-5 py-4 text-slate-500 dark:text-zinc-400">{customer.joinedDate}</td>
-                    <td className="whitespace-nowrap px-5 py-4 text-center">
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                          customer.status === 'Active'
-                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                            : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
-                        }`}
-                      >
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            customer.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-400'
-                          }`}
-                        />
-                        {customer.status}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Link
-                          to={`/customers/${encodeURIComponent(customer.slug)}`}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                          aria-label={`View ${customer.name}`}
-                        >
-                          <span className="material-symbols-outlined text-[18px]">visibility</span>
-                        </Link>
-                        <Link
-                          to={`/customers/${encodeURIComponent(customer.slug)}/edit`}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                          aria-label={`Edit ${customer.name}`}
-                        >
-                          <span className="material-symbols-outlined text-[18px]">edit</span>
-                        </Link>
-                      </div>
-                    </td>
+        {filteredCustomers.length > 0 ? (
+          <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/80 font-bold uppercase tracking-wider text-slate-500 dark:border-zinc-800 dark:bg-zinc-800/40 dark:text-zinc-400">
+                    <th className="px-5 py-3.5">Customer ID</th>
+                    <th className="px-5 py-3.5">Name & Profile</th>
+                    <th className="px-5 py-3.5">Email</th>
+                    <th className="px-5 py-3.5">Phone</th>
+                    <th className="px-5 py-3.5">Joined Date</th>
+                    <th className="px-5 py-3.5 text-center">Status</th>
+                    <th className="px-5 py-3.5 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                  {filteredCustomers.map((customer) => (
+                    <tr key={customer.id} className="group transition-colors hover:bg-slate-50/70 dark:hover:bg-zinc-800/40">
+                      <td className="whitespace-nowrap px-5 py-4 font-mono font-bold text-slate-400 dark:text-zinc-500">
+                        {customer.id}
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          {customer.avatar ? (
+                            <img src={customer.avatar} alt={customer.name} className="h-9 w-9 rounded-full object-cover ring-2 ring-slate-100 dark:ring-zinc-800" />
+                          ) : (
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
+                              {customer.initials}
+                            </div>
+                          )}
+                          <div className="flex flex-col">
+                            <span className="font-['Plus_Jakarta_Sans'] font-bold text-slate-900 transition-colors group-hover:text-[#FF6B35] dark:text-zinc-100">
+                              {customer.name}
+                            </span>
+                            <span className="text-[11px] text-slate-400 dark:text-zinc-500">{customer.profile}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4 text-slate-600 dark:text-zinc-300">{customer.email}</td>
+                      <td className="whitespace-nowrap px-5 py-4 font-medium text-slate-600 dark:text-zinc-300">{customer.phone}</td>
+                      <td className="whitespace-nowrap px-5 py-4 text-slate-500 dark:text-zinc-400">{customer.joinedDate}</td>
+                      <td className="whitespace-nowrap px-5 py-4 text-center">
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                            customer.status === 'Active'
+                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                              : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
+                          }`}
+                        >
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              customer.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-400'
+                            }`}
+                          />
+                          {customer.status}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Link
+                            to={`/customers/${encodeURIComponent(customer.slug)}`}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                            aria-label={`View ${customer.name}`}
+                          >
+                            <span className="material-symbols-outlined text-[18px]">visibility</span>
+                          </Link>
+                          <Link
+                            to={`/customers/${encodeURIComponent(customer.slug)}/edit`}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                            aria-label={`Edit ${customer.name}`}
+                          >
+                            <span className="material-symbols-outlined text-[18px]">edit</span>
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="border-t border-slate-100 p-4 dark:border-zinc-800">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={124}
+                totalItems={12482}
+                startItem={1}
+                endItem={3}
+                rowsPerPage={rowsPerPage}
+                onPageChange={setCurrentPage}
+                onRowsPerPageChange={setRowsPerPage}
+              />
+            </div>
+          </section>
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-[#FF6B35] ring-1 ring-orange-200/60 dark:bg-orange-950/40 dark:ring-orange-800/40">
+              <span className="material-symbols-outlined text-3xl">search_off</span>
+            </div>
+            <h3 className="mt-4 font-['Plus_Jakarta_Sans'] text-base font-bold text-slate-900 dark:text-zinc-100">
+              No customers found matching criteria
+            </h3>
+            <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-slate-500 dark:text-zinc-400">
+              No customer records match your query or filters. Try adjusting your search query or reset your filters.
+            </p>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
+              {(searchQuery || statusFilter !== 'all') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('')
+                    setStatusFilter('all')
+                    setCurrentPage(1)
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                >
+                  <span className="material-symbols-outlined text-sm">refresh</span>
+                  Clear Filters
+                </button>
+              )}
+              <Link
+                to="/customers/new"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#e0531f]"
+              >
+                <span className="material-symbols-outlined text-sm">person_add</span>
+                Add Customer
+              </Link>
+            </div>
           </div>
-          <div className="border-t border-slate-100 p-4 dark:border-zinc-800">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={124}
-              totalItems={12482}
-              startItem={1}
-              endItem={3}
-              rowsPerPage={rowsPerPage}
-              onPageChange={setCurrentPage}
-              onRowsPerPageChange={setRowsPerPage}
-            />
-          </div>
-        </section>
+        )}
       </div>
     </MainLayout>
   )

@@ -327,20 +327,20 @@ const SecurityManagementPage = () => {
                 </div>
                 <button className="text-[#FF6B35] dark:text-orange-400 text-xs font-bold hover:underline">View All Logs</button>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse min-w-[700px]">
-                  <thead>
-                    <tr className="border-b border-slate-100 bg-slate-50/80 font-bold uppercase tracking-wider text-slate-500 dark:border-zinc-800 dark:bg-zinc-800/40 dark:text-zinc-400">
-                      <th className="px-5 py-3.5">User / Identity</th>
-                      <th className="px-5 py-3.5">Location &amp; IP</th>
-                      <th className="px-5 py-3.5">Device &amp; Browser</th>
-                      <th className="px-5 py-3.5">Status</th>
-                      <th className="px-5 py-3.5 text-right">Time</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                    {filteredLoginAttempts.length > 0 ? (
-                      filteredLoginAttempts.map((attempt) => (
+              {filteredLoginAttempts.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse min-w-[700px]">
+                    <thead>
+                      <tr className="border-b border-slate-100 bg-slate-50/80 font-bold uppercase tracking-wider text-slate-500 dark:border-zinc-800 dark:bg-zinc-800/40 dark:text-zinc-400">
+                        <th className="px-5 py-3.5">User / Identity</th>
+                        <th className="px-5 py-3.5">Location &amp; IP</th>
+                        <th className="px-5 py-3.5">Device &amp; Browser</th>
+                        <th className="px-5 py-3.5">Status</th>
+                        <th className="px-5 py-3.5 text-right">Time</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                      {filteredLoginAttempts.map((attempt) => (
                         <tr key={attempt.id} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors group">
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-3">
@@ -377,17 +377,23 @@ const SecurityManagementPage = () => {
                             </span>
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={5} className="py-8 text-center text-xs text-slate-400">
-                          No login attempts match the selected filter.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center p-10 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-[#FF6B35] ring-1 ring-orange-200/60 dark:bg-orange-950/40 dark:ring-orange-800/40">
+                    <span className="material-symbols-outlined text-2xl">search_off</span>
+                  </div>
+                  <p className="mt-3 text-sm font-bold text-slate-800 dark:text-zinc-200">
+                    No login attempts match the selected filter
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
+                    Try switching filters to view all recorded authentication attempts.
+                  </p>
+                </div>
+              )}
             </section>
 
             <section>

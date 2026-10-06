@@ -300,156 +300,182 @@ const DeliveryManagementPage = () => {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] border-separate border-spacing-0 text-left">
-              <thead>
-                <tr className="bg-slate-50/80 dark:bg-zinc-800/50">
-                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:px-8">
-                    Order ID
-                  </th>
-                  <th className="px-4 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:px-6">Driver</th>
-                  <th className="px-4 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:px-6">
-                    Merchant
-                  </th>
-                  <th className="px-4 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:px-6">
-                    Destination
-                  </th>
-                  <th className="px-4 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:px-6">ETA</th>
-                  <th className="px-4 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:px-6">Status</th>
-                  <th className="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:px-8">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                {filteredDeliveries.map((row) => (
-                  <tr key={row.id} className="transition-colors hover:bg-slate-50/50 dark:hover:bg-zinc-800/40">
-                    <td className="px-6 py-6 sm:px-8">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-slate-900 dark:text-zinc-100">#{row.id}</span>
-                        <span className="text-[11px] text-slate-400">{row.date}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-6 sm:px-6">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full ${row.driver.avatarBg}`}
-                        >
-                          <img alt="" className="h-full w-full object-cover" src={row.driver.img} />
-                        </div>
-                        <div className="flex min-w-0 flex-col">
-                          <span className="text-sm font-medium text-slate-900 dark:text-zinc-100">{row.driver.name}</span>
-                          <div className="flex items-center gap-1">
-                            <span
-                              className="material-symbols-outlined text-[10px] text-orange-400"
-                              style={{ fontVariationSettings: "'FILL' 1" }}
-                            >
-                              star
-                            </span>
-                            <span className="text-[10px] font-bold text-slate-500">{row.driver.rating}</span>
+          {filteredDeliveries.length > 0 ? (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px] border-separate border-spacing-0 text-left">
+                  <thead>
+                    <tr className="bg-slate-50/80 dark:bg-zinc-800/50">
+                      <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:px-8">
+                        Order ID
+                      </th>
+                      <th className="px-4 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:px-6">Driver</th>
+                      <th className="px-4 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:px-6">
+                        Merchant
+                      </th>
+                      <th className="px-4 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:px-6">
+                        Destination
+                      </th>
+                      <th className="px-4 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:px-6">ETA</th>
+                      <th className="px-4 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:px-6">Status</th>
+                      <th className="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:px-8">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                    {filteredDeliveries.map((row) => (
+                      <tr key={row.id} className="transition-colors hover:bg-slate-50/50 dark:hover:bg-zinc-800/40">
+                        <td className="px-6 py-6 sm:px-8">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-slate-900 dark:text-zinc-100">#{row.id}</span>
+                            <span className="text-[11px] text-slate-400">{row.date}</span>
                           </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-6 sm:px-6">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-bold text-white ${row.brand.logoBg}`}
-                        >
-                          {row.brand.letter}
-                        </div>
-                        <span className="text-sm font-medium text-slate-900 dark:text-zinc-100">{row.brand.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-6 sm:px-6">
-                      <div className="flex flex-col">
-                        <span className="max-w-[160px] truncate text-sm text-slate-900 dark:text-zinc-100">
-                          {row.destination.line1}
-                        </span>
-                        <span className="text-[11px] text-slate-400">{row.destination.distance}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-6 sm:px-6">
-                      {row.eta.type === 'time' && (
-                        <div className={`flex items-center gap-1 font-bold ${row.eta.color}`}>
-                          <span className="material-symbols-outlined text-sm">schedule</span>
-                          <span className="text-sm">{row.eta.text}</span>
-                        </div>
-                      )}
-                      {row.eta.type === 'arrived' && (
-                        <div className={`flex items-center gap-1 font-bold ${row.eta.color}`}>
-                          <span className="material-symbols-outlined text-sm">done_all</span>
-                          <span className="text-sm">{row.eta.text}</span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-6 sm:px-6">
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider ${statusPill[row.status.variant]}`}
-                      >
-                        <span
-                          className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                            row.status.variant === 'blue'
-                              ? 'animate-pulse bg-indigo-600'
-                              : row.status.variant === 'green'
-                                ? 'bg-green-600'
-                                : 'bg-slate-400'
-                          }`}
-                        />
-                        {row.status.label}
-                      </span>
-                    </td>
-                    <td className="px-6 py-6 text-right sm:px-8">
-                      <button
-                        type="button"
-                        className="text-slate-400 transition-all hover:text-[#ab3500] dark:hover:text-orange-400"
-                        aria-label="View on map"
-                      >
-                        <span className="material-symbols-outlined">map</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+                        <td className="px-4 py-6 sm:px-6">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full ${row.driver.avatarBg}`}
+                            >
+                              <img alt="" className="h-full w-full object-cover" src={row.driver.img} />
+                            </div>
+                            <div className="flex min-w-0 flex-col">
+                              <span className="text-sm font-medium text-slate-900 dark:text-zinc-100">{row.driver.name}</span>
+                              <div className="flex items-center gap-1">
+                                <span
+                                  className="material-symbols-outlined text-[10px] text-orange-400"
+                                  style={{ fontVariationSettings: "'FILL' 1" }}
+                                >
+                                  star
+                                </span>
+                                <span className="text-[10px] font-bold text-slate-500">{row.driver.rating}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-6 sm:px-6">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-bold text-white ${row.brand.logoBg}`}
+                            >
+                              {row.brand.letter}
+                            </div>
+                            <span className="text-sm font-medium text-slate-900 dark:text-zinc-100">{row.brand.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-6 sm:px-6">
+                          <div className="flex flex-col">
+                            <span className="max-w-[160px] truncate text-sm text-slate-900 dark:text-zinc-100">
+                              {row.destination.line1}
+                            </span>
+                            <span className="text-[11px] text-slate-400">{row.destination.distance}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-6 sm:px-6">
+                          {row.eta.type === 'time' && (
+                            <div className={`flex items-center gap-1 font-bold ${row.eta.color}`}>
+                              <span className="material-symbols-outlined text-sm">schedule</span>
+                              <span className="text-sm">{row.eta.text}</span>
+                            </div>
+                          )}
+                          {row.eta.type === 'arrived' && (
+                            <div className={`flex items-center gap-1 font-bold ${row.eta.color}`}>
+                              <span className="material-symbols-outlined text-sm">done_all</span>
+                              <span className="text-sm">{row.eta.text}</span>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-6 sm:px-6">
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider ${statusPill[row.status.variant]}`}
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                                row.status.variant === 'blue'
+                                  ? 'animate-pulse bg-indigo-600'
+                                  : row.status.variant === 'green'
+                                    ? 'bg-green-600'
+                                    : 'bg-slate-400'
+                              }`}
+                            />
+                            {row.status.label}
+                          </span>
+                        </td>
+                        <td className="px-6 py-6 text-right sm:px-8">
+                          <button
+                            type="button"
+                            className="text-slate-400 transition-all hover:text-[#ab3500] dark:hover:text-orange-400"
+                            aria-label="View on map"
+                          >
+                            <span className="material-symbols-outlined">map</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-          <div className="flex flex-col gap-4 border-t border-slate-100 bg-slate-50/40 px-6 py-4 sm:flex-row sm:items-center sm:justify-end dark:border-zinc-800 dark:bg-zinc-800/30">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-all hover:bg-white hover:text-[#ab3500] dark:hover:bg-zinc-700 dark:hover:text-orange-400"
-                aria-label="Previous page"
-              >
-                <span className="material-symbols-outlined text-sm">chevron_left</span>
-              </button>
-              <button
-                type="button"
-                className="h-8 w-8 rounded-full bg-[#ab3500] text-xs font-bold text-white shadow-md shadow-orange-900/20"
-              >
-                1
-              </button>
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-slate-600 transition-all hover:bg-white dark:text-zinc-300 dark:hover:bg-zinc-700"
-              >
-                2
-              </button>
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-slate-600 transition-all hover:bg-white dark:text-zinc-300 dark:hover:bg-zinc-700"
-              >
-                3
-              </button>
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-all hover:bg-white hover:text-[#ab3500] dark:hover:bg-zinc-700 dark:hover:text-orange-400"
-                aria-label="Next page"
-              >
-                <span className="material-symbols-outlined text-sm">chevron_right</span>
-              </button>
+              <div className="flex flex-col gap-4 border-t border-slate-100 bg-slate-50/40 px-6 py-4 sm:flex-row sm:items-center sm:justify-end dark:border-zinc-800 dark:bg-zinc-800/30">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-all hover:bg-white hover:text-[#ab3500] dark:hover:bg-zinc-700 dark:hover:text-orange-400"
+                    aria-label="Previous page"
+                  >
+                    <span className="material-symbols-outlined text-sm">chevron_left</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="h-8 w-8 rounded-full bg-[#ab3500] text-xs font-bold text-white shadow-md shadow-orange-900/20"
+                  >
+                    1
+                  </button>
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-slate-600 transition-all hover:bg-white dark:text-zinc-300 dark:hover:bg-zinc-700"
+                  >
+                    2
+                  </button>
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-slate-600 transition-all hover:bg-white dark:text-zinc-300 dark:hover:bg-zinc-700"
+                  >
+                    3
+                  </button>
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-all hover:bg-white hover:text-[#ab3500] dark:hover:bg-zinc-700 dark:hover:text-orange-400"
+                    aria-label="Next page"
+                  >
+                    <span className="material-symbols-outlined text-sm">chevron_right</span>
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center p-12 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-[#FF6B35] ring-1 ring-orange-200/60 dark:bg-orange-950/40 dark:ring-orange-800/40">
+                <span className="material-symbols-outlined text-3xl">search_off</span>
+              </div>
+              <h3 className="mt-4 font-['Plus_Jakarta_Sans'] text-base font-bold text-slate-900 dark:text-zinc-100">
+                No deliveries found matching criteria
+              </h3>
+              <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-slate-500 dark:text-zinc-400">
+                No active deliveries match your current search terms or filter tab.
+              </p>
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="mt-5 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                >
+                  <span className="material-symbols-outlined text-sm">refresh</span>
+                  Clear Search
+                </button>
+              )}
             </div>
-          </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">

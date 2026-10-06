@@ -293,7 +293,7 @@ const CuisineTypeManagementPage = () => {
   const validateForm = () => {
     const errors = {}
     if (!formData.category_id) {
-      errors.category_id = 'Menu category is required.'
+      errors.category_id = 'Category is required.'
     }
 
     if (!formData.name.trim()) {
@@ -555,7 +555,7 @@ const CuisineTypeManagementPage = () => {
                 setSearchQuery(e.target.value)
                 setCurrentPage(1)
               }}
-              placeholder="Search by cuisine name, description, or menu category..."
+              placeholder="Search by cuisine name, description, or category..."
               className="h-11 w-full rounded-xl border border-slate-200/80 bg-white pl-10 pr-9 text-sm font-medium text-slate-800 placeholder-slate-400 shadow-sm transition focus:border-[#FF6B35] focus:outline-none focus:ring-1 focus:ring-[#FF6B35]/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:placeholder-zinc-500"
             />
             {searchQuery && (
@@ -675,9 +675,10 @@ const CuisineTypeManagementPage = () => {
         )}
 
         {/* Cuisines Data Table */}
-        <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+        {filteredCuisines.length > 0 ? (
+          <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
               <thead className="border-b border-slate-200 bg-slate-50/90 font-bold uppercase tracking-wider text-slate-700 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-200">
                 <tr>
                   <th scope="col" className="px-5 py-3.5">
@@ -687,7 +688,7 @@ const CuisineTypeManagementPage = () => {
                     Cuisine Type
                   </th>
                   <th scope="col" className="px-5 py-3.5">
-                    Menu Category
+                    Category
                   </th>
                   <th scope="col" className="px-5 py-3.5">
                     Description
@@ -704,8 +705,7 @@ const CuisineTypeManagementPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                {paginatedCuisines.length > 0 ? (
-                  paginatedCuisines.map((cuisine, rowIdx) => {
+                {paginatedCuisines.map((cuisine, rowIdx) => {
                     const parentCategory = categoryMap.get(cuisine.category_id)
                     const isExpanded = expandedDescIds.has(cuisine.id)
                     const isDragging = draggedCuisineId === cuisine.id
@@ -771,14 +771,14 @@ const CuisineTypeManagementPage = () => {
                           </div>
                         </td>
 
-                        {/* Flattened Menu Category Tag */}
+                        {/* Category Tag */}
                         <td className="whitespace-nowrap px-5 py-4">
                           {parentCategory ? (
                             <button
                               type="button"
                               onClick={() => handleFilterByCategory(parentCategory.id)}
                               className="inline-flex items-center gap-1.5 rounded-md bg-slate-100/90 px-2 py-1 text-xs font-semibold text-slate-700 transition hover:bg-orange-50 hover:text-[#FF6B35] dark:bg-zinc-800/80 dark:text-zinc-200 dark:hover:bg-orange-950/30 dark:hover:text-orange-400"
-                              title="Click to filter by this menu category"
+                              title="Click to filter by this category"
                             >
                               <span className="material-symbols-outlined text-[15px] text-[#FF6B35]">
                                 {parentCategory.icon || 'category'}
@@ -926,48 +926,48 @@ const CuisineTypeManagementPage = () => {
                         </td>
                       </tr>
                     )
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center">
-                      <div className="mx-auto flex max-w-sm flex-col items-center">
-                        <span className="material-symbols-outlined text-4xl text-slate-300 dark:text-zinc-600">
-                          dinner_dining
-                        </span>
-                        <p className="mt-2 text-sm font-semibold text-slate-700 dark:text-zinc-300">
-                          No cuisine types found
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
-                          Try adjusting your search criteria, clearing category filters, or create a new cuisine type.
-                        </p>
-                        <div className="mt-4 flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSearchQuery('')
-                              handleFilterByCategory('all')
-                              setStatusFilter('all')
-                            }}
-                            className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-200"
-                          >
-                            Reset Filters
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenCreateModal()}
-                            className="rounded-xl bg-[#FF6B35] px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#e05624]"
-                          >
-                            Add Cuisine Type
-                          </button>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-[#FF6B35] ring-1 ring-orange-200/60 dark:bg-orange-950/40 dark:ring-orange-800/40">
+              <span className="material-symbols-outlined text-3xl">search_off</span>
+            </div>
+            <h3 className="mt-4 font-['Plus_Jakarta_Sans'] text-base font-bold text-slate-900 dark:text-zinc-100">
+              No cuisine types found matching criteria
+            </h3>
+            <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-slate-500 dark:text-zinc-400">
+              Try adjusting your search criteria, clearing category filters, or create a new cuisine type.
+            </p>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
+              {(searchQuery || selectedCategoryFilter !== 'all' || statusFilter !== 'all') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('')
+                    handleFilterByCategory('all')
+                    setStatusFilter('all')
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                >
+                  <span className="material-symbols-outlined text-sm">refresh</span>
+                  Reset Filters
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => handleOpenCreateModal()}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#e05624]"
+              >
+                <span className="material-symbols-outlined text-sm">add</span>
+                Add Cuisine Type
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Pagination identical to Brand Directory */}
         {filteredCuisines.length > 0 && (
@@ -1003,7 +1003,7 @@ const CuisineTypeManagementPage = () => {
                       {editingCuisine ? 'Edit Cuisine Type' : 'Add New Cuisine Type'}
                     </h2>
                     <p className="text-xs text-slate-500 dark:text-zinc-400">
-                      Map to menu category with ordering and visual iconography.
+                      Map to category with ordering and visual iconography.
                     </p>
                   </div>
                 </div>
@@ -1017,10 +1017,10 @@ const CuisineTypeManagementPage = () => {
               </div>
 
               <form onSubmit={handleSaveCuisine} className="mt-5 space-y-4">
-                {/* Menu Category Selector */}
+                {/* Category Selector */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                    Menu Category <span className="text-rose-500">*</span>
+                    Category <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={formData.category_id}
@@ -1037,7 +1037,7 @@ const CuisineTypeManagementPage = () => {
                     }`}
                   >
                     <option value="" disabled>
-                      Select menu category...
+                      Select category...
                     </option>
                     {categories.map((cat) => (
                       <option key={cat.id} value={cat.id}>

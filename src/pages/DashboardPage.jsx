@@ -274,20 +274,20 @@ const DashboardPage = () => {
                 {t('dashboard.viewHistory')}
               </button>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="border-b border-slate-100 bg-slate-50/80 font-bold uppercase tracking-wider text-slate-500 dark:border-zinc-800 dark:bg-zinc-800/40 dark:text-zinc-400">
-                  <tr>
-                    <th className="px-5 py-3.5">{t('dashboard.table.orderId')}</th>
-                    <th className="px-5 py-3.5">{t('dashboard.table.customer')}</th>
-                    <th className="px-5 py-3.5">{t('dashboard.table.branch')}</th>
-                    <th className="px-5 py-3.5">{t('dashboard.table.status')}</th>
-                    <th className="px-5 py-3.5 text-right">{t('dashboard.table.time')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                  {filteredOrders.length > 0 ? (
-                    filteredOrders.map((order) => (
+            {filteredOrders.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="border-b border-slate-100 bg-slate-50/80 font-bold uppercase tracking-wider text-slate-500 dark:border-zinc-800 dark:bg-zinc-800/40 dark:text-zinc-400">
+                    <tr>
+                      <th className="px-5 py-3.5">{t('dashboard.table.orderId')}</th>
+                      <th className="px-5 py-3.5">{t('dashboard.table.customer')}</th>
+                      <th className="px-5 py-3.5">{t('dashboard.table.branch')}</th>
+                      <th className="px-5 py-3.5">{t('dashboard.table.status')}</th>
+                      <th className="px-5 py-3.5 text-right">{t('dashboard.table.time')}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                    {filteredOrders.map((order) => (
                       <tr key={order.id} className="transition-colors hover:bg-slate-50/70 dark:hover:bg-zinc-800/40">
                         <td className="whitespace-nowrap px-5 py-4 font-mono font-bold text-[#FF6B35] dark:text-orange-400">
                           {order.id}
@@ -317,17 +317,23 @@ const DashboardPage = () => {
                           {order.time}
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={5} className="py-8 text-center text-xs text-slate-400">
-                        No orders match the current filter.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-10 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-[#FF6B35] ring-1 ring-orange-200/60 dark:bg-orange-950/40 dark:ring-orange-800/40">
+                  <span className="material-symbols-outlined text-2xl">search_off</span>
+                </div>
+                <p className="mt-3 text-sm font-bold text-slate-800 dark:text-zinc-200">
+                  No orders match the current filter
+                </p>
+                <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
+                  Try selecting a different status filter to view active orders.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
