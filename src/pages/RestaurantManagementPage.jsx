@@ -5,17 +5,6 @@ import Pagination from '../components/Pagination'
 import { formatLatestUpdate } from '../utils/format'
 import { loadStoredMerchants, saveStoredMerchants, MERCHANT_TYPES } from '../data/demoMerchants'
 
-const emptyBrandForm = {
-  id: '',
-  name: '',
-  type: 'Restaurant & Dining',
-  locations: 1,
-  status: 'Active',
-  description: '',
-  logo: '',
-  sort_order: 1,
-}
-
 const RestaurantManagementPage = () => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -36,11 +25,7 @@ const RestaurantManagementPage = () => {
   // Expandable description IDs
   const [expandedDescIds, setExpandedDescIds] = useState(() => new Set())
 
-  // Modals
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingBrand, setEditingBrand] = useState(null)
-  const [formData, setFormData] = useState(emptyBrandForm)
-  const [formErrors, setFormErrors] = useState({})
+  // Delete modal state
   const [brandToDelete, setBrandToDelete] = useState(null)
 
   // Toast
@@ -147,77 +132,13 @@ const RestaurantManagementPage = () => {
   const handleToggleActive = (id) => {
     const brand = brands.find((b) => b.id === id)
     if (!brand) return
-    const nextStatus = brand.status === 'Active' ? 'Inactive' : 'Active'
+    const currentStatus = (brand.status || 'ACTIVE').toUpperCase()
+    const nextStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
     const now = new Date().toISOString()
     updateBrandsState((prev) =>
       prev.map((b) => (b.id === id ? { ...b, status: nextStatus, updated_at: now } : b))
     )
     showToast(`"${brand.name}" set to ${nextStatus}.`)
-  }
-
-  // Edit Modal
-  const handleOpenEditModal = (brand) => {
-    setEditingBrand(brand)
-    setFormData({
-      id: brand.id,
-      name: brand.name,
-      type: brand.type || 'Premium Casual',
-      locations: brand.locations || 1,
-      status: brand.status || 'Active',
-      description: brand.description || '',
-      logo: brand.logo || '',
-      sort_order: brand.sort_order || 1,
-    })
-    setFormErrors({})
-    setIsModalOpen(true)
-  }
-
-  const handleSaveBrand = (e) => {
-    e.preventDefault()
-    if (!formData.name.trim()) {
-      setFormErrors({ name: 'Brand name is required.' })
-      return
-    }
-
-    const now = new Date().toISOString()
-    if (editingBrand) {
-      updateBrandsState((prev) =>
-        prev.map((b) =>
-          b.id === editingBrand.id
-            ? {
-                ...b,
-                name: formData.name.trim(),
-                type: formData.type,
-                locations: parseInt(formData.locations, 10) || 1,
-                status: formData.status,
-                description: formData.description.trim(),
-                logo: formData.logo || b.logo,
-                sort_order: parseInt(formData.sort_order, 10) || 1,
-                updated_at: now,
-              }
-            : b
-        )
-      )
-      showToast(`Merchant "${formData.name.trim()}" updated successfully!`)
-    } else {
-      const newBrand = {
-        id: `b-${Date.now()}`,
-        name: formData.name.trim(),
-        type: formData.type,
-        locations: parseInt(formData.locations, 10) || 1,
-        status: formData.status,
-        description: formData.description.trim(),
-        logo:
-          formData.logo ||
-          'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=150&auto=format&fit=crop&q=80',
-        sort_order: parseInt(formData.sort_order, 10) || 1,
-        created_at: now,
-        updated_at: now,
-      }
-      updateBrandsState((prev) => [...prev, newBrand])
-      showToast(`Merchant "${newBrand.name}" created successfully!`)
-    }
-    setIsModalOpen(false)
   }
 
   const handleConfirmDelete = () => {
@@ -246,7 +167,7 @@ const RestaurantManagementPage = () => {
         if (searchQuery && !b.name.toLowerCase().includes(searchQuery.toLowerCase())) {
           return false
         }
-        if (statusFilter !== 'all' && b.status.toLowerCase() !== statusFilter) {
+        if (statusFilter !== 'all' && (b.status || '').toUpperCase() !== statusFilter.toUpperCase()) {
           return false
         }
         if (typeFilter !== 'all' && b.type !== typeFilter) {
@@ -283,7 +204,7 @@ const RestaurantManagementPage = () => {
   // Dynamic KPI Metrics
   const metrics = useMemo(() => {
     const total = brands.length
-    const active = brands.filter((b) => b.status === 'Active').length
+    const active = brands.filter((b) => (b.status || '').toUpperCase() === 'ACTIVE').length
     const totalBranches = brands.reduce((acc, b) => acc + (b.locations || 0), 0)
     const inactive = total - active
     return { total, active, totalBranches, inactive }
@@ -463,8 +384,10 @@ const RestaurantManagementPage = () => {
               className="cursor-pointer border-none bg-transparent p-0 text-sm font-semibold text-slate-900 focus:ring-0 dark:text-zinc-100"
             >
               <option value="all">All Statuses</option>
-              <option value="active">Active Only</option>
-              <option value="inactive">Inactive Only</option>
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="INACTIVE">INACTIVE</option>
+              <option value="PENDING">PENDING</option>
+              <option value="BLOCKED">BLOCKED</option>
             </select>
           </div>
 
@@ -716,23 +639,32 @@ const RestaurantManagementPage = () => {
 
                         {/* Status Toggle Switch */}
                         <td className="whitespace-nowrap px-5 py-4 text-center">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleActive(brand.id)}
-                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold transition ${
-                              brand.status === 'Active'
-                                ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400'
-                            }`}
-                            title="Click to toggle status"
-                          >
-                            <span
-                              className={`h-1.5 w-1.5 rounded-full ${
-                                brand.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-400'
-                              }`}
-                            />
-                            {brand.status}
-                          </button>
+                          {(() => {
+                            const rawStatus = (brand.status || 'ACTIVE').toUpperCase()
+                            let badgeClass = 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400'
+                            let dotClass = 'bg-emerald-500'
+                            if (rawStatus === 'INACTIVE') {
+                              badgeClass = 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400'
+                              dotClass = 'bg-slate-400'
+                            } else if (rawStatus === 'PENDING') {
+                              badgeClass = 'bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-400'
+                              dotClass = 'bg-amber-500'
+                            } else if (rawStatus === 'BLOCKED') {
+                              badgeClass = 'bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-400'
+                              dotClass = 'bg-rose-500'
+                            }
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleActive(brand.id)}
+                                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold transition ${badgeClass}`}
+                                title={`Status: ${rawStatus}. Click to toggle.`}
+                              >
+                                <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
+                                {rawStatus}
+                              </button>
+                            )
+                          })()}
                         </td>
 
                         {/* Latest Update Column */}
@@ -761,7 +693,7 @@ const RestaurantManagementPage = () => {
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               type="button"
-                              onClick={() => handleOpenEditModal(brand)}
+                              onClick={() => navigate(`/restaurants/${brand.id}/edit`)}
                               className="flex h-9 w-9 min-h-[32px] min-w-[32px] items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                               title="Edit Merchant details"
                             >
@@ -838,168 +770,6 @@ const RestaurantManagementPage = () => {
             }}
             itemName="merchants"
           />
-        )}
-
-        {/* Add / Edit Brand Modal */}
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm">
-            <div className="relative w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-zinc-800">
-                <div className="flex items-center gap-2.5">
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 text-[#FF6B35] dark:bg-orange-950/40">
-                    <span className="material-symbols-outlined text-xl">
-                      {editingBrand ? 'edit' : 'add'}
-                    </span>
-                  </span>
-                  <div>
-                    <h2 className="font-['Plus_Jakarta_Sans'] text-lg font-bold text-slate-900 dark:text-zinc-50">
-                      {editingBrand ? 'Edit Merchant Details' : 'Add New Merchant'}
-                    </h2>
-                    <p className="text-xs text-slate-500 dark:text-zinc-400">
-                      Configure merchant profile, classification, and branch allocation.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-                >
-                  <span className="material-symbols-outlined text-xl">close</span>
-                </button>
-              </div>
-
-              <form onSubmit={handleSaveBrand} className="mt-5 space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                    Merchant Name <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => {
-                      setFormData((prev) => ({ ...prev, name: e.target.value }))
-                      if (formErrors.name) setFormErrors({})
-                    }}
-                    placeholder="e.g. Whole Harvest Organic Market"
-                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-800 transition focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                  />
-                  {formErrors.name && (
-                    <p className="mt-1 text-[11px] text-rose-500">{formErrors.name}</p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                      Merchant Type
-                    </label>
-                    <select
-                      value={formData.type}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, type: e.target.value }))}
-                      className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-800 transition focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                    >
-                      {MERCHANT_TYPES.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                      Branch Locations
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={formData.locations}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, locations: e.target.value }))
-                      }
-                      className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-800 transition focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                      Sort Order
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={formData.sort_order}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, sort_order: e.target.value }))
-                      }
-                      className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-800 transition focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                      Status
-                    </label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
-                      className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-800 transition focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                    >
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                    Logo Image URL
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.logo}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, logo: e.target.value }))}
-                    placeholder="https://images.unsplash.com/..."
-                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-800 transition focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                    Description <span className="text-slate-400">(optional)</span>
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, description: e.target.value }))
-                    }
-                    placeholder="Provide details about merchant offerings, locations, and business summary..."
-                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-800 transition focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-2.5 border-t border-slate-100 pt-4 dark:border-zinc-800">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="rounded-xl bg-[#FF6B35] px-5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#e05624]"
-                  >
-                    {editingBrand ? 'Save Changes' : 'Create Merchant'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
         )}
 
         {/* Delete Confirmation Modal */}

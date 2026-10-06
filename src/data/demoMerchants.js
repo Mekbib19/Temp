@@ -218,13 +218,57 @@ export const loadStoredMerchants = () => {
     if (raw) {
       const parsed = JSON.parse(raw)
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed
+        return parsed.map((m) => ({
+          ...m,
+          merchant_id: m.merchant_id || m.id,
+          status: (m.status || 'ACTIVE').toUpperCase(),
+          branch_name: m.branch_name || `${m.name} Main Branch`,
+          is_featured: Boolean(m.is_featured),
+          is_main_branch: m.is_main_branch !== undefined ? Boolean(m.is_main_branch) : true,
+          latitude: typeof m.latitude === 'number' ? m.latitude : 9.0016,
+          longitude: typeof m.longitude === 'number' ? m.longitude : 38.7842,
+          address: m.address || 'Central Commercial Boulevard',
+          opening_hours: m.opening_hours || '08:00 AM',
+          closing_hours: m.closing_hours || '10:00 PM',
+          is_open: m.is_open !== undefined ? Boolean(m.is_open) : true,
+          accepts_orders: m.accepts_orders !== undefined ? Boolean(m.accepts_orders) : true,
+          eta_min: m.eta_min || 20,
+          eta_max: m.eta_max || 40,
+          average_rating: m.average_rating || 4.8,
+          total_rating: m.total_rating || 5,
+          total_reviews: m.total_reviews || 12,
+        }))
       }
     }
   } catch (e) {
     console.error('Failed to load stored merchants:', e)
   }
   return defaultMerchants
+}
+
+export const getMerchantById = (id) => {
+  if (!id) return null
+  const current = loadStoredMerchants()
+  return current.find((m) => m.id === id || m.merchant_id === id) || null
+}
+
+export const updateMerchant = (id, updatedFields) => {
+  const current = loadStoredMerchants()
+  const now = new Date().toISOString()
+  let updatedRecord = null
+  const updatedList = current.map((m) => {
+    if (m.id === id || m.merchant_id === id) {
+      updatedRecord = {
+        ...m,
+        ...updatedFields,
+        updated_at: now,
+      }
+      return updatedRecord
+    }
+    return m
+  })
+  saveStoredMerchants(updatedList)
+  return updatedRecord
 }
 
 export const saveStoredMerchants = (data) => {
@@ -236,17 +280,36 @@ export const saveStoredMerchants = (data) => {
   }
 }
 
+export const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
 export const addMerchant = (newMerchantData) => {
   const current = loadStoredMerchants()
   const nextOrder = current.length > 0 ? Math.max(...current.map((m) => m.sort_order || 0)) + 1 : 1
   const now = new Date().toISOString()
+  const merchantId = newMerchantData.id || generateUUID()
   const created = {
-    id: `m-${Date.now()}`,
+    id: merchantId,
+    merchant_id: merchantId,
     sort_order: nextOrder,
     created_at: now,
     updated_at: now,
-    status: 'Active',
+    status: (newMerchantData.status || 'ACTIVE').toUpperCase(),
     locations: 1,
+    is_main_branch: true,
+    is_open: true,
+    accepts_orders: true,
+    average_rating: 4.8,
+    total_rating: 5,
+    total_reviews: 12,
     ...newMerchantData,
   }
   const updatedList = [created, ...current].map((m, idx) => ({ ...m, sort_order: idx + 1 }))

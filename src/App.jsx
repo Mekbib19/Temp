@@ -29,8 +29,10 @@ function App() {
         <Route path="/insights" element={<InsightsManagementPage />} />
         <Route path="/restaurants" element={<RestaurantManagementPage />} />
         <Route path="/restaurants/new" element={<AddMerchantPage />} />
+        <Route path="/restaurants/:merchantId/edit" element={<AddMerchantPage />} />
         <Route path="/merchants" element={<RestaurantManagementPage />} />
         <Route path="/merchants/new" element={<AddMerchantPage />} />
+        <Route path="/merchants/:merchantId/edit" element={<AddMerchantPage />} />
         <Route path="/categories" element={<CategoryManagementPage />} />
         <Route path="/cuisines" element={<CuisineTypeManagementPage />} />
         <Route path="/cuisine-types" element={<Navigate to="/cuisines" replace />} />
