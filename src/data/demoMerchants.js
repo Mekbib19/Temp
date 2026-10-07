@@ -218,26 +218,80 @@ export const loadStoredMerchants = () => {
     if (raw) {
       const parsed = JSON.parse(raw)
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((m) => ({
-          ...m,
-          merchant_id: m.merchant_id || m.id,
-          status: (m.status || 'ACTIVE').toUpperCase(),
-          branch_name: m.branch_name || `${m.name} Main Branch`,
-          is_featured: Boolean(m.is_featured),
-          is_main_branch: m.is_main_branch !== undefined ? Boolean(m.is_main_branch) : true,
-          latitude: typeof m.latitude === 'number' ? m.latitude : 9.0016,
-          longitude: typeof m.longitude === 'number' ? m.longitude : 38.7842,
-          address: m.address || 'Central Commercial Boulevard',
-          opening_hours: m.opening_hours || '08:00 AM',
-          closing_hours: m.closing_hours || '10:00 PM',
-          is_open: m.is_open !== undefined ? Boolean(m.is_open) : true,
-          accepts_orders: m.accepts_orders !== undefined ? Boolean(m.accepts_orders) : true,
-          eta_min: m.eta_min || 20,
-          eta_max: m.eta_max || 40,
-          average_rating: m.average_rating || 4.8,
-          total_rating: m.total_rating || 5,
-          total_reviews: m.total_reviews || 12,
-        }))
+        return parsed.map((m) => {
+          const merchantId = m.merchant_id || m.id
+          let branches = []
+          if (Array.isArray(m.branches) && m.branches.length > 0) {
+            branches = m.branches.map((b, idx) => ({
+              id: b.id || generateUUID(),
+              merchant_id: merchantId,
+              name: b.name || `${m.name} Branch ${idx + 1}`,
+              is_featured: Boolean(b.is_featured),
+              is_main_branch: b.is_main_branch !== undefined ? Boolean(b.is_main_branch) : idx === 0,
+              latitude: typeof b.latitude === 'number' ? b.latitude : 9.0016,
+              longitude: typeof b.longitude === 'number' ? b.longitude : 38.7842,
+              address: b.address || m.address || 'Central Commercial Boulevard',
+              opening_hours: b.opening_hours || '08:00 AM',
+              closing_hours: b.closing_hours || '10:00 PM',
+              is_open: b.is_open !== undefined ? Boolean(b.is_open) : true,
+              accepts_orders: b.accepts_orders !== undefined ? Boolean(b.accepts_orders) : true,
+              eta_min: b.eta_min || 20,
+              eta_max: b.eta_max || 40,
+              average_rating: b.average_rating || 4.8,
+              total_rating: b.total_rating || 5,
+              total_reviews: b.total_reviews || 12,
+              status: (b.status || m.status || 'ACTIVE').toUpperCase(),
+            }))
+          } else {
+            branches = [
+              {
+                id: generateUUID(),
+                merchant_id: merchantId,
+                name: m.branch_name || `${m.name} Main Branch`,
+                is_featured: Boolean(m.is_featured),
+                is_main_branch: true,
+                latitude: typeof m.latitude === 'number' ? m.latitude : 9.0016,
+                longitude: typeof m.longitude === 'number' ? m.longitude : 38.7842,
+                address: m.address || 'Central Commercial Boulevard',
+                opening_hours: m.opening_hours || '08:00 AM',
+                closing_hours: m.closing_hours || '10:00 PM',
+                is_open: m.is_open !== undefined ? Boolean(m.is_open) : true,
+                accepts_orders: m.accepts_orders !== undefined ? Boolean(m.accepts_orders) : true,
+                eta_min: m.eta_min || 20,
+                eta_max: m.eta_max || 40,
+                average_rating: m.average_rating || 4.8,
+                total_rating: m.total_rating || 5,
+                total_reviews: m.total_reviews || 12,
+                status: (m.status || 'ACTIVE').toUpperCase(),
+              },
+            ]
+          }
+
+          const mainBranch = branches.find((b) => b.is_main_branch) || branches[0]
+
+          return {
+            ...m,
+            merchant_id: merchantId,
+            status: (m.status || 'ACTIVE').toUpperCase(),
+            branches,
+            locations: branches.length,
+            branch_name: mainBranch.name,
+            is_featured: mainBranch.is_featured,
+            is_main_branch: true,
+            latitude: mainBranch.latitude,
+            longitude: mainBranch.longitude,
+            address: mainBranch.address,
+            opening_hours: mainBranch.opening_hours,
+            closing_hours: mainBranch.closing_hours,
+            is_open: mainBranch.is_open,
+            accepts_orders: mainBranch.accepts_orders,
+            eta_min: mainBranch.eta_min,
+            eta_max: mainBranch.eta_max,
+            average_rating: m.average_rating || mainBranch.average_rating,
+            total_rating: m.total_rating || mainBranch.total_rating,
+            total_reviews: m.total_reviews || mainBranch.total_reviews,
+          }
+        })
       }
     }
   } catch (e) {
@@ -296,6 +350,38 @@ export const addMerchant = (newMerchantData) => {
   const nextOrder = current.length > 0 ? Math.max(...current.map((m) => m.sort_order || 0)) + 1 : 1
   const now = new Date().toISOString()
   const merchantId = newMerchantData.id || generateUUID()
+  const branches = Array.isArray(newMerchantData.branches) && newMerchantData.branches.length > 0
+    ? newMerchantData.branches.map((b, idx) => ({
+        ...b,
+        id: b.id || generateUUID(),
+        merchant_id: merchantId,
+        is_main_branch: b.is_main_branch !== undefined ? Boolean(b.is_main_branch) : idx === 0,
+      }))
+    : [
+        {
+          id: generateUUID(),
+          merchant_id: merchantId,
+          name: newMerchantData.branch_name || `${newMerchantData.name} Main Branch`,
+          is_featured: Boolean(newMerchantData.is_featured),
+          is_main_branch: true,
+          latitude: typeof newMerchantData.latitude === 'number' ? newMerchantData.latitude : 9.0016,
+          longitude: typeof newMerchantData.longitude === 'number' ? newMerchantData.longitude : 38.7842,
+          address: newMerchantData.address || 'Central Commercial Boulevard',
+          opening_hours: newMerchantData.opening_hours || '08:00 AM',
+          closing_hours: newMerchantData.closing_hours || '10:00 PM',
+          is_open: newMerchantData.is_open !== undefined ? Boolean(newMerchantData.is_open) : true,
+          accepts_orders: newMerchantData.accepts_orders !== undefined ? Boolean(newMerchantData.accepts_orders) : true,
+          eta_min: newMerchantData.eta_min || 20,
+          eta_max: newMerchantData.eta_max || 40,
+          average_rating: newMerchantData.average_rating || 4.8,
+          total_rating: newMerchantData.total_rating || 5,
+          total_reviews: newMerchantData.total_reviews || 12,
+          status: (newMerchantData.status || 'ACTIVE').toUpperCase(),
+        },
+      ]
+
+  const mainBranch = branches.find((b) => b.is_main_branch) || branches[0]
+
   const created = {
     id: merchantId,
     merchant_id: merchantId,
@@ -303,13 +389,14 @@ export const addMerchant = (newMerchantData) => {
     created_at: now,
     updated_at: now,
     status: (newMerchantData.status || 'ACTIVE').toUpperCase(),
-    locations: 1,
+    locations: branches.length,
+    branches,
     is_main_branch: true,
-    is_open: true,
-    accepts_orders: true,
-    average_rating: 4.8,
-    total_rating: 5,
-    total_reviews: 12,
+    is_open: mainBranch.is_open,
+    accepts_orders: mainBranch.accepts_orders,
+    average_rating: mainBranch.average_rating,
+    total_rating: mainBranch.total_rating,
+    total_reviews: mainBranch.total_reviews,
     ...newMerchantData,
   }
   const updatedList = [created, ...current].map((m, idx) => ({ ...m, sort_order: idx + 1 }))
