@@ -7,23 +7,40 @@ import {
   saveStoredCategories,
   generateUUID,
   slugify,
+  SUPPORTED_CATEGORIES,
+  PRESET_ICON_ASSETS,
 } from '../data/demoCategories'
+import { loadStoredCuisines } from '../data/demoCuisines'
 
 const emptyCategoryForm = {
   id: '',
+  code: 'FOOD',
   name: '',
   description: '',
-  icon: '',
+  icon: 'restaurant',
   image: '', // custom image icon
+  badgeColor: 'orange',
   is_active: true,
   sort_order: 1,
 }
 
 const CategoryManagementPage = () => {
   const [categories, setCategories] = useState(() => loadStoredCategories())
+  const [cuisines] = useState(() => loadStoredCuisines())
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all') // 'all' | 'active' | 'inactive'
   const [sortBy, setSortBy] = useState('sort_order_asc') // 'sort_order_asc' | 'sort_order_desc' | 'name_asc' | 'name_desc' | 'created_desc' | 'updated_desc'
+
+  // Map cuisines by category_id
+  const cuisinesMap = useMemo(() => {
+    const map = new Map()
+    cuisines.forEach((c) => {
+      const list = map.get(c.category_id) || []
+      list.push(c)
+      map.set(c.category_id, list)
+    })
+    return map
+  }, [cuisines])
 
   // Pagination states matching Merchant Management
   const [currentPage, setCurrentPage] = useState(1)
@@ -194,11 +211,14 @@ const CategoryManagementPage = () => {
   const handleOpenCreateModal = () => {
     setEditingCategory(null)
     const nextOrder = categories.length > 0 ? Math.max(...categories.map((c) => c.sort_order || 0)) + 1 : 1
+    const defaultPreset = PRESET_ICON_ASSETS[0]
     setFormData({
       ...emptyCategoryForm,
+      code: 'FOOD',
       sort_order: nextOrder,
-      icon: '',
-      image: '',
+      icon: 'restaurant',
+      image: defaultPreset ? defaultPreset.dataUrl : '',
+      badgeColor: 'orange',
       is_active: true,
     })
     setFormErrors({})
@@ -210,10 +230,12 @@ const CategoryManagementPage = () => {
     setEditingCategory(cat)
     setFormData({
       id: cat.id,
+      code: cat.code || 'FOOD',
       name: cat.name,
       description: cat.description || '',
       icon: cat.icon || '',
       image: cat.image || '',
+      badgeColor: cat.badgeColor || 'orange',
       is_active: cat.is_active,
       sort_order: cat.sort_order || 1,
     })
@@ -307,11 +329,13 @@ const CategoryManagementPage = () => {
           c.id === editingCategory.id
             ? {
                 ...c,
+                code: (formData.code || 'FOOD').toUpperCase().trim(),
                 name: formData.name.trim(),
                 slug: computedSlug || c.slug,
                 description: formData.description.trim(),
                 icon: formData.icon,
                 image: formData.image || '',
+                badgeColor: formData.badgeColor || 'orange',
                 is_active: formData.is_active,
                 sort_order: parseInt(formData.sort_order, 10) || 1,
                 updated_at: now,
@@ -323,11 +347,13 @@ const CategoryManagementPage = () => {
     } else {
       const newCategory = {
         id: generateUUID(),
+        code: (formData.code || 'FOOD').toUpperCase().trim(),
         name: formData.name.trim(),
         slug: computedSlug,
         description: formData.description.trim(),
         icon: formData.icon || '',
         image: formData.image || '',
+        badgeColor: formData.badgeColor || 'orange',
         is_active: formData.is_active,
         sort_order: parseInt(formData.sort_order, 10) || 1,
         created_at: now,
@@ -392,11 +418,16 @@ const CategoryManagementPage = () => {
         {/* Header matching Merchant Management style */}
         <section className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div>
-            <h1 className="font-['Plus_Jakarta_Sans'] mb-2 text-4xl font-extrabold tracking-tight text-slate-900 dark:text-zinc-100">
-              Category Management
-            </h1>
-            <p className="text-sm font-medium text-slate-500 dark:text-zinc-400">
-              Configure global food categories, visual iconography, ordering priorities, and storefront availability
+            <div className="flex items-center gap-2">
+              <h1 className="font-['Plus_Jakarta_Sans'] text-4xl font-extrabold tracking-tight text-slate-900 dark:text-zinc-100">
+                Category Management
+              </h1>
+              <span className="inline-flex items-center rounded-lg bg-orange-100 px-2.5 py-1 text-xs font-bold text-orange-800 dark:bg-orange-950/60 dark:text-orange-300">
+                7 Core Categories
+              </span>
+            </div>
+            <p className="mt-2 text-sm font-medium text-slate-500 dark:text-zinc-400">
+              Manage supported merchant categories and their category-specific specialization types (<code className="font-mono text-xs font-bold text-orange-600 dark:text-orange-400">cuisine_types</code>)
             </p>
           </div>
 
@@ -420,6 +451,7 @@ const CategoryManagementPage = () => {
             </button>
           </div>
         </section>
+
 
         {/* Standardized Metric Cards matching Merchant Management */}
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -602,10 +634,13 @@ const CategoryManagementPage = () => {
                     Order
                   </th>
                   <th scope="col" className="px-5 py-3.5">
-                    Category Name
+                    Category & Code
                   </th>
                   <th scope="col" className="px-5 py-3.5">
                     Description
+                  </th>
+                  <th scope="col" className="px-5 py-3.5">
+                    Specializations (cuisine_types)
                   </th>
                   <th scope="col" className="px-5 py-3.5 text-center">
                     Status
@@ -623,6 +658,7 @@ const CategoryManagementPage = () => {
                     const isExpanded = expandedDescIds.has(cat.id)
                     const isDragging = draggedCatId === cat.id
                     const isOver = dragOverCatId === cat.id
+                    const matchedCuisines = cuisinesMap.get(cat.id) || []
 
                     return (
                       <tr
@@ -637,7 +673,7 @@ const CategoryManagementPage = () => {
                           isOver ? 'ring-2 ring-[#FF6B35] ring-inset bg-orange-50/30' : 'hover:bg-slate-50/80 dark:hover:bg-zinc-800/40'
                         }`}
                       >
-                        {/* Ticket 1: Dynamic Sort Order & Interactive Drag Handle with Reorder Controls */}
+                        {/* Dynamic Sort Order & Interactive Drag Handle with Reorder Controls */}
                         <td className="whitespace-nowrap px-4 py-3.5 font-mono font-medium text-slate-700 dark:text-zinc-300">
                           <div className="flex items-center gap-1.5">
                             <span
@@ -670,7 +706,7 @@ const CategoryManagementPage = () => {
                           </div>
                         </td>
 
-                        {/* Icon / Image + Name: Guaranteed same size (40x40 container with 24x24 icon/image) */}
+                        {/* Category & Code Badge Column */}
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
                             <span
@@ -684,14 +720,26 @@ const CategoryManagementPage = () => {
                                   className="h-6 w-6 object-contain"
                                 />
                               ) : (
-                                <span className="text-xs font-black tracking-wider uppercase text-[#FF6B35]">
-                                  {cat.name.slice(0, 2)}
+                                <span className="material-symbols-outlined text-[20px]">
+                                  {cat.icon || 'category'}
                                 </span>
                               )}
                             </span>
-                            <span className="font-['Plus_Jakarta_Sans'] font-bold text-slate-900 dark:text-zinc-100">
-                              {cat.name}
-                            </span>
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-['Plus_Jakarta_Sans'] font-bold text-slate-900 dark:text-zinc-100">
+                                  {cat.name}
+                                </span>
+                                {cat.code && (
+                                  <span className="inline-flex rounded-md bg-orange-100/80 px-1.5 py-0.5 font-mono text-[9px] font-bold text-orange-800 dark:bg-orange-950/60 dark:text-orange-300">
+                                    {cat.code}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="font-mono text-[10px] text-slate-400 dark:text-zinc-500">
+                                /{cat.slug}
+                              </span>
+                            </div>
                           </div>
                         </td>
 
@@ -760,6 +808,36 @@ const CategoryManagementPage = () => {
                             </td>
                           )
                         })()}
+
+                        {/* Specializations (cuisine_types) Cell */}
+                        <td className="px-5 py-4">
+                          <div className="flex flex-col gap-1.5">
+                            <div>
+                              <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700 ring-1 ring-amber-200/60 dark:bg-amber-950/40 dark:text-amber-400">
+                                {matchedCuisines.length} {matchedCuisines.length === 1 ? 'Type' : 'Types'}
+                              </span>
+                            </div>
+                            {matchedCuisines.length > 0 ? (
+                              <div className="flex flex-wrap gap-1 max-w-xs">
+                                {matchedCuisines.slice(0, 4).map((c) => (
+                                  <span
+                                    key={c.id}
+                                    className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-zinc-800 dark:text-zinc-300"
+                                  >
+                                    {c.name}
+                                  </span>
+                                ))}
+                                {matchedCuisines.length > 4 && (
+                                  <span className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
+                                    +{matchedCuisines.length - 4} more
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-[11px] italic text-slate-400">No specializations</span>
+                            )}
+                          </div>
+                        </td>
 
                         {/* Status Toggle Switch */}
                         <td className="whitespace-nowrap px-5 py-4 text-center">
@@ -919,6 +997,57 @@ const CategoryManagementPage = () => {
               </div>
 
               <form onSubmit={handleSaveCategory} className="mt-5 space-y-4">
+                {/* Category Code (FOOD, GROCERY, PHARMACY, etc.) */}
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                      Category Code <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[10px] font-semibold text-slate-400">System Unique Key</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={formData.code || ''}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        code: e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''),
+                      }))
+                    }
+                    placeholder="e.g. FOOD, GROCERY, PHARMACY, RETAIL"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 font-mono text-xs font-bold text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  />
+                  {/* Quick Preset Buttons for Supported Categories */}
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] font-medium text-slate-400">Supported:</span>
+                    {SUPPORTED_CATEGORIES.map((sc) => (
+                      <button
+                        key={sc.code}
+                        type="button"
+                        onClick={() => {
+                          const asset = PRESET_ICON_ASSETS.find((a) => a.code === sc.code)
+                          setFormData((prev) => ({
+                            ...prev,
+                            code: sc.code,
+                            name: sc.name,
+                            description: sc.description,
+                            icon: sc.icon,
+                            image: asset ? asset.dataUrl : prev.image,
+                            badgeColor: sc.badgeColor,
+                          }))
+                        }}
+                        className={`rounded-lg px-2 py-0.5 font-mono text-[10px] font-bold transition ${
+                          formData.code === sc.code
+                            ? 'bg-[#FF6B35] text-white shadow-xs'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300'
+                        }`}
+                      >
+                        {sc.code}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Category Name */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
@@ -928,7 +1057,7 @@ const CategoryManagementPage = () => {
                     type="text"
                     value={formData.name}
                     onChange={handleNameChange}
-                    placeholder="e.g. Traditional Ethiopian & Habesha Bites, Artisan Burgers"
+                    placeholder="e.g. Food, Grocery, Pharmacy, Retail..."
                     className={`mt-1.5 w-full rounded-xl border bg-white px-3.5 py-2.5 text-xs text-slate-800 transition focus:outline-none dark:bg-zinc-800 dark:text-zinc-200 ${
                       formErrors.name
                         ? 'border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-500'

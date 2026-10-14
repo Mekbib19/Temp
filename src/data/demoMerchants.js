@@ -6,14 +6,13 @@
 export const STORAGE_KEY = 'deliver_app_merchants_data'
 
 export const MERCHANT_TYPES = [
-  'Restaurant & Dining',
-  'Grocery & Supermarket',
-  'Pharmacy & Health',
-  'Bakery & Cafe',
-  'Beverage & Spirits',
-  'Retail & Convenience',
-  'Specialty & Gourmet',
-  'Pet Care & Supplies',
+  'Food',
+  'Grocery',
+  'Pharmacy',
+  'Retail',
+  'Flowers & Gifts',
+  'Services',
+  'Package',
 ]
 
 export const defaultMerchants = [

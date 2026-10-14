@@ -1,84 +1,135 @@
 /**
- * Demo Category Seed Data adhering to the Category schema:
+ * Category Data adhering to the Category schema:
  * uuid id PK
+ * string code UK (e.g. FOOD, GROCERY, PHARMACY, RETAIL, FLOWERS_GIFTS, SERVICES, PACKAGE)
  * string name
  * string slug UK
  * string description
- * string icon
- * string image (optional custom icon image or downloaded icon)
+ * string icon (Material symbol name)
+ * string image (Data URL / vector icon image)
+ * string badgeColor
  * boolean is_active
  * int sort_order
  * timestamp created_at
  * timestamp updated_at
  */
 
-const STORAGE_KEY = 'deliver_app_categories_data'
+export const STORAGE_KEY = 'deliver_app_categories_v2'
 
 const getDynamicOffset = (days, hours = 0) => {
   return new Date(Date.now() - (days * 86400000 + hours * 3600000)).toISOString()
 }
 
-// Built-in curated SVG food icons (clean, scalable vector data URIs)
+// Built-in curated SVG vector icons for each supported category
 export const PRESET_ICON_ASSETS = [
   {
-    id: 'burger',
-    name: 'Burger & Sliders',
+    id: 'food',
+    name: 'Food & Restaurants',
+    code: 'FOOD',
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF6B35"><path d="M12 2C7.58 2 4 4.79 4 8.2h16C20 4.79 16.42 2 12 2zm-8 8.8v1c0 .55.45 1 1 1h14c.55 0 1-.45 1-1v-1H4zm1 4c-.55 0-1 .45-1 1 0 2.21 3.58 4 8 4s8-1.79 8-4c0-.55-.45-1-1-1H5z"/></svg>`,
     dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF6B35"><path d="M12 2C7.58 2 4 4.79 4 8.2h16C20 4.79 16.42 2 12 2zm-8 8.8v1c0 .55.45 1 1 1h14c.55 0 1-.45 1-1v-1H4zm1 4c-.55 0-1 .45-1 1 0 2.21 3.58 4 8 4s8-1.79 8-4c0-.55-.45-1-1-1H5z"/></svg>',
   },
   {
-    id: 'ethiopian',
-    name: 'Ethiopian Injera & Pot',
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF6B35"><path d="M12 3a9 9 0 0 0-9 9c0 4.41 3.19 8.08 7.4 8.85l.6 1.15h2l.6-1.15C17.81 20.08 21 16.41 21 12a9 9 0 0 0-9-9zm0 2c3.87 0 7 3.13 7 7 0 1.25-.33 2.43-.9 3.45L12 12 5.9 15.45C5.33 14.43 5 13.25 5 12c0-3.87 3.13-7 7-7zm0 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>`,
-    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF6B35"><path d="M12 3a9 9 0 0 0-9 9c0 4.41 3.19 8.08 7.4 8.85l.6 1.15h2l.6-1.15C17.81 20.08 21 16.41 21 12a9 9 0 0 0-9-9zm0 2c3.87 0 7 3.13 7 7 0 1.25-.33 2.43-.9 3.45L12 12 5.9 15.45C5.33 14.43 5 13.25 5 12c0-3.87 3.13-7 7-7zm0 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>',
+    id: 'grocery',
+    name: 'Grocery & Fresh Produce',
+    code: 'GROCERY',
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#10B981"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>`,
+    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2310B981"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>',
   },
   {
-    id: 'pizza',
-    name: 'Pizza Slice',
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF6B35"><path d="M12 2C8.43 2 5.23 3.54 3.01 6L12 22l8.99-16C18.77 3.54 15.57 2 12 2zm0 3.5c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm-2.5 7c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5zm5 0c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5z"/></svg>`,
-    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF6B35"><path d="M12 2C8.43 2 5.23 3.54 3.01 6L12 22l8.99-16C18.77 3.54 15.57 2 12 2zm0 3.5c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm-2.5 7c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5zm5 0c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5z"/></svg>',
+    id: 'pharmacy',
+    name: 'Pharmacy & Medicine',
+    code: 'PHARMACY',
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#0284C7"><path d="M6 3h12v2H6zm5 3h2v4h4v2h-4v4h-2v-4H7v-2h4zm-6 9h14v2H5zm0 3h14v2H5z"/></svg>`,
+    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%230284C7"><path d="M6 3h12v2H6zm5 3h2v4h4v2h-4v4h-2v-4H7v-2h4zm-6 9h14v2H5zm0 3h14v2H5z"/></svg>',
   },
   {
-    id: 'coffee',
-    name: 'Coffee Cup & Steam',
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF6B35"><path d="M4 19h16v2H4v-2zm16-9h-2V5c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 2.21 1.79 4 4 4h8c2.21 0 4-1.79 4-4v-2h2c1.1 0 2-.9 2-2v-1c0-1.1-.9-2-2-2zm-4 5c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2V5h12v10zm4-3h-2v-2h2v2z"/></svg>`,
-    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF6B35"><path d="M4 19h16v2H4v-2zm16-9h-2V5c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 2.21 1.79 4 4 4h8c2.21 0 4-1.79 4-4v-2h2c1.1 0 2-.9 2-2v-1c0-1.1-.9-2-2-2zm-4 5c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2V5h12v10zm4-3h-2v-2h2v2z"/></svg>',
+    id: 'retail',
+    name: 'Retail & Merchandise',
+    code: 'RETAIL',
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#9333EA"><path d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm7 17H5V8h2v2c0 .55.45 1 1 1s1-.45 1-1V8h6v2c0 .55.45 1 1 1s1-.45 1-1V8h2v12z"/></svg>`,
+    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%239333EA"><path d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm7 17H5V8h2v2c0 .55.45 1 1 1s1-.45 1-1V8h6v2c0 .55.45 1 1 1s1-.45 1-1V8h2v12z"/></svg>',
   },
   {
-    id: 'ramen',
-    name: 'Ramen & Chopsticks',
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF6B35"><path d="M22 3.5 11 8.8V11h9v1c0 5-4.03 9-9 9s-9-4-9-9v-1h9V8.8L3 4.5l.8-1.8 17.4 2.6.8-1.8zM4 13c.46 3.95 3.86 7 8 7s7.54-3.05 8-7H4z"/></svg>`,
-    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF6B35"><path d="M22 3.5 11 8.8V11h9v1c0 5-4.03 9-9 9s-9-4-9-9v-1h9V8.8L3 4.5l.8-1.8 17.4 2.6.8-1.8zM4 13c.46 3.95 3.86 7 8 7s7.54-3.05 8-7H4z"/></svg>',
+    id: 'flowers_gifts',
+    name: 'Flowers & Gifts',
+    code: 'FLOWERS_GIFTS',
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#EC4899"><path d="M12 3c-1.1 0-2 .9-2 2 0 .55.22 1.05.59 1.41C9.65 7.15 9 8.5 9 10c-1.5 0-2.85.65-3.41 1.59C5.22 11.22 4.72 11 4.17 11c-1.1 0-2 .9-2 2 0 1.1.9 2 2 2 .55 0 1.05-.22 1.41-.59C6.15 15.35 7.5 16 9 16v5h2v-5c1.5 0 2.85-.65 3.41-1.59.36.37.86.59 1.41.59 1.1 0 2-.9 2-2 0-1.1-.9-2-2-2-.55 0-1.05.22-1.41.59C13.85 10.65 12.5 10 11 10c0-1.5.65-2.85 1.59-3.41.37.36.87.59 1.41.59 1.1 0 2-.9 2-2 0-1.1-.9-2-2-2-.55 0-1.05.22-1.41.59C12.05 4.05 12 3.55 12 3z"/></svg>`,
+    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23EC4899"><path d="M12 3c-1.1 0-2 .9-2 2 0 .55.22 1.05.59 1.41C9.65 7.15 9 8.5 9 10c-1.5 0-2.85.65-3.41 1.59C5.22 11.22 4.72 11 4.17 11c-1.1 0-2 .9-2 2 0 1.1.9 2 2 2 .55 0 1.05-.22 1.41-.59C6.15 15.35 7.5 16 9 16v5h2v-5c1.5 0 2.85-.65 3.41-1.59.36.37.86.59 1.41.59 1.1 0 2-.9 2-2 0-1.1-.9-2-2-2-.55 0-1.05.22-1.41.59C13.85 10.65 12.5 10 11 10c0-1.5.65-2.85 1.59-3.41.37.36.87.59 1.41.59 1.1 0 2-.9 2-2 0-1.1-.9-2-2-2-.55 0-1.05.22-1.41.59C12.05 4.05 12 3.55 12 3z"/></svg>',
   },
   {
-    id: 'cake',
-    name: 'Bakery & Cake',
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF6B35"><path d="M12 6a2 2 0 0 0 2-2c0-.38-.1-.74-.29-1.05L12 1l-1.71 1.95A1.98 1.98 0 0 0 10 4a2 2 0 0 0 2 2zm6 3h-3V8h-6v1H6c-1.66 0-3 1.34-3 3v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-8c0-1.66-1.34-3-3-3zm1 11H5v-4.03c.6.22 1.28.36 2 .36 1.86 0 3.41-1.02 4.24-2.5.83 1.48 2.38 2.5 4.24 2.5.72 0 1.4-.14 2-.36V20z"/></svg>`,
-    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF6B35"><path d="M12 6a2 2 0 0 0 2-2c0-.38-.1-.74-.29-1.05L12 1l-1.71 1.95A1.98 1.98 0 0 0 10 4a2 2 0 0 0 2 2zm6 3h-3V8h-6v1H6c-1.66 0-3 1.34-3 3v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-8c0-1.66-1.34-3-3-3zm1 11H5v-4.03c.6.22 1.28.36 2 .36 1.86 0 3.41-1.02 4.24-2.5.83 1.48 2.38 2.5 4.24 2.5.72 0 1.4-.14 2-.36V20z"/></svg>',
+    id: 'services',
+    name: 'Services & Maintenance',
+    code: 'SERVICES',
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#D97706"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>`,
+    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23D97706"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>',
   },
   {
-    id: 'salad',
-    name: 'Fresh Greens & Bowls',
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF6B35"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.4z"/></svg>`,
-    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF6B35"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.4z"/></svg>',
+    id: 'package',
+    name: 'Package & Courier',
+    code: 'PACKAGE',
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#4F46E5"><path d="M20 7l-8-4-8 4 8 4 8-4zm-8 6l-7-3.5V17l7 3.5 7-3.5v-7.5L12 13z"/></svg>`,
+    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234F46E5"><path d="M20 7l-8-4-8 4 8 4 8-4zm-8 6l-7-3.5V17l7 3.5 7-3.5v-7.5L12 13z"/></svg>',
+  },
+]
+
+// Official Supported Categories Definition
+export const SUPPORTED_CATEGORIES = [
+  {
+    code: 'FOOD',
+    name: 'Food',
+    slug: 'food',
+    description: 'Restaurants, cafes, fast food',
+    icon: 'restaurant',
+    badgeColor: 'orange',
   },
   {
-    id: 'drinks',
-    name: 'Craft Drinks & Mocktails',
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF6B35"><path d="M21 5V3H3v2l8 9v5H6v2h12v-2h-5v-5l8-9zM7.43 7 5.66 5h12.69l-1.78 2H7.43z"/></svg>`,
-    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF6B35"><path d="M21 5V3H3v2l8 9v5H6v2h12v-2h-5v-5l8-9zM7.43 7 5.66 5h12.69l-1.78 2H7.43z"/></svg>',
+    code: 'GROCERY',
+    name: 'Grocery',
+    slug: 'grocery',
+    description: 'Supermarkets, fresh produce',
+    icon: 'local_grocery_store',
+    badgeColor: 'emerald',
   },
   {
-    id: 'seafood',
-    name: 'Seafood & Grill',
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF6B35"><path d="M2 12c4 1 7-2 10-2s6 3 10 2c-4-1-7 2-10 2s-6-3-10-2zm19.5-3.5C18.5 4 14 3 12 3S5.5 4 2.5 8.5C4 10 7 11 12 11s8-1 9.5-2.5z"/></svg>`,
-    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF6B35"><path d="M2 12c4 1 7-2 10-2s6 3 10 2c-4-1-7 2-10 2s-6-3-10-2zm19.5-3.5C18.5 4 14 3 12 3S5.5 4 2.5 8.5C4 10 7 11 12 11s8-1 9.5-2.5z"/></svg>',
+    code: 'PHARMACY',
+    name: 'Pharmacy',
+    slug: 'pharmacy',
+    description: 'Medicines, health products',
+    icon: 'medication',
+    badgeColor: 'sky',
   },
   {
-    id: 'holiday',
-    name: 'Celebration & Festive Platter',
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF6B35"><path d="M12 2C8.69 2 6 4.69 6 8c0 1.28.4 2.47 1.09 3.45L12 22l4.91-10.55C17.6 10.47 18 9.28 18 8c0-3.31-2.69-6-6-6zm0 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>`,
-    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF6B35"><path d="M12 2C8.69 2 6 4.69 6 8c0 1.28.4 2.47 1.09 3.45L12 22l4.91-10.55C17.6 10.47 18 9.28 18 8c0-3.31-2.69-6-6-6zm0 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>',
+    code: 'RETAIL',
+    name: 'Retail',
+    slug: 'retail',
+    description: 'Electronics, fashion, general merchandise',
+    icon: 'shopping_bag',
+    badgeColor: 'purple',
+  },
+  {
+    code: 'FLOWERS_GIFTS',
+    name: 'Flowers & Gifts',
+    slug: 'flowers-gifts',
+    description: 'Florists, gift shops',
+    icon: 'local_florist',
+    badgeColor: 'pink',
+  },
+  {
+    code: 'SERVICES',
+    name: 'Services',
+    slug: 'services',
+    description: 'Cleaning, Maintenance, Professional, Consulting',
+    icon: 'handyman',
+    badgeColor: 'amber',
+  },
+  {
+    code: 'PACKAGE',
+    name: 'Package',
+    slug: 'package',
+    description: 'Courier services',
+    icon: 'inventory_2',
+    badgeColor: 'indigo',
   },
 ]
 
@@ -96,126 +147,105 @@ export const downloadIconFile = (filename, svgContent) => {
   URL.revokeObjectURL(url)
 }
 
+// Initial Seed Categories - Primary Supported Categories
 export const initialCategories = [
   {
-    id: 'a8b1c2d3-1111-4444-8888-000000000001',
-    name: 'Artisan Burgers & Sliders',
-    slug: 'artisan-burgers-sliders',
-    description: 'Fresh ground prime Angus beef patties, toasted brioche buns, and house-made artisan sauces.',
-    icon: 'lunch_dining',
-    image: PRESET_ICON_ASSETS[0].dataUrl, // Uses custom vector icon image
+    id: 'cat-food-1111-4444-8888-000000000001',
+    code: 'FOOD',
+    name: 'Food',
+    slug: 'food',
+    description: 'Restaurants, cafes, fast food',
+    icon: 'restaurant',
+    image: PRESET_ICON_ASSETS[0].dataUrl,
+    badgeColor: 'orange',
     is_active: true,
     sort_order: 1,
     created_at: getDynamicOffset(90),
-    updated_at: getDynamicOffset(0, 2), // 2 hours ago
+    updated_at: getDynamicOffset(0, 2),
   },
   {
-    id: 'b9c2d3e4-2222-4444-8888-000000000002',
-    name: 'Traditional Ethiopian & Habesha Bites',
-    slug: 'traditional-ethiopian-habesha',
-    description: 'Authentic injera with doro wat, kitfo, tibs, and flavorful vegetarian shiro combos.',
-    icon: 'restaurant',
-    image: PRESET_ICON_ASSETS[1].dataUrl, // Uses custom vector icon image
+    id: 'cat-groc-2222-4444-8888-000000000002',
+    code: 'GROCERY',
+    name: 'Grocery',
+    slug: 'grocery',
+    description: 'Supermarkets, fresh produce',
+    icon: 'local_grocery_store',
+    image: PRESET_ICON_ASSETS[1].dataUrl,
+    badgeColor: 'emerald',
     is_active: true,
     sort_order: 2,
-    created_at: getDynamicOffset(120),
-    updated_at: getDynamicOffset(1), // 1 day ago
+    created_at: getDynamicOffset(90),
+    updated_at: getDynamicOffset(1),
   },
   {
-    id: 'c0d3e4f5-3333-4444-8888-000000000003',
-    name: 'Wood-Fired Pizza & Pasta',
-    slug: 'wood-fired-pizza-pasta',
-    description: 'Neapolitan style sourdough crust, San Marzano tomato base, and handmade fresh egg pasta.',
-    icon: 'local_pizza',
-    image: PRESET_ICON_ASSETS[2].dataUrl, // Uses custom vector icon image
+    id: 'cat-phar-3333-4444-8888-000000000003',
+    code: 'PHARMACY',
+    name: 'Pharmacy',
+    slug: 'pharmacy',
+    description: 'Medicines, health products',
+    icon: 'medication',
+    image: PRESET_ICON_ASSETS[2].dataUrl,
+    badgeColor: 'sky',
     is_active: true,
     sort_order: 3,
-    created_at: getDynamicOffset(150),
-    updated_at: getDynamicOffset(3), // 3 days ago
+    created_at: getDynamicOffset(85),
+    updated_at: getDynamicOffset(2),
   },
   {
-    id: 'd1e4f5a6-4444-4444-8888-000000000004',
-    name: 'Specialty Coffee & Roastery',
-    slug: 'specialty-coffee-roastery',
-    description: 'Single-origin pour-overs and cold brew infusions.',
-    icon: 'coffee',
+    id: 'cat-retl-4444-4444-8888-000000000004',
+    code: 'RETAIL',
+    name: 'Retail',
+    slug: 'retail',
+    description: 'Electronics, fashion, general merchandise',
+    icon: 'shopping_bag',
     image: PRESET_ICON_ASSETS[3].dataUrl,
+    badgeColor: 'purple',
     is_active: true,
     sort_order: 4,
-    created_at: getDynamicOffset(180),
-    updated_at: getDynamicOffset(7), // 7 days ago
+    created_at: getDynamicOffset(80),
+    updated_at: getDynamicOffset(3),
   },
   {
-    id: 'e2f5a6b7-5555-4444-8888-000000000005',
-    name: 'Asian Wok & Ramen Bowls',
-    slug: 'asian-wok-ramen-bowls',
-    description: 'Slow-simmered rich tonkotsu broth, hand-pulled noodles, spicy kimchi, and crispy gyoza.',
-    icon: 'ramen_dining',
+    id: 'cat-flow-5555-4444-8888-000000000005',
+    code: 'FLOWERS_GIFTS',
+    name: 'Flowers & Gifts',
+    slug: 'flowers-gifts',
+    description: 'Florists, gift shops',
+    icon: 'local_florist',
     image: PRESET_ICON_ASSETS[4].dataUrl,
+    badgeColor: 'pink',
     is_active: true,
     sort_order: 5,
-    created_at: getDynamicOffset(210),
-    updated_at: getDynamicOffset(14), // 14 days ago
+    created_at: getDynamicOffset(75),
+    updated_at: getDynamicOffset(4),
   },
   {
-    id: 'f3a6b7c8-6666-4444-8888-000000000006',
-    name: 'Pastries, Cakes & Bakery',
-    slug: 'pastries-cakes-bakery',
-    description: 'Flaky French butter croissants, artisan sourdough loaves, cupcakes, and celebration cakes.',
-    icon: 'cake',
+    id: 'cat-serv-6666-4444-8888-000000000006',
+    code: 'SERVICES',
+    name: 'Services',
+    slug: 'services',
+    description: 'Cleaning, Maintenance, Professional, Consulting',
+    icon: 'handyman',
     image: PRESET_ICON_ASSETS[5].dataUrl,
+    badgeColor: 'amber',
     is_active: true,
     sort_order: 6,
-    created_at: getDynamicOffset(240),
-    updated_at: getDynamicOffset(32), // 1 month ago
+    created_at: getDynamicOffset(70),
+    updated_at: getDynamicOffset(5),
   },
   {
-    id: 'a4b7c8d9-7777-4444-8888-000000000007',
-    name: 'Fresh Greens & Protein Bowls',
-    slug: 'fresh-greens-protein-bowls',
-    description: 'Organic grain bowls, Mediterranean salads, grilled halloumi, and cold-pressed wellness juices.',
-    icon: 'nutrition',
+    id: 'cat-pack-7777-4444-8888-000000000007',
+    code: 'PACKAGE',
+    name: 'Package',
+    slug: 'package',
+    description: 'Courier services',
+    icon: 'inventory_2',
     image: PRESET_ICON_ASSETS[6].dataUrl,
+    badgeColor: 'indigo',
     is_active: true,
     sort_order: 7,
-    created_at: getDynamicOffset(300),
-    updated_at: getDynamicOffset(95), // 3 months ago
-  },
-  {
-    id: 'b5c8d9e0-8888-4444-8888-000000000008',
-    name: 'Craft Mocktails & Refreshers',
-    slug: 'craft-mocktails-refreshers',
-    description: 'Botanical fizzes and iced coolers.',
-    icon: 'local_bar',
-    image: PRESET_ICON_ASSETS[7].dataUrl,
-    is_active: false,
-    sort_order: 8,
-    created_at: getDynamicOffset(400),
-    updated_at: getDynamicOffset(240), // 8 months ago
-  },
-  {
-    id: 'c6d9e0f1-9999-4444-8888-000000000009',
-    name: 'Gourmet Seafood & Grill',
-    slug: 'gourmet-seafood-grill',
-    description: 'Wild-caught salmon fillets, garlic herb king prawns, and smoked ocean delicacies.',
-    icon: 'set_meal',
-    image: PRESET_ICON_ASSETS[8].dataUrl,
-    is_active: true,
-    sort_order: 9,
-    created_at: getDynamicOffset(750),
-    updated_at: getDynamicOffset(390), // 1 year ago
-  },
-  {
-    id: 'd7e0f1a2-0000-4444-8888-000000000010',
-    name: 'Seasonal Holiday Specials',
-    slug: 'seasonal-holiday-specials',
-    description: 'Limited edition festive family feasts, seasonal roasts, and holiday dessert platters.',
-    icon: 'celebration',
-    image: PRESET_ICON_ASSETS[9].dataUrl,
-    is_active: false,
-    sort_order: 10,
-    created_at: getDynamicOffset(5), // Created 5 days ago, never updated
-    updated_at: null,
+    created_at: getDynamicOffset(65),
+    updated_at: getDynamicOffset(6),
   },
 ]
 
@@ -226,29 +256,15 @@ export const loadStoredCategories = () => {
     if (raw) {
       const parsed = JSON.parse(raw)
       if (Array.isArray(parsed) && parsed.length > 0) {
-        const mapInitial = new Map(initialCategories.map((c) => [c.id, c]))
-        const refreshed = parsed.map((cat, idx) => {
-          const seed = mapInitial.get(cat.id)
-          const fallbackImage = seed?.image || PRESET_ICON_ASSETS[idx % PRESET_ICON_ASSETS.length]?.dataUrl
-          const image = cat.image || fallbackImage
-          if (seed) {
-            // Keep user updates, but sync seed descriptions for demonstrative short/large variety if default
-            if (
-              cat.id === 'd1e4f5a6-4444-4444-8888-000000000004' ||
-              cat.id === 'b5c8d9e0-8888-4444-8888-000000000008'
-            ) {
-              return { ...cat, image, description: seed.description }
-            }
-            if (cat.updated_at?.startsWith('2024-')) {
-              return { ...cat, image, created_at: seed.created_at, updated_at: seed.updated_at }
-            }
-          }
-          return { ...cat, image }
-        })
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(refreshed))
-        return refreshed
+        // Check if existing data contains the supported categories (FOOD, GROCERY, etc.)
+        const hasFoodCode = parsed.some((c) => c.code === 'FOOD' || c.id === 'cat-food-1111-4444-8888-000000000001')
+        if (hasFoodCode) {
+          return parsed
+        }
       }
     }
+    // If not set or old schema, save initialCategories to STORAGE_KEY
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(initialCategories))
   } catch (e) {
     console.error('Failed to load stored categories:', e)
   }
@@ -268,6 +284,7 @@ export const resetStoredCategories = () => {
   if (typeof window === 'undefined') return initialCategories
   try {
     localStorage.removeItem(STORAGE_KEY)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(initialCategories))
   } catch (e) {
     console.error('Failed to reset categories:', e)
   }
