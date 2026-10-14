@@ -7,39 +7,14 @@ import {
   saveStoredCategories,
   generateUUID,
   slugify,
-  PRESET_ICON_ASSETS,
-  downloadIconFile,
 } from '../data/demoCategories'
-
-const AVAILABLE_ICONS = [
-  { name: 'lunch_dining', label: 'Burgers' },
-  { name: 'restaurant', label: 'Dining' },
-  { name: 'local_pizza', label: 'Pizza' },
-  { name: 'coffee', label: 'Coffee' },
-  { name: 'ramen_dining', label: 'Noodles & Ramen' },
-  { name: 'cake', label: 'Bakery & Cake' },
-  { name: 'nutrition', label: 'Salads & Greens' },
-  { name: 'local_bar', label: 'Beverages' },
-  { name: 'set_meal', label: 'Seafood' },
-  { name: 'celebration', label: 'Special Occasions' },
-  { name: 'icecream', label: 'Desserts' },
-  { name: 'bakery_dining', label: 'Breads & Pastry' },
-  { name: 'fastfood', label: 'Fast Food' },
-  { name: 'takeout_dining', label: 'Takeout' },
-  { name: 'egg_alt', label: 'Breakfast' },
-  { name: 'soup_kitchen', label: 'Soups & Stews' },
-  { name: 'liquor', label: 'Cocktails' },
-  { name: 'local_cafe', label: 'Cafe' },
-  { name: 'emoji_food_beverage', label: 'Hot Drinks' },
-  { name: 'tapas', label: 'Appetizers' },
-]
 
 const emptyCategoryForm = {
   id: '',
   name: '',
   description: '',
-  icon: 'restaurant',
-  image: '', // optional custom image / downloaded icon
+  icon: '',
+  image: '', // custom image icon
   is_active: true,
   sort_order: 1,
 }
@@ -59,8 +34,8 @@ const CategoryManagementPage = () => {
   const [editingCategory, setEditingCategory] = useState(null)
   const [formData, setFormData] = useState(emptyCategoryForm)
   const [formErrors, setFormErrors] = useState({})
-  const [iconMode, setIconMode] = useState('symbol') // 'symbol' | 'image'
   const fileInputRef = useRef(null)
+  const [isDraggingFile, setIsDraggingFile] = useState(false)
 
   // Delete modal
   const [categoryToDelete, setCategoryToDelete] = useState(null)
@@ -211,7 +186,7 @@ const CategoryManagementPage = () => {
     const total = categories.length
     const active = categories.filter((c) => c.is_active).length
     const inactive = total - active
-    const withIcons = categories.filter((c) => Boolean(c.icon)).length
+    const withIcons = categories.filter((c) => Boolean(c.image || c.icon)).length
     return { total, active, inactive, withIcons }
   }, [categories])
 
@@ -222,11 +197,10 @@ const CategoryManagementPage = () => {
     setFormData({
       ...emptyCategoryForm,
       sort_order: nextOrder,
-      icon: 'restaurant',
+      icon: '',
       image: '',
       is_active: true,
     })
-    setIconMode('symbol')
     setFormErrors({})
     setIsModalOpen(true)
   }
@@ -238,41 +212,59 @@ const CategoryManagementPage = () => {
       id: cat.id,
       name: cat.name,
       description: cat.description || '',
-      icon: cat.icon || 'restaurant',
+      icon: cat.icon || '',
       image: cat.image || '',
       is_active: cat.is_active,
       sort_order: cat.sort_order || 1,
     })
-    setIconMode(cat.image ? 'image' : 'symbol')
     setFormErrors({})
     setIsModalOpen(true)
   }
 
-  // Handle image upload from file (SVG, PNG, JPG, WebP)
-  const handleIconFileUpload = (e) => {
-    const file = e.target.files?.[0]
+  // Process uploaded image file
+  const processUploadedFile = (file) => {
     if (!file) return
-
     if (!file.type.startsWith('image/')) {
-      showToast('Please upload a valid image or SVG file.')
+      showToast('Please upload a valid image file (SVG, PNG, JPG, or WebP).')
       return
     }
-
-    if (file.size > 2 * 1024 * 1024) {
-      showToast('Icon file should be under 2MB.')
+    if (file.size > 3 * 1024 * 1024) {
+      showToast('Icon file should be under 3MB.')
       return
     }
-
     const reader = new FileReader()
     reader.onload = (event) => {
       const dataUrl = event.target?.result
       if (dataUrl) {
         setFormData((prev) => ({ ...prev, image: dataUrl }))
-        setIconMode('image')
         showToast(`Loaded "${file.name}" as category icon.`)
       }
     }
     reader.readAsDataURL(file)
+  }
+
+  // Handle image upload from file (SVG, PNG, JPG, WebP)
+  const handleIconFileUpload = (e) => {
+    const file = e.target.files?.[0]
+    processUploadedFile(file)
+    if (e.target) e.target.value = ''
+  }
+
+  const handleFileDrop = (e) => {
+    e.preventDefault()
+    setIsDraggingFile(false)
+    const file = e.dataTransfer.files?.[0]
+    processUploadedFile(file)
+  }
+
+  const handleFileDragOver = (e) => {
+    e.preventDefault()
+    setIsDraggingFile(true)
+  }
+
+  const handleFileDragLeave = (e) => {
+    e.preventDefault()
+    setIsDraggingFile(false)
   }
 
   // Form field change handlers
@@ -334,7 +326,7 @@ const CategoryManagementPage = () => {
         name: formData.name.trim(),
         slug: computedSlug,
         description: formData.description.trim(),
-        icon: formData.icon || 'restaurant',
+        icon: formData.icon || '',
         image: formData.image || '',
         is_active: formData.is_active,
         sort_order: parseInt(formData.sort_order, 10) || 1,
@@ -678,12 +670,12 @@ const CategoryManagementPage = () => {
                           </div>
                         </td>
 
-                        {/* Icon / Image + Name: Guaranteed same size for image or icon */}
+                        {/* Icon / Image + Name: Guaranteed same size (40x40 container with 24x24 icon/image) */}
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
                             <span
                               className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] ring-1 ring-orange-200/50 dark:bg-orange-950/30 dark:ring-orange-800/30 overflow-hidden"
-                              title={cat.image ? 'Custom Icon Image' : `Symbol: ${cat.icon || 'restaurant'}`}
+                              title={cat.image ? 'Category Icon Image' : cat.name}
                             >
                               {cat.image ? (
                                 <img
@@ -692,7 +684,9 @@ const CategoryManagementPage = () => {
                                   className="h-6 w-6 object-contain"
                                 />
                               ) : (
-                                <span className="material-symbols-outlined text-2xl">{cat.icon || 'restaurant'}</span>
+                                <span className="text-xs font-black tracking-wider uppercase text-[#FF6B35]">
+                                  {cat.name.slice(0, 2)}
+                                </span>
                               )}
                             </span>
                             <span className="font-['Plus_Jakarta_Sans'] font-bold text-slate-900 dark:text-zinc-100">
@@ -946,155 +940,105 @@ const CategoryManagementPage = () => {
                   )}
                 </div>
 
-                {/* Visual Icon / Image: Same size guaranteed (40x40 container with 24x24 icon/image) */}
-                <div className="rounded-xl border border-slate-200/90 bg-slate-50/70 p-3.5 dark:border-zinc-800 dark:bg-zinc-850">
+                {/* Upload Category Icon as Image (Matching Cuisine Modal) */}
+                <div>
                   <div className="flex items-center justify-between">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-800 dark:text-zinc-200">
-                        Category Visual Icon
-                      </label>
-                      <p className="text-[11px] text-slate-500 dark:text-zinc-400">
-                        Choose a system symbol or custom image. Both are rendered in the exact same size.
-                      </p>
-                    </div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                      Category Icon Image
+                    </label>
+                    <span className="text-[11px] font-medium text-slate-400 dark:text-zinc-500">
+                      Upload custom image (SVG, PNG, JPG, WebP)
+                    </span>
+                  </div>
 
-                    {/* Live Preview Badge - Exact same 40x40 / 24x24 dimensions */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        Preview
-                      </span>
-                      <span
-                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] ring-1 ring-orange-200/60 shadow-xs dark:bg-orange-950/40 dark:ring-orange-800/40 overflow-hidden"
-                        title="Live icon/image preview (same size guaranteed)"
-                      >
-                        {formData.image ? (
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*,.svg"
+                    onChange={handleIconFileUpload}
+                    className="hidden"
+                  />
+
+                  {formData.image ? (
+                    /* Image preview & action controls */
+                    <div className="mt-2 flex flex-col gap-3 rounded-2xl border border-orange-200/80 bg-orange-50/40 p-4 dark:border-zinc-700 dark:bg-zinc-800/40 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-3.5">
+                        <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-orange-200 bg-white p-2 shadow-xs dark:border-zinc-700 dark:bg-zinc-900">
                           <img
                             src={formData.image}
-                            alt="Category icon preview"
-                            className="h-6 w-6 object-contain"
+                            alt="Category Icon"
+                            className="h-full w-full object-contain"
                           />
-                        ) : (
-                          <span className="material-symbols-outlined text-2xl">
-                            {formData.icon || 'restaurant'}
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-950/40 dark:text-emerald-400">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                              Custom Icon Loaded
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs font-semibold text-slate-800 dark:text-zinc-200">
+                            {formData.name ? `${formData.name} Icon` : 'Uploaded Icon Image'}
+                          </p>
+                          <p className="text-[10px] text-slate-400 dark:text-zinc-500">
+                            Square icon will display across merchant cards, menus, and table records.
+                          </p>
+                        </div>
+                      </div>
 
-                  {/* Mode Selector Tabs */}
-                  <div className="mt-3 flex rounded-lg bg-slate-200/60 p-0.5 dark:bg-zinc-800">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIconMode('symbol')
-                        setFormData((prev) => ({ ...prev, image: '' }))
-                      }}
-                      className={`flex-1 rounded-md py-1.5 text-xs font-semibold transition ${
-                        iconMode === 'symbol' && !formData.image
-                          ? 'bg-white text-slate-900 shadow-xs dark:bg-zinc-900 dark:text-zinc-100'
-                          : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
-                      }`}
-                    >
-                      System Material Icon
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIconMode('image')
-                      }}
-                      className={`flex-1 rounded-md py-1.5 text-xs font-semibold transition ${
-                        iconMode === 'image' || Boolean(formData.image)
-                          ? 'bg-white text-[#FF6B35] shadow-xs dark:bg-zinc-900 dark:text-orange-400'
-                          : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
-                      }`}
-                    >
-                      Custom Image Icon (Optional)
-                    </button>
-                  </div>
-
-                  {iconMode === 'symbol' && !formData.image ? (
-                    <div className="mt-3 space-y-2">
                       <div className="flex items-center gap-2">
-                        <select
-                          value={formData.icon}
-                          onChange={(e) => setFormData((prev) => ({ ...prev, icon: e.target.value }))}
-                          className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-800 transition focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-                        >
-                          {AVAILABLE_ICONS.map((ico) => (
-                            <option key={ico.name} value={ico.name}>
-                              {ico.name} — {ico.label}
-                            </option>
-                          ))}
-                        </select>
                         <button
                           type="button"
-                          onClick={() => {
-                            const selectedPreset = PRESET_ICON_ASSETS.find(
-                              (p) => p.id === formData.icon || p.name.toLowerCase().includes(formData.icon)
-                            ) || PRESET_ICON_ASSETS[0]
-                            downloadIconFile(
-                              `${slugify(formData.name || formData.icon)}-icon`,
-                              selectedPreset.svg
-                            )
-                            showToast(`Downloaded "${formData.icon || 'category'}" icon as SVG file.`)
-                          }}
-                          className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-                          title="Download this icon as .SVG to your computer"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                         >
-                          <span className="material-symbols-outlined text-[16px]">download</span>
-                          Download .SVG
+                          <span className="material-symbols-outlined text-[15px]">upload</span>
+                          Change Image
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData((prev) => ({ ...prev, image: '' }))}
+                          className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-100 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-400"
+                          title="Remove custom icon image"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">delete</span>
+                          Remove
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-3 space-y-3">
-                      {/* Upload from file */}
-                      <div>
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          onChange={handleIconFileUpload}
-                          accept="image/svg+xml,image/png,image/jpeg,image/webp,image/x-icon"
-                          className="hidden"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-orange-50/50 px-4 py-2.5 text-xs font-semibold text-[#FF6B35] transition hover:bg-orange-100/60 dark:border-orange-900/60 dark:bg-orange-950/20"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">upload_file</span>
-                          Upload Custom Icon / Image (SVG, PNG, JPG)
-                        </button>
+                    /* Dropzone to upload image */
+                    <div
+                      onDragOver={handleFileDragOver}
+                      onDragLeave={handleFileDragLeave}
+                      onDrop={handleFileDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`mt-2 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-5 text-center transition ${
+                        isDraggingFile
+                          ? 'border-[#FF6B35] bg-orange-50/60 dark:bg-orange-950/20'
+                          : 'border-slate-200 bg-slate-50/60 hover:border-[#FF6B35]/70 hover:bg-orange-50/20 dark:border-zinc-700 dark:bg-zinc-800/40 dark:hover:border-zinc-600'
+                      }`}
+                    >
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-100/80 text-[#FF6B35] dark:bg-orange-950/60">
+                        <span className="material-symbols-outlined text-2xl">add_photo_alternate</span>
                       </div>
-
-                      {/* Image URL Input */}
-                      <div>
-                        <label className="mb-1 block text-[11px] font-medium text-slate-500 dark:text-zinc-400">
-                          Or image web URL / data URI:
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={formData.image}
-                            onChange={(e) =>
-                              setFormData((prev) => ({ ...prev, image: e.target.value }))
-                            }
-                            placeholder="https://... or data:image/..."
-                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 transition focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-                          />
-                          {formData.image && (
-                            <button
-                              type="button"
-                              onClick={() => setFormData((prev) => ({ ...prev, image: '' }))}
-                              className="rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400"
-                              title="Clear custom image"
-                            >
-                              Clear
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                      <p className="mt-2 text-xs font-bold text-slate-800 dark:text-zinc-200">
+                        Click to upload icon image, or drag & drop here
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
+                        SVG, PNG, JPG, or WebP up to 3MB (Square 1:1 format recommended)
+                      </p>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          fileInputRef.current?.click()
+                        }}
+                        className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-3.5 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-[#e0531f]"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">file_upload</span>
+                        Browse Image File
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1204,8 +1148,8 @@ const CategoryManagementPage = () => {
                       className="h-6 w-6 object-contain"
                     />
                   ) : (
-                    <span className="material-symbols-outlined text-2xl">
-                      {categoryToDelete.icon || 'restaurant'}
+                    <span className="text-xs font-black tracking-wider uppercase text-[#FF6B35]">
+                      {categoryToDelete.name.slice(0, 2)}
                     </span>
                   )}
                 </span>

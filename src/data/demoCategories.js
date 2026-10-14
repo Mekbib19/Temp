@@ -56,6 +56,30 @@ export const PRESET_ICON_ASSETS = [
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF6B35"><path d="M12 6a2 2 0 0 0 2-2c0-.38-.1-.74-.29-1.05L12 1l-1.71 1.95A1.98 1.98 0 0 0 10 4a2 2 0 0 0 2 2zm6 3h-3V8h-6v1H6c-1.66 0-3 1.34-3 3v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-8c0-1.66-1.34-3-3-3zm1 11H5v-4.03c.6.22 1.28.36 2 .36 1.86 0 3.41-1.02 4.24-2.5.83 1.48 2.38 2.5 4.24 2.5.72 0 1.4-.14 2-.36V20z"/></svg>`,
     dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF6B35"><path d="M12 6a2 2 0 0 0 2-2c0-.38-.1-.74-.29-1.05L12 1l-1.71 1.95A1.98 1.98 0 0 0 10 4a2 2 0 0 0 2 2zm6 3h-3V8h-6v1H6c-1.66 0-3 1.34-3 3v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-8c0-1.66-1.34-3-3-3zm1 11H5v-4.03c.6.22 1.28.36 2 .36 1.86 0 3.41-1.02 4.24-2.5.83 1.48 2.38 2.5 4.24 2.5.72 0 1.4-.14 2-.36V20z"/></svg>',
   },
+  {
+    id: 'salad',
+    name: 'Fresh Greens & Bowls',
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF6B35"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.4z"/></svg>`,
+    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF6B35"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.4z"/></svg>',
+  },
+  {
+    id: 'drinks',
+    name: 'Craft Drinks & Mocktails',
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF6B35"><path d="M21 5V3H3v2l8 9v5H6v2h12v-2h-5v-5l8-9zM7.43 7 5.66 5h12.69l-1.78 2H7.43z"/></svg>`,
+    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF6B35"><path d="M21 5V3H3v2l8 9v5H6v2h12v-2h-5v-5l8-9zM7.43 7 5.66 5h12.69l-1.78 2H7.43z"/></svg>',
+  },
+  {
+    id: 'seafood',
+    name: 'Seafood & Grill',
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF6B35"><path d="M2 12c4 1 7-2 10-2s6 3 10 2c-4-1-7 2-10 2s-6-3-10-2zm19.5-3.5C18.5 4 14 3 12 3S5.5 4 2.5 8.5C4 10 7 11 12 11s8-1 9.5-2.5z"/></svg>`,
+    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF6B35"><path d="M2 12c4 1 7-2 10-2s6 3 10 2c-4-1-7 2-10 2s-6-3-10-2zm19.5-3.5C18.5 4 14 3 12 3S5.5 4 2.5 8.5C4 10 7 11 12 11s8-1 9.5-2.5z"/></svg>',
+  },
+  {
+    id: 'holiday',
+    name: 'Celebration & Festive Platter',
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF6B35"><path d="M12 2C8.69 2 6 4.69 6 8c0 1.28.4 2.47 1.09 3.45L12 22l4.91-10.55C17.6 10.47 18 9.28 18 8c0-3.31-2.69-6-6-6zm0 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>`,
+    dataUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF6B35"><path d="M12 2C8.69 2 6 4.69 6 8c0 1.28.4 2.47 1.09 3.45L12 22l4.91-10.55C17.6 10.47 18 9.28 18 8c0-3.31-2.69-6-6-6zm0 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>',
+  },
 ]
 
 // Helper function to trigger browser download of an SVG icon file
@@ -115,7 +139,7 @@ export const initialCategories = [
     slug: 'specialty-coffee-roastery',
     description: 'Single-origin pour-overs and cold brew infusions.',
     icon: 'coffee',
-    image: '', // Uses Material Symbol icon
+    image: PRESET_ICON_ASSETS[3].dataUrl,
     is_active: true,
     sort_order: 4,
     created_at: getDynamicOffset(180),
@@ -127,7 +151,7 @@ export const initialCategories = [
     slug: 'asian-wok-ramen-bowls',
     description: 'Slow-simmered rich tonkotsu broth, hand-pulled noodles, spicy kimchi, and crispy gyoza.',
     icon: 'ramen_dining',
-    image: '', // Uses Material Symbol icon
+    image: PRESET_ICON_ASSETS[4].dataUrl,
     is_active: true,
     sort_order: 5,
     created_at: getDynamicOffset(210),
@@ -139,7 +163,7 @@ export const initialCategories = [
     slug: 'pastries-cakes-bakery',
     description: 'Flaky French butter croissants, artisan sourdough loaves, cupcakes, and celebration cakes.',
     icon: 'cake',
-    image: '', // Uses Material Symbol icon
+    image: PRESET_ICON_ASSETS[5].dataUrl,
     is_active: true,
     sort_order: 6,
     created_at: getDynamicOffset(240),
@@ -151,7 +175,7 @@ export const initialCategories = [
     slug: 'fresh-greens-protein-bowls',
     description: 'Organic grain bowls, Mediterranean salads, grilled halloumi, and cold-pressed wellness juices.',
     icon: 'nutrition',
-    image: '',
+    image: PRESET_ICON_ASSETS[6].dataUrl,
     is_active: true,
     sort_order: 7,
     created_at: getDynamicOffset(300),
@@ -163,7 +187,7 @@ export const initialCategories = [
     slug: 'craft-mocktails-refreshers',
     description: 'Botanical fizzes and iced coolers.',
     icon: 'local_bar',
-    image: '',
+    image: PRESET_ICON_ASSETS[7].dataUrl,
     is_active: false,
     sort_order: 8,
     created_at: getDynamicOffset(400),
@@ -175,7 +199,7 @@ export const initialCategories = [
     slug: 'gourmet-seafood-grill',
     description: 'Wild-caught salmon fillets, garlic herb king prawns, and smoked ocean delicacies.',
     icon: 'set_meal',
-    image: '',
+    image: PRESET_ICON_ASSETS[8].dataUrl,
     is_active: true,
     sort_order: 9,
     created_at: getDynamicOffset(750),
@@ -187,7 +211,7 @@ export const initialCategories = [
     slug: 'seasonal-holiday-specials',
     description: 'Limited edition festive family feasts, seasonal roasts, and holiday dessert platters.',
     icon: 'celebration',
-    image: '',
+    image: PRESET_ICON_ASSETS[9].dataUrl,
     is_active: false,
     sort_order: 10,
     created_at: getDynamicOffset(5), // Created 5 days ago, never updated
@@ -203,21 +227,23 @@ export const loadStoredCategories = () => {
       const parsed = JSON.parse(raw)
       if (Array.isArray(parsed) && parsed.length > 0) {
         const mapInitial = new Map(initialCategories.map((c) => [c.id, c]))
-        const refreshed = parsed.map((cat) => {
+        const refreshed = parsed.map((cat, idx) => {
           const seed = mapInitial.get(cat.id)
+          const fallbackImage = seed?.image || PRESET_ICON_ASSETS[idx % PRESET_ICON_ASSETS.length]?.dataUrl
+          const image = cat.image || fallbackImage
           if (seed) {
             // Keep user updates, but sync seed descriptions for demonstrative short/large variety if default
             if (
               cat.id === 'd1e4f5a6-4444-4444-8888-000000000004' ||
               cat.id === 'b5c8d9e0-8888-4444-8888-000000000008'
             ) {
-              return { ...cat, description: seed.description }
+              return { ...cat, image, description: seed.description }
             }
             if (cat.updated_at?.startsWith('2024-')) {
-              return { ...cat, created_at: seed.created_at, updated_at: seed.updated_at }
+              return { ...cat, image, created_at: seed.created_at, updated_at: seed.updated_at }
             }
           }
-          return cat
+          return { ...cat, image }
         })
         localStorage.setItem(STORAGE_KEY, JSON.stringify(refreshed))
         return refreshed

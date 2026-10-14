@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import Pagination from '../components/Pagination'
@@ -11,35 +11,13 @@ import {
 } from '../data/demoCuisines'
 import { loadStoredCategories } from '../data/demoCategories'
 
-const AVAILABLE_ICONS = [
-  { name: 'dinner_dining', label: 'Dinner / Fine Dining' },
-  { name: 'lunch_dining', label: 'Burgers & Sandwiches' },
-  { name: 'restaurant', label: 'General Dining' },
-  { name: 'soup_kitchen', label: 'Wats, Soups & Stews' },
-  { name: 'local_pizza', label: 'Pizza & Flatbreads' },
-  { name: 'ramen_dining', label: 'Ramen & Noodles' },
-  { name: 'coffee', label: 'Coffee & Roastery' },
-  { name: 'local_cafe', label: 'Espresso & Drinks' },
-  { name: 'cake', label: 'Cakes & Patisserie' },
-  { name: 'bakery_dining', label: 'Bakery & Pastries' },
-  { name: 'set_meal', label: 'Seafood & Platters' },
-  { name: 'spa', label: 'Salads & Wellness' },
-  { name: 'nutrition', label: 'Greens & Grain' },
-  { name: 'skillet', label: 'Tibs & Stir-Fry' },
-  { name: 'egg_alt', label: 'Breakfast & Poultry' },
-  { name: 'room_service', label: 'Specialty Platters' },
-  { name: 'tapas', label: 'Appetizers & Fritters' },
-  { name: 'local_bar', label: 'Beverages & Mocktails' },
-  { name: 'fastfood', label: 'Street Food & Snacks' },
-  { name: 'icecream', label: 'Gelato & Desserts' },
-]
-
 const emptyCuisineForm = {
   id: '',
   category_id: '',
   name: '',
   description: '',
-  icon: 'dinner_dining',
+  icon: '',
+  image: '', // uploaded icon image as base64 or URL
   is_active: true,
   sort_order: 1,
 }
@@ -66,6 +44,52 @@ const CuisineTypeManagementPage = () => {
   const [editingCuisine, setEditingCuisine] = useState(null)
   const [formData, setFormData] = useState(emptyCuisineForm)
   const [formErrors, setFormErrors] = useState({})
+  const fileInputRef = useRef(null)
+  const [isDraggingFile, setIsDraggingFile] = useState(false)
+  const processUploadedFile = (file) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      showToast('Please upload a valid image file (SVG, PNG, JPG, or WebP).')
+      return
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      showToast('Icon file size should be under 3MB.')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result
+      if (dataUrl) {
+        setFormData((prev) => ({ ...prev, image: dataUrl }))
+        showToast(`Loaded "${file.name}" as cuisine icon.`)
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleIconFileUpload = (e) => {
+    const file = e.target.files?.[0]
+    processUploadedFile(file)
+    if (e.target) e.target.value = ''
+  }
+
+  const handleFileDrop = (e) => {
+    e.preventDefault()
+    setIsDraggingFile(false)
+    const file = e.dataTransfer.files?.[0]
+    processUploadedFile(file)
+  }
+
+  const handleFileDragOver = (e) => {
+    e.preventDefault()
+    setIsDraggingFile(true)
+  }
+
+  const handleFileDragLeave = (e) => {
+    e.preventDefault()
+    setIsDraggingFile(false)
+  }
+
 
   // Delete modal
   const [cuisineToDelete, setCuisineToDelete] = useState(null)
@@ -257,7 +281,8 @@ const CuisineTypeManagementPage = () => {
       ...emptyCuisineForm,
       category_id: defaultCatId,
       sort_order: nextOrder,
-      icon: 'dinner_dining',
+      icon: '',
+      image: '',
       is_active: true,
     })
     setFormErrors({})
@@ -272,7 +297,8 @@ const CuisineTypeManagementPage = () => {
       category_id: cuisine.category_id,
       name: cuisine.name,
       description: cuisine.description || '',
-      icon: cuisine.icon || 'dinner_dining',
+      icon: cuisine.icon || '',
+      image: cuisine.image || '',
       is_active: cuisine.is_active,
       sort_order: cuisine.sort_order || 1,
     })
@@ -329,7 +355,8 @@ const CuisineTypeManagementPage = () => {
                 name: formData.name.trim(),
                 slug: computedSlug || c.slug,
                 description: formData.description.trim(),
-                icon: formData.icon,
+                icon: formData.icon || '',
+                image: formData.image || '',
                 is_active: formData.is_active,
                 sort_order: parseInt(formData.sort_order, 10) || 1,
                 updated_at: now,
@@ -346,7 +373,8 @@ const CuisineTypeManagementPage = () => {
         name: formData.name.trim(),
         slug: computedSlug,
         description: formData.description.trim(),
-        icon: formData.icon,
+        icon: formData.icon || '',
+        image: formData.image || '',
         is_active: formData.is_active,
         sort_order: parseInt(formData.sort_order, 10) || 1,
         created_at: now,
@@ -654,10 +682,18 @@ const CuisineTypeManagementPage = () => {
               <span className="text-xs font-medium text-slate-700 dark:text-zinc-300">
                 Filtering by Category:
               </span>
-              <span className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 text-xs font-bold text-slate-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100">
-                <span className="material-symbols-outlined text-sm text-[#FF6B35]">
-                  {categoryMap.get(selectedCategoryFilter)?.icon || 'category'}
-                </span>
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-white px-2 py-0.5 text-xs font-bold text-slate-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100">
+                {categoryMap.get(selectedCategoryFilter)?.image ? (
+                  <img
+                    src={categoryMap.get(selectedCategoryFilter)?.image}
+                    alt=""
+                    className="h-3.5 w-3.5 object-contain"
+                  />
+                ) : (
+                  <span className="text-[10px] font-bold text-[#FF6B35]">
+                    {(categoryMap.get(selectedCategoryFilter)?.name || 'C').slice(0, 2).toUpperCase()}
+                  </span>
+                )}
                 {categoryMap.get(selectedCategoryFilter)?.name || 'Unknown Category'}
               </span>
               <span className="text-xs text-slate-500 dark:text-zinc-400">
@@ -760,10 +796,18 @@ const CuisineTypeManagementPage = () => {
                         {/* Icon + Name */}
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
-                            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] ring-1 ring-orange-200/50 dark:bg-orange-950/30 dark:ring-orange-800/30">
-                              <span className="material-symbols-outlined text-2xl">
-                                {cuisine.icon || 'dinner_dining'}
-                              </span>
+                            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] ring-1 ring-orange-200/50 dark:bg-orange-950/30 dark:ring-orange-800/30 overflow-hidden">
+                              {cuisine.image ? (
+                                <img
+                                  src={cuisine.image}
+                                  alt={cuisine.name}
+                                  className="h-6 w-6 object-contain"
+                                />
+                              ) : (
+                                <span className="text-xs font-black tracking-wider uppercase text-[#FF6B35]">
+                                  {cuisine.name.slice(0, 2)}
+                                </span>
+                              )}
                             </span>
                             <span className="font-['Plus_Jakarta_Sans'] font-bold text-slate-900 dark:text-zinc-100">
                               {cuisine.name}
@@ -780,9 +824,17 @@ const CuisineTypeManagementPage = () => {
                               className="inline-flex items-center gap-1.5 rounded-md bg-slate-100/90 px-2 py-1 text-xs font-semibold text-slate-700 transition hover:bg-orange-50 hover:text-[#FF6B35] dark:bg-zinc-800/80 dark:text-zinc-200 dark:hover:bg-orange-950/30 dark:hover:text-orange-400"
                               title="Click to filter by this category"
                             >
-                              <span className="material-symbols-outlined text-[15px] text-[#FF6B35]">
-                                {parentCategory.icon || 'category'}
-                              </span>
+                              {parentCategory.image ? (
+                                <img
+                                  src={parentCategory.image}
+                                  alt={parentCategory.name}
+                                  className="h-3.5 w-3.5 object-contain"
+                                />
+                              ) : (
+                                <span className="text-[10px] font-bold text-[#FF6B35]">
+                                  {parentCategory.name.slice(0, 2).toUpperCase()}
+                                </span>
+                              )}
                               <span>{parentCategory.name}</span>
                             </button>
                           ) : (
@@ -1071,29 +1123,107 @@ const CuisineTypeManagementPage = () => {
                   )}
                 </div>
 
-                {/* Icon Selection */}
+                {/* Upload Cuisine Icon as Image */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                    Icon <span className="text-slate-400">(Material Symbol)</span>
-                  </label>
-                  <div className="mt-1.5 flex items-center gap-3">
-                    <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] ring-1 ring-orange-200 dark:bg-orange-950/40 dark:ring-orange-800/40">
-                      <span className="material-symbols-outlined text-2xl">
-                        {formData.icon || 'dinner_dining'}
-                      </span>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                      Cuisine Icon Image
+                    </label>
+                    <span className="text-[11px] font-medium text-slate-400 dark:text-zinc-500">
+                      Upload custom image (SVG, PNG, JPG, WebP)
                     </span>
-                    <select
-                      value={formData.icon}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, icon: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-800 transition focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                    >
-                      {AVAILABLE_ICONS.map((ico) => (
-                        <option key={ico.name} value={ico.name}>
-                          {ico.name} — {ico.label}
-                        </option>
-                      ))}
-                    </select>
                   </div>
+
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*,.svg"
+                    onChange={handleIconFileUpload}
+                    className="hidden"
+                  />
+
+                  {formData.image ? (
+                    /* Image preview & action controls */
+                    <div className="mt-2 flex flex-col gap-3 rounded-2xl border border-orange-200/80 bg-orange-50/40 p-4 dark:border-zinc-700 dark:bg-zinc-800/40 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-3.5">
+                        <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-orange-200 bg-white p-2 shadow-xs dark:border-zinc-700 dark:bg-zinc-900">
+                          <img
+                            src={formData.image}
+                            alt="Cuisine Icon"
+                            className="h-full w-full object-contain"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-950/40 dark:text-emerald-400">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                              Custom Icon Loaded
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs font-semibold text-slate-800 dark:text-zinc-200">
+                            {formData.name ? `${formData.name} Icon` : 'Uploaded Icon Image'}
+                          </p>
+                          <p className="text-[10px] text-slate-400 dark:text-zinc-500">
+                            Square icon will display across merchant cards, menus, and table records.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">upload</span>
+                          Change Image
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData((prev) => ({ ...prev, image: '' }))}
+                          className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-100 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-400"
+                          title="Remove custom icon image"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">delete</span>
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Dropzone to upload image */
+                    <div
+                      onDragOver={handleFileDragOver}
+                      onDragLeave={handleFileDragLeave}
+                      onDrop={handleFileDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`mt-2 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-5 text-center transition ${
+                        isDraggingFile
+                          ? 'border-[#FF6B35] bg-orange-50/60 dark:bg-orange-950/20'
+                          : 'border-slate-200 bg-slate-50/60 hover:border-[#FF6B35]/70 hover:bg-orange-50/20 dark:border-zinc-700 dark:bg-zinc-800/40 dark:hover:border-zinc-600'
+                      }`}
+                    >
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-100/80 text-[#FF6B35] dark:bg-orange-950/60">
+                        <span className="material-symbols-outlined text-2xl">add_photo_alternate</span>
+                      </div>
+                      <p className="mt-2 text-xs font-bold text-slate-800 dark:text-zinc-200">
+                        Click to upload icon image, or drag & drop here
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
+                        SVG, PNG, JPG, or WebP up to 3MB (Square 1:1 format recommended)
+                      </p>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          fileInputRef.current?.click()
+                        }}
+                        className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-3.5 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-[#e0531f]"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">file_upload</span>
+                        Browse Image File
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Sort Order & Status */}
