@@ -12,18 +12,17 @@ const RestaurantManagementPage = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
-  const [sortBy, setSortBy] = useState('sort_order_asc')
+  const [sortBy, setSortBy] = useState('name_asc')
 
   // Pagination states matching Category & Cuisine pages
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
 
-  // Drag-and-drop & inline reordering
-  const [draggedBrandId, setDraggedBrandId] = useState(null)
-  const [dragOverBrandId, setDragOverBrandId] = useState(null)
-
   // Expandable description IDs
   const [expandedDescIds, setExpandedDescIds] = useState(() => new Set())
+
+  // View Details modal state
+  const [selectedBrandForView, setSelectedBrandForView] = useState(null)
 
   // Delete modal state
   const [brandToDelete, setBrandToDelete] = useState(null)
@@ -64,68 +63,6 @@ const RestaurantManagementPage = () => {
       saveStoredMerchants(next)
       return next
     })
-  }
-
-  // Handle reordering up/down
-  const handleMoveOrder = (brandId, direction) => {
-    updateBrandsState((prev) => {
-      const sorted = [...prev].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-      const currentIndex = sorted.findIndex((b) => b.id === brandId)
-      if (currentIndex === -1) return prev
-      const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
-      if (targetIndex < 0 || targetIndex >= sorted.length) return prev
-
-      const item = sorted[currentIndex]
-      sorted.splice(currentIndex, 1)
-      sorted.splice(targetIndex, 0, item)
-
-      return sorted.map((b, idx) => ({
-        ...b,
-        sort_order: idx + 1,
-        updated_at: b.id === brandId ? new Date().toISOString() : b.updated_at,
-      }))
-    })
-    showToast('Merchant sequence order updated.')
-  }
-
-  // Drag-and-drop
-  const handleDragStart = (e, brandId) => {
-    e.dataTransfer.setData('text/plain', brandId)
-    e.dataTransfer.effectAllowed = 'move'
-    setDraggedBrandId(brandId)
-  }
-
-  const handleDragOver = (e, brandId) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-    if (dragOverBrandId !== brandId) {
-      setDragOverBrandId(brandId)
-    }
-  }
-
-  const handleDrop = (e, targetBrandId) => {
-    e.preventDefault()
-    const sourceBrandId = e.dataTransfer.getData('text/plain') || draggedBrandId
-    setDraggedBrandId(null)
-    setDragOverBrandId(null)
-    if (!sourceBrandId || sourceBrandId === targetBrandId) return
-
-    updateBrandsState((prev) => {
-      const sorted = [...prev].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-      const sourceIndex = sorted.findIndex((b) => b.id === sourceBrandId)
-      const targetIndex = sorted.findIndex((b) => b.id === targetBrandId)
-      if (sourceIndex === -1 || targetIndex === -1) return prev
-
-      const [removed] = sorted.splice(sourceIndex, 1)
-      sorted.splice(targetIndex, 0, removed)
-
-      return sorted.map((b, idx) => ({
-        ...b,
-        sort_order: idx + 1,
-        updated_at: b.id === sourceBrandId ? new Date().toISOString() : b.updated_at,
-      }))
-    })
-    showToast('Merchant reordered successfully.')
   }
 
   // Toggle active status
@@ -177,20 +114,18 @@ const RestaurantManagementPage = () => {
       })
       .sort((a, b) => {
         switch (sortBy) {
-          case 'sort_order_asc':
-            return (a.sort_order || 0) - (b.sort_order || 0)
-          case 'sort_order_desc':
-            return (b.sort_order || 0) - (a.sort_order || 0)
           case 'name_asc':
             return a.name.localeCompare(b.name)
           case 'name_desc':
             return b.name.localeCompare(a.name)
           case 'locations_desc':
             return b.locations - a.locations
+          case 'locations_asc':
+            return a.locations - b.locations
           case 'updated_desc':
             return new Date(b.updated_at || 0) - new Date(a.updated_at || 0)
           default:
-            return (a.sort_order || 0) - (b.sort_order || 0)
+            return a.name.localeCompare(b.name)
         }
       })
   }, [brands, searchQuery, statusFilter, typeFilter, sortBy])
@@ -423,11 +358,10 @@ const RestaurantManagementPage = () => {
               onChange={(e) => setSortBy(e.target.value)}
               className="cursor-pointer border-none bg-transparent p-0 text-sm font-semibold text-slate-900 focus:ring-0 dark:text-zinc-100"
             >
-              <option value="sort_order_asc">Order: Low → High</option>
-              <option value="sort_order_desc">Order: High → Low</option>
               <option value="name_asc">Name: A → Z</option>
               <option value="name_desc">Name: Z → A</option>
               <option value="locations_desc">Locations: Most</option>
+              <option value="locations_asc">Locations: Fewest</option>
               <option value="updated_desc">Recently Updated</option>
             </select>
           </div>
@@ -456,9 +390,6 @@ const RestaurantManagementPage = () => {
                 <thead className="border-b border-slate-200 bg-slate-50/90 font-bold uppercase tracking-wider text-slate-700 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-200">
                   <tr>
                     <th scope="col" className="px-5 py-3.5">
-                      Order
-                    </th>
-                    <th scope="col" className="px-5 py-3.5">
                       Merchant
                     </th>
                     <th scope="col" className="px-5 py-3.5">
@@ -482,71 +413,38 @@ const RestaurantManagementPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                  {paginatedBrands.map((brand, rowIdx) => {
+                  {paginatedBrands.map((brand) => {
                     const isExpanded = expandedDescIds.has(brand.id)
-                    const isDragging = draggedBrandId === brand.id
-                    const isOver = dragOverBrandId === brand.id
 
                     return (
                       <tr
                         key={brand.id || brand.name}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, brand.id)}
-                        onDragOver={(e) => handleDragOver(e, brand.id)}
-                        onDrop={(e) => handleDrop(e, brand.id)}
-                        className={`group transition-all ${
-                          isDragging ? 'opacity-40 bg-orange-50/50 dark:bg-orange-950/20' : ''
-                        } ${
-                          isOver ? 'ring-2 ring-[#FF6B35] ring-inset bg-orange-50/30' : 'hover:bg-slate-50/70 dark:hover:bg-zinc-800/40'
-                        }`}
+                        className="group transition-all hover:bg-slate-50/70 dark:hover:bg-zinc-800/40"
                       >
-                        {/* Dynamic Sort Order & Grab Handle */}
-                        <td className="whitespace-nowrap px-4 py-3.5 font-mono font-medium text-slate-700 dark:text-zinc-300">
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              className="cursor-grab active:cursor-grabbing text-slate-400 transition hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-200"
-                              title="Click and drag to reorder merchant sequence"
-                            >
-                              <span className="material-symbols-outlined text-[18px]">drag_indicator</span>
-                            </span>
-                            <span className="inline-flex h-6 min-w-7 items-center justify-center rounded-md bg-slate-100 px-1.5 text-[11px] font-bold text-slate-800 dark:bg-zinc-800 dark:text-zinc-200">
-                              #{brand.sort_order ?? rowIdx + 1}
-                            </span>
-                            <div className="flex flex-col opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                type="button"
-                                onClick={() => handleMoveOrder(brand.id, 'up')}
-                                className="h-3 w-4 flex items-center justify-center text-slate-400 hover:text-[#FF6B35] dark:text-zinc-500 dark:hover:text-orange-400"
-                                title="Move up"
-                              >
-                                <span className="material-symbols-outlined text-[12px]">keyboard_arrow_up</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleMoveOrder(brand.id, 'down')}
-                                className="h-3 w-4 flex items-center justify-center text-slate-400 hover:text-[#FF6B35] dark:text-zinc-500 dark:hover:text-orange-400"
-                                title="Move down"
-                              >
-                                <span className="material-symbols-outlined text-[12px]">keyboard_arrow_down</span>
-                              </button>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Logo + Name: Exactly same 40x40 badge size */}
+                        {/* Logo + Name */}
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-slate-200/60 bg-slate-100 shadow-xs dark:border-zinc-800">
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/restaurants/${brand.id}`)}
+                              className="h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-slate-200/60 bg-slate-100 shadow-xs transition-transform duration-200 hover:scale-105 hover:ring-2 hover:ring-[#FF6B35]/40 dark:border-zinc-800"
+                              title="Click to view full merchant information"
+                            >
                               <img
                                 alt={`${brand.name} logo`}
-                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                className="h-full w-full object-cover"
                                 src={brand.logo}
                               />
-                            </div>
+                            </button>
                             <div>
-                              <p className="font-['Plus_Jakarta_Sans'] font-bold text-slate-900 dark:text-zinc-100">
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/restaurants/${brand.id}`)}
+                                className="text-left font-['Plus_Jakarta_Sans'] font-bold text-slate-900 transition hover:text-[#FF6B35] dark:text-zinc-100 dark:hover:text-orange-400"
+                                title="Click to view full merchant information"
+                              >
                                 {brand.name}
-                              </p>
+                              </button>
                               <p className="text-[11px] text-slate-500 dark:text-zinc-400">
                                 {brand.type || 'Merchant Partner'}
                               </p>
@@ -693,9 +591,19 @@ const RestaurantManagementPage = () => {
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               type="button"
+                              onClick={() => navigate(`/restaurants/${brand.id}`)}
+                              className="flex h-9 w-9 min-h-[32px] min-w-[32px] items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                              title="View Full Merchant Information"
+                              aria-label={`View full information for ${brand.name}`}
+                            >
+                              <span className="material-symbols-outlined text-[19px]">visibility</span>
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => navigate(`/restaurants/${brand.id}/edit`)}
                               className="flex h-9 w-9 min-h-[32px] min-w-[32px] items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                               title="Edit Merchant details"
+                              aria-label={`Edit ${brand.name}`}
                             >
                               <span className="material-symbols-outlined text-[19px]">edit</span>
                             </button>
@@ -704,6 +612,7 @@ const RestaurantManagementPage = () => {
                               onClick={() => setBrandToDelete(brand)}
                               className="flex h-9 w-9 min-h-[32px] min-w-[32px] items-center justify-center rounded-lg text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-950/40"
                               title="Delete Merchant"
+                              aria-label={`Delete ${brand.name}`}
                             >
                               <span className="material-symbols-outlined text-[19px]">delete</span>
                             </button>
@@ -820,6 +729,278 @@ const RestaurantManagementPage = () => {
                   className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-rose-700"
                 >
                   Confirm Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* View Merchant Details Modal */}
+        {selectedBrandForView && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="view-merchant-title"
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setSelectedBrandForView(null)
+            }}
+          >
+            <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl transition-all dark:border-zinc-800 dark:bg-zinc-900 md:p-8">
+              {/* Header */}
+              <div className="flex items-start justify-between border-b border-slate-100 pb-5 dark:border-zinc-800">
+                <div className="flex items-center gap-4">
+                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-100 shadow-sm dark:border-zinc-700">
+                    <img
+                      src={selectedBrandForView.logo}
+                      alt={selectedBrandForView.name}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2
+                        id="view-merchant-title"
+                        className="font-['Plus_Jakarta_Sans'] text-xl font-bold text-slate-900 dark:text-zinc-50"
+                      >
+                        {selectedBrandForView.name}
+                      </h2>
+                      {/* Status Badge */}
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                          (selectedBrandForView.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
+                            ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-950/40 dark:text-emerald-400'
+                            : (selectedBrandForView.status || '').toUpperCase() === 'PENDING'
+                            ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20 dark:bg-amber-950/40 dark:text-amber-400'
+                            : (selectedBrandForView.status || '').toUpperCase() === 'BLOCKED'
+                            ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-600/20 dark:bg-rose-950/40 dark:text-rose-400'
+                            : 'bg-slate-100 text-slate-600 ring-1 ring-slate-400/20 dark:bg-zinc-800 dark:text-zinc-400'
+                        }`}
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                        {(selectedBrandForView.status || 'ACTIVE').toUpperCase()}
+                      </span>
+                    </div>
+                    <p className="mt-1 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500 dark:text-zinc-400">
+                      <span className="inline-flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[15px] text-[#FF6B35]">storefront</span>
+                        {selectedBrandForView.type || 'Merchant Partner'}
+                      </span>
+                      {selectedBrandForView.category_name && (
+                        <>
+                          <span>•</span>
+                          <span className="inline-flex items-center gap-1 text-slate-700 dark:text-zinc-300">
+                            <span className="material-symbols-outlined text-[14px] text-[#FF6B35]">category</span>
+                            {selectedBrandForView.category_name}
+                          </span>
+                        </>
+                      )}
+                      {selectedBrandForView.cuisine_name && (
+                        <>
+                          <span>•</span>
+                          <span className="inline-flex items-center gap-1 text-slate-700 dark:text-zinc-300">
+                            <span className="material-symbols-outlined text-[14px] text-amber-500">restaurant</span>
+                            {selectedBrandForView.cuisine_name}
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedBrandForView(null)}
+                  className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                  aria-label="Close"
+                >
+                  <span className="material-symbols-outlined text-xl">close</span>
+                </button>
+              </div>
+
+              {/* Content Details */}
+              <div className="mt-6 space-y-6">
+                {/* Branch & Coordinates Card */}
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4.5 dark:border-zinc-800 dark:bg-zinc-800/40">
+                  <div className="flex items-center justify-between pb-3">
+                    <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
+                      <span className="material-symbols-outlined text-[18px] text-[#FF6B35]">pin_drop</span>
+                      Branch & Coordinates
+                    </h4>
+                    <div className="flex items-center gap-1.5">
+                      {selectedBrandForView.is_main_branch && (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 ring-1 ring-blue-600/20 dark:bg-blue-950/40 dark:text-blue-400">
+                          Main Branch
+                        </span>
+                      )}
+                      {selectedBrandForView.is_featured && (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-600/20 dark:bg-amber-950/40 dark:text-amber-400">
+                          ★ Featured
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <p className="text-[11px] font-semibold text-slate-400 dark:text-zinc-500">Branch Name</p>
+                      <p className="mt-0.5 text-xs font-bold text-slate-800 dark:text-zinc-200">
+                        {selectedBrandForView.branch_name || `${selectedBrandForView.name} Main Branch`}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-slate-400 dark:text-zinc-500">Physical Address</p>
+                      <p className="mt-0.5 text-xs font-medium text-slate-700 dark:text-zinc-300">
+                        {selectedBrandForView.address || 'Central Commercial Boulevard'}
+                      </p>
+                    </div>
+                    <div className="sm:col-span-2 rounded-xl border border-slate-200/80 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900/80">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-sm text-[#FF6B35]">explore</span>
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                            GPS Coordinates:
+                          </span>
+                          <span className="font-mono text-xs font-bold text-slate-900 dark:text-zinc-100">
+                            {Number(selectedBrandForView.latitude || 9.0016).toFixed(6)},{' '}
+                            {Number(selectedBrandForView.longitude || 38.7842).toFixed(6)}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const coords = `${selectedBrandForView.latitude || 9.0016}, ${selectedBrandForView.longitude || 38.7842}`
+                            navigator.clipboard?.writeText(coords)
+                            showToast(`Coordinates copied: ${coords}`)
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                        >
+                          <span className="material-symbols-outlined text-[13px]">content_copy</span>
+                          Copy Coordinates
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Operating Hours & Fulfillment Card */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 dark:border-zinc-800 dark:bg-zinc-800/40">
+                    <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      <span className="material-symbols-outlined text-sm text-slate-500">schedule</span>
+                      Operating Hours
+                    </p>
+                    <p className="mt-1.5 text-xs font-bold text-slate-800 dark:text-zinc-200">
+                      {selectedBrandForView.opening_hours || '08:00 AM'} - {selectedBrandForView.closing_hours || '10:00 PM'}
+                    </p>
+                    <div className="mt-2 flex items-center gap-1.5">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                          selectedBrandForView.is_open !== false
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                            : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                        }`}
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                        {selectedBrandForView.is_open !== false ? 'Open Now' : 'Closed'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 dark:border-zinc-800 dark:bg-zinc-800/40">
+                    <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      <span className="material-symbols-outlined text-sm text-slate-500">moped</span>
+                      Fulfillment
+                    </p>
+                    <p className="mt-1.5 text-xs font-bold text-slate-800 dark:text-zinc-200">
+                      ETA: {selectedBrandForView.eta_min || 20} - {selectedBrandForView.eta_max || 40} mins
+                    </p>
+                    <div className="mt-2 flex items-center gap-1.5">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                          selectedBrandForView.accepts_orders !== false
+                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                        }`}
+                      >
+                        {selectedBrandForView.accepts_orders !== false ? 'Accepting Orders' : 'Orders Paused'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 dark:border-zinc-800 dark:bg-zinc-800/40">
+                    <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      <span className="material-symbols-outlined text-sm text-amber-500">star</span>
+                      Ratings & Analytics
+                    </p>
+                    <div className="mt-1.5 flex items-baseline gap-1.5">
+                      <span className="text-base font-extrabold text-slate-900 dark:text-zinc-100">
+                        {Number(selectedBrandForView.average_rating || 4.8).toFixed(1)}
+                      </span>
+                      <span className="text-xs text-amber-500">★★★★★</span>
+                    </div>
+                    <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+                      {selectedBrandForView.total_reviews || 12} customer reviews
+                    </p>
+                  </div>
+                </div>
+
+                {/* Description */}
+                {selectedBrandForView.description && (
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-800/30">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      About Merchant
+                    </p>
+                    <p className="mt-1.5 text-xs leading-relaxed text-slate-700 dark:text-zinc-300">
+                      {selectedBrandForView.description}
+                    </p>
+                  </div>
+                )}
+
+                {/* Contact & Identifiers */}
+                <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
+                  <div className="rounded-2xl border border-slate-100 p-3.5 dark:border-zinc-800">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact</p>
+                    <p className="mt-1 text-slate-700 dark:text-zinc-300">
+                      <span className="font-semibold">Phone:</span> {selectedBrandForView.phone || 'N/A'}
+                    </p>
+                    <p className="text-slate-700 dark:text-zinc-300">
+                      <span className="font-semibold">Email:</span> {selectedBrandForView.email || 'N/A'}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-100 p-3.5 dark:border-zinc-800 font-mono text-[11px]">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-sans">System ID</p>
+                    <p className="mt-1 truncate text-slate-600 dark:text-zinc-400" title={selectedBrandForView.id}>
+                      ID: {selectedBrandForView.id}
+                    </p>
+                    <p className="truncate text-slate-500 dark:text-zinc-500 font-sans">
+                      Locations: {selectedBrandForView.locations || 1} branches
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="mt-8 flex items-center justify-between border-t border-slate-100 pt-5 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setSelectedBrandForView(null)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  Close
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const id = selectedBrandForView.id
+                    setSelectedBrandForView(null)
+                    navigate(`/restaurants/${id}/edit`)
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#e0531f]"
+                >
+                  <span className="material-symbols-outlined text-[16px]">edit</span>
+                  Edit Merchant Details
                 </button>
               </div>
             </div>

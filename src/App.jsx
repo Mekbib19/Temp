@@ -5,6 +5,7 @@ import CustomerFormPage from './pages/CustomerFormPage'
 import CustomerProfilePage from './pages/CustomerProfilePage'
 import RestaurantManagementPage from './pages/RestaurantManagementPage'
 import AddMerchantPage from './pages/AddMerchantPage'
+import MerchantDetailsPage from './pages/MerchantDetailsPage'
 import CategoryManagementPage from './pages/CategoryManagementPage'
 import CuisineTypeManagementPage from './pages/CuisineTypeManagementPage'
 import DeliveryManagementPage from './pages/DeliveryManagementPage'
@@ -30,9 +31,11 @@ function App() {
         <Route path="/restaurants" element={<RestaurantManagementPage />} />
         <Route path="/restaurants/new" element={<AddMerchantPage />} />
         <Route path="/restaurants/:merchantId/edit" element={<AddMerchantPage />} />
+        <Route path="/restaurants/:merchantId" element={<MerchantDetailsPage />} />
         <Route path="/merchants" element={<RestaurantManagementPage />} />
         <Route path="/merchants/new" element={<AddMerchantPage />} />
         <Route path="/merchants/:merchantId/edit" element={<AddMerchantPage />} />
+        <Route path="/merchants/:merchantId" element={<MerchantDetailsPage />} />
         <Route path="/categories" element={<CategoryManagementPage />} />
         <Route path="/cuisines" element={<CuisineTypeManagementPage />} />
         <Route path="/cuisine-types" element={<Navigate to="/cuisines" replace />} />
