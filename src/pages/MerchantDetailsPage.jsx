@@ -413,10 +413,10 @@ export default function MerchantDetailsPage() {
                   </span>
                 </div>
 
-                {/* Cuisine Tags Bar */}
+                {/* Specialization Tags Bar */}
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                    Cuisines:
+                    Specializations:
                   </span>
                   {assignedCuisines.length > 0 ? (
                     assignedCuisines.map((c) => (
@@ -428,7 +428,7 @@ export default function MerchantDetailsPage() {
                           <img src={c.image} alt={c.name} className="h-3.5 w-3.5 object-contain" />
                         ) : (
                           <span className="material-symbols-outlined text-[13px] text-amber-500">
-                            {c.icon || 'restaurant'}
+                            {c.icon || 'star'}
                           </span>
                         )}
                         {c.name}
@@ -436,11 +436,11 @@ export default function MerchantDetailsPage() {
                     ))
                   ) : merchant.cuisine_name ? (
                     <span className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
-                      <span className="material-symbols-outlined text-[13px] text-amber-500">restaurant</span>
+                      <span className="material-symbols-outlined text-[13px] text-amber-500">star</span>
                       {merchant.cuisine_name}
                     </span>
                   ) : (
-                    <span className="text-xs italic text-slate-400">No cuisines assigned</span>
+                    <span className="text-xs italic text-slate-400">No specializations assigned</span>
                   )}
                 </div>
               </div>
@@ -771,6 +771,60 @@ export default function MerchantDetailsPage() {
                     </p>
                   </div>
                 </div>
+
+                {/* Weekly Operating Days Schedule Cards */}
+                {currentBranch.schedule && (
+                  <div className="border-t border-slate-100 p-4 dark:border-zinc-800">
+                    <div className="mb-2.5 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-sm text-amber-500">schedule</span>
+                      <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">
+                        Weekly Operating Schedule
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-7">
+                      {[
+                        { key: 'monday', label: 'Mon' },
+                        { key: 'tuesday', label: 'Tue' },
+                        { key: 'wednesday', label: 'Wed' },
+                        { key: 'thursday', label: 'Thu' },
+                        { key: 'friday', label: 'Fri' },
+                        { key: 'saturday', label: 'Sat' },
+                        { key: 'sunday', label: 'Sun' },
+                      ].map((d) => {
+                        const dayData = currentBranch.schedule?.[d.key] || { is_open: true, open_time: '08:00', close_time: '22:00' }
+                        const isOpen = Boolean(dayData.is_open)
+                        return (
+                          <div
+                            key={d.key}
+                            className={`rounded-xl border p-2 text-center transition ${
+                              isOpen
+                                ? 'border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/40 dark:bg-emerald-950/20'
+                                : 'border-slate-200 bg-slate-100/50 opacity-60 dark:border-zinc-800 dark:bg-zinc-800/20'
+                            }`}
+                          >
+                            <span className="block text-[11px] font-bold text-slate-800 dark:text-zinc-200">
+                              {d.label}
+                            </span>
+                            <span
+                              className={`mt-0.5 inline-block rounded px-1.5 py-0.2 text-[9px] font-bold ${
+                                isOpen
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                                  : 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
+                              }`}
+                            >
+                              {isOpen ? 'Open' : 'Closed'}
+                            </span>
+                            {isOpen && (
+                              <p className="mt-1 font-mono text-[10px] text-slate-600 dark:text-zinc-400">
+                                {dayData.open_time} - {dayData.close_time}
+                              </p>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

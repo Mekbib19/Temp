@@ -344,6 +344,9 @@ const CuisineTypeManagementPage = () => {
     const now = new Date().toISOString()
     const computedSlug = slugify(formData.name.trim())
 
+    const parentCat = categoryMap.get(formData.category_id)
+    const catCode = parentCat?.code || 'FOOD'
+
     if (editingCuisine) {
       // Update
       updateCuisinesState((prev) =>
@@ -352,6 +355,7 @@ const CuisineTypeManagementPage = () => {
             ? {
                 ...c,
                 category_id: formData.category_id,
+                category_code: catCode,
                 name: formData.name.trim(),
                 slug: computedSlug || c.slug,
                 description: formData.description.trim(),
@@ -364,12 +368,13 @@ const CuisineTypeManagementPage = () => {
             : c
         )
       )
-      showToast(`Cuisine type "${formData.name.trim()}" updated successfully!`)
+      showToast(`Specialization "${formData.name.trim()}" updated successfully!`)
     } else {
       // Create new
       const newCuisine = {
         id: generateUUID(),
         category_id: formData.category_id,
+        category_code: catCode,
         name: formData.name.trim(),
         slug: computedSlug,
         description: formData.description.trim(),
@@ -381,7 +386,7 @@ const CuisineTypeManagementPage = () => {
         updated_at: now,
       }
       updateCuisinesState((prev) => [...prev, newCuisine])
-      showToast(`Cuisine type "${newCuisine.name}" created successfully!`)
+      showToast(`Specialization "${newCuisine.name}" created successfully!`)
     }
 
     setIsModalOpen(false)
@@ -439,7 +444,7 @@ const CuisineTypeManagementPage = () => {
     <MainLayout
       activeMenuKey="cuisineManagement"
       breadcrumbParent="Dashboard"
-      breadcrumbCurrent="Cuisines"
+      breadcrumbCurrent="Specializations (cuisine_types)"
     >
       <div className="space-y-6 pb-12">
         {/* Toast Notification */}
@@ -455,11 +460,16 @@ const CuisineTypeManagementPage = () => {
         {/* Header matching unified management style */}
         <section className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div>
-            <h1 className="font-['Plus_Jakarta_Sans'] mb-2 text-4xl font-extrabold tracking-tight text-slate-900 dark:text-zinc-100">
-              Cuisine Type Management
-            </h1>
-            <p className="text-sm font-medium text-slate-500 dark:text-zinc-400">
-              Define specialized culinary types and map them directly to menu categories
+            <div className="flex items-center gap-2">
+              <h1 className="font-['Plus_Jakarta_Sans'] text-4xl font-extrabold tracking-tight text-slate-900 dark:text-zinc-100">
+                Cuisine Types
+              </h1>
+              <span className="inline-flex items-center rounded-lg bg-orange-100 px-2.5 py-1 font-mono text-xs font-bold text-orange-800 dark:bg-orange-950/60 dark:text-orange-300">
+                cuisine_types
+              </span>
+            </div>
+            <p className="mt-2 text-sm font-medium text-slate-500 dark:text-zinc-400">
+              Specialization and cuisine types for merchants within each category (Food, Grocery, Pharmacy, Retail, Flowers & Gifts, Services, Package)
             </p>
           </div>
 
@@ -562,6 +572,78 @@ const CuisineTypeManagementPage = () => {
             </div>
           </div>
         </section>
+
+        {/* Category-Specific Specialization Tabs */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              Filter by Merchant Category
+            </span>
+            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">
+              {filteredCuisines.length} {filteredCuisines.length === 1 ? 'specialization' : 'specializations'} displayed
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+            <button
+              type="button"
+              onClick={() => handleFilterByCategory('all')}
+              className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
+                selectedCategoryFilter === 'all'
+                  ? 'bg-slate-900 text-white shadow-sm dark:bg-zinc-100 dark:text-zinc-900'
+                  : 'border border-slate-200/80 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800'
+              }`}
+            >
+              <span className="material-symbols-outlined text-base">apps</span>
+              <span>All Categories</span>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] ${
+                selectedCategoryFilter === 'all'
+                  ? 'bg-white/20 text-white dark:bg-zinc-900/20 dark:text-zinc-900'
+                  : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
+              }`}>
+                {cuisines.length}
+              </span>
+            </button>
+
+            {categories.map((cat) => {
+              const isSelected = selectedCategoryFilter === cat.id
+              const count = cuisines.filter((c) => c.category_id === cat.id).length
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => handleFilterByCategory(cat.id)}
+                  className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
+                    isSelected
+                      ? 'bg-[#FF6B35] text-white shadow-sm ring-2 ring-[#FF6B35]/40'
+                      : 'border border-slate-200/80 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-base">
+                    {cat.icon || 'category'}
+                  </span>
+                  <span>{cat.name}</span>
+                  {cat.code && (
+                    <span className={`rounded font-mono text-[9px] px-1 py-0.2 ${
+                      isSelected
+                        ? 'bg-white/20 text-white'
+                        : 'bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400'
+                    }`}>
+                      {cat.code}
+                    </span>
+                  )}
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] ${
+                    isSelected
+                      ? 'bg-white/20 text-white'
+                      : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
         {/* Filter & Controls Bar - Order Management Filter Style with Matching Size Filters Icon and Search Engine */}
         <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200/80 bg-slate-100/90 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
@@ -821,7 +903,7 @@ const CuisineTypeManagementPage = () => {
                             <button
                               type="button"
                               onClick={() => handleFilterByCategory(parentCategory.id)}
-                              className="inline-flex items-center gap-1.5 rounded-md bg-slate-100/90 px-2 py-1 text-xs font-semibold text-slate-700 transition hover:bg-orange-50 hover:text-[#FF6B35] dark:bg-zinc-800/80 dark:text-zinc-200 dark:hover:bg-orange-950/30 dark:hover:text-orange-400"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white px-2.5 py-1 text-xs font-semibold text-slate-800 shadow-2xs transition hover:border-[#FF6B35] hover:text-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:text-orange-400"
                               title="Click to filter by this category"
                             >
                               {parentCategory.image ? (
@@ -831,11 +913,16 @@ const CuisineTypeManagementPage = () => {
                                   className="h-3.5 w-3.5 object-contain"
                                 />
                               ) : (
-                                <span className="text-[10px] font-bold text-[#FF6B35]">
-                                  {parentCategory.name.slice(0, 2).toUpperCase()}
+                                <span className="material-symbols-outlined text-sm text-[#FF6B35]">
+                                  {parentCategory.icon || 'category'}
                                 </span>
                               )}
                               <span>{parentCategory.name}</span>
+                              {parentCategory.code && (
+                                <span className="rounded bg-orange-100 px-1 py-0.2 font-mono text-[9px] font-bold text-orange-800 dark:bg-orange-950/60 dark:text-orange-300">
+                                  {parentCategory.code}
+                                </span>
+                              )}
                             </button>
                           ) : (
                             <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 dark:text-zinc-500">
@@ -1052,10 +1139,10 @@ const CuisineTypeManagementPage = () => {
                   </span>
                   <div>
                     <h2 className="font-['Plus_Jakarta_Sans'] text-lg font-bold text-slate-900 dark:text-zinc-50">
-                      {editingCuisine ? 'Edit Cuisine Type' : 'Add New Cuisine Type'}
+                      {editingCuisine ? 'Edit Specialization Type' : 'Add New Specialization Type'}
                     </h2>
                     <p className="text-xs text-slate-500 dark:text-zinc-400">
-                      Map to category with ordering and visual iconography.
+                      Define a category-specific specialization type (<code className="font-mono text-[11px] text-[#FF6B35]">cuisine_types</code>) for merchants.
                     </p>
                   </div>
                 </div>
@@ -1071,9 +1158,12 @@ const CuisineTypeManagementPage = () => {
               <form onSubmit={handleSaveCuisine} className="mt-5 space-y-4">
                 {/* Category Selector */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                    Category <span className="text-rose-500">*</span>
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                      Merchant Category <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">Category-Specific Table</span>
+                  </div>
                   <select
                     value={formData.category_id}
                     onChange={(e) => {
@@ -1089,11 +1179,11 @@ const CuisineTypeManagementPage = () => {
                     }`}
                   >
                     <option value="" disabled>
-                      Select category...
+                      Select merchant category...
                     </option>
                     {categories.map((cat) => (
                       <option key={cat.id} value={cat.id}>
-                        {cat.name}
+                        {cat.code ? `[${cat.code}] ` : ''}{cat.name} ({cat.description})
                       </option>
                     ))}
                   </select>

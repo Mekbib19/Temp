@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import { MERCHANT_TYPES, addMerchant, generateUUID, getMerchantById, updateMerchant } from '../data/demoMerchants'
@@ -6,46 +6,22 @@ import { loadStoredCuisines, slugify } from '../data/demoCuisines'
 import { loadStoredCategories } from '../data/demoCategories'
 
 const MERCHANT_TYPE_CATEGORY_MAP = {
-  'Restaurant & Dining': [
-    'artisan-burgers-sliders',
-    'traditional-ethiopian-habesha',
-    'wood-fired-pizza-pasta',
-    'asian-wok-ramen-bowls',
-    'fresh-greens-protein-bowls',
-    'gourmet-seafood-grill',
-    'seasonal-holiday-specials',
-  ],
-  'Bakery & Cafe': [
-    'pastries-cakes-bakery',
-    'specialty-coffee-roastery',
-  ],
-  'Beverage & Spirits': [
-    'craft-mocktails-refreshers',
-    'specialty-coffee-roastery',
-  ],
-  'Specialty & Gourmet': [
-    'gourmet-seafood-grill',
-    'fresh-greens-protein-bowls',
-    'artisan-burgers-sliders',
-    'traditional-ethiopian-habesha',
-  ],
-  'Grocery & Supermarket': [
-    'fresh-greens-protein-bowls',
-    'traditional-ethiopian-habesha',
-    'pastries-cakes-bakery',
-  ],
-  'Pharmacy & Health': [
-    'fresh-greens-protein-bowls',
-  ],
-  'Retail & Convenience': [
-    'artisan-burgers-sliders',
-    'craft-mocktails-refreshers',
-    'pastries-cakes-bakery',
-  ],
-  'Pet Care & Supplies': [
-    'fresh-greens-protein-bowls',
-    'seasonal-holiday-specials',
-  ],
+  Food: ['food'],
+  Grocery: ['grocery'],
+  Pharmacy: ['pharmacy'],
+  Retail: ['retail'],
+  'Flowers & Gifts': ['flowers-gifts'],
+  Services: ['services'],
+  Package: ['package'],
+  // Legacy mappings for backwards compatibility
+  'Restaurant & Dining': ['food'],
+  'Bakery & Cafe': ['food'],
+  'Beverage & Spirits': ['food'],
+  'Specialty & Gourmet': ['food', 'grocery'],
+  'Grocery & Supermarket': ['grocery'],
+  'Pharmacy & Health': ['pharmacy'],
+  'Retail & Convenience': ['retail'],
+  'Pet Care & Supplies': ['retail'],
 }
 
 const getCategoriesForMerchantType = (merchantType = '', allCategories = []) => {
@@ -54,62 +30,41 @@ const getCategoriesForMerchantType = (merchantType = '', allCategories = []) => 
 
   if (MERCHANT_TYPE_CATEGORY_MAP[trimmed] && MERCHANT_TYPE_CATEGORY_MAP[trimmed].length > 0) {
     const slugs = MERCHANT_TYPE_CATEGORY_MAP[trimmed]
-    const matched = allCategories.filter((c) => slugs.includes(c.slug))
+    const matched = allCategories.filter((c) => slugs.includes(c.slug) || slugs.includes(c.code?.toLowerCase()))
     if (matched.length > 0) return matched
   }
 
   const lower = trimmed.toLowerCase()
-  const matchedSlugs = new Set()
+  const matched = allCategories.filter((c) => {
+    const cSlug = (c.slug || '').toLowerCase()
+    const cCode = (c.code || '').toLowerCase()
+    const cName = (c.name || '').toLowerCase()
 
-  if (lower.includes('burger') || lower.includes('fast food') || lower.includes('slider')) {
-    matchedSlugs.add('artisan-burgers-sliders')
-  }
-  if (lower.includes('ethiopian') || lower.includes('habesha') || lower.includes('traditional')) {
-    matchedSlugs.add('traditional-ethiopian-habesha')
-  }
-  if (lower.includes('pizza') || lower.includes('pasta') || lower.includes('italian')) {
-    matchedSlugs.add('wood-fired-pizza-pasta')
-  }
-  if (lower.includes('coffee') || lower.includes('cafe') || lower.includes('roaster') || lower.includes('espresso') || lower.includes('tea')) {
-    matchedSlugs.add('specialty-coffee-roastery')
-  }
-  if (lower.includes('asian') || lower.includes('ramen') || lower.includes('wok') || lower.includes('noodle') || lower.includes('sushi') || lower.includes('japanese') || lower.includes('chinese') || lower.includes('thai')) {
-    matchedSlugs.add('asian-wok-ramen-bowls')
-  }
-  if (lower.includes('bakery') || lower.includes('cake') || lower.includes('pastry') || lower.includes('bread') || lower.includes('dessert') || lower.includes('sweet') || lower.includes('bake')) {
-    matchedSlugs.add('pastries-cakes-bakery')
-  }
-  if (lower.includes('green') || lower.includes('salad') || lower.includes('vegan') || lower.includes('vegetarian') || lower.includes('healthy') || lower.includes('bowl') || lower.includes('diet')) {
-    matchedSlugs.add('fresh-greens-protein-bowls')
-  }
-  if (lower.includes('bar') || lower.includes('drink') || lower.includes('beverage') || lower.includes('spirit') || lower.includes('cocktail') || lower.includes('mocktail') || lower.includes('wine') || lower.includes('liquor') || lower.includes('beer')) {
-    matchedSlugs.add('craft-mocktails-refreshers')
-    matchedSlugs.add('specialty-coffee-roastery')
-  }
-  if (lower.includes('seafood') || lower.includes('fish') || lower.includes('grill') || lower.includes('steak') || lower.includes('bbq') || lower.includes('meat')) {
-    matchedSlugs.add('gourmet-seafood-grill')
-  }
-  if (lower.includes('holiday') || lower.includes('seasonal') || lower.includes('festive') || lower.includes('special')) {
-    matchedSlugs.add('seasonal-holiday-specials')
-  }
-  if (lower.includes('grocery') || lower.includes('supermarket') || lower.includes('market') || lower.includes('organic') || lower.includes('produce')) {
-    matchedSlugs.add('fresh-greens-protein-bowls')
-    matchedSlugs.add('traditional-ethiopian-habesha')
-    matchedSlugs.add('pastries-cakes-bakery')
-  }
-  if (lower.includes('pharmacy') || lower.includes('health') || lower.includes('wellness') || lower.includes('care') || lower.includes('med')) {
-    matchedSlugs.add('fresh-greens-protein-bowls')
-  }
-  if (lower.includes('restaurant') || lower.includes('dining') || lower.includes('kitchen') || lower.includes('bistro') || lower.includes('eatery')) {
-    const slugs = MERCHANT_TYPE_CATEGORY_MAP['Restaurant & Dining'] || []
-    slugs.forEach((s) => matchedSlugs.add(s))
-  }
+    if (lower.includes('food') || lower.includes('restaurant') || lower.includes('dining') || lower.includes('cafe') || lower.includes('burger') || lower.includes('habesha')) {
+      return cSlug === 'food' || cCode === 'food'
+    }
+    if (lower.includes('grocery') || lower.includes('supermarket') || lower.includes('produce') || lower.includes('market')) {
+      return cSlug === 'grocery' || cCode === 'grocery'
+    }
+    if (lower.includes('pharmacy') || lower.includes('health') || lower.includes('medicine') || lower.includes('drug')) {
+      return cSlug === 'pharmacy' || cCode === 'pharmacy'
+    }
+    if (lower.includes('retail') || lower.includes('electronic') || lower.includes('fashion') || lower.includes('goods')) {
+      return cSlug === 'retail' || cCode === 'retail'
+    }
+    if (lower.includes('flower') || lower.includes('gift') || lower.includes('plant') || lower.includes('florist')) {
+      return cSlug === 'flowers-gifts' || cCode === 'flowers_gifts'
+    }
+    if (lower.includes('service') || lower.includes('clean') || lower.includes('maintenance') || lower.includes('consult')) {
+      return cSlug === 'services' || cCode === 'services'
+    }
+    if (lower.includes('package') || lower.includes('courier') || lower.includes('parcel') || lower.includes('shipping') || lower.includes('deliver')) {
+      return cSlug === 'package' || cCode === 'package'
+    }
+    return cName.includes(lower) || cSlug.includes(lower)
+  })
 
-  if (matchedSlugs.size > 0) {
-    const list = allCategories.filter((c) => matchedSlugs.has(c.slug))
-    if (list.length > 0) return list
-  }
-
+  if (matched.length > 0) return matched
   return allCategories
 }
 
@@ -138,6 +93,26 @@ const DEFAULT_SAMPLE_LOGOS = [
 
 
 
+const DAYS_OF_WEEK = [
+  { key: 'monday', short: 'Mon', label: 'Monday' },
+  { key: 'tuesday', short: 'Tue', label: 'Tuesday' },
+  { key: 'wednesday', short: 'Wed', label: 'Wednesday' },
+  { key: 'thursday', short: 'Thu', label: 'Thursday' },
+  { key: 'friday', short: 'Fri', label: 'Friday' },
+  { key: 'saturday', short: 'Sat', label: 'Saturday' },
+  { key: 'sunday', short: 'Sun', label: 'Sunday' },
+]
+
+const createDefaultSchedule = () => ({
+  monday: { is_open: true, open_time: '08:00', close_time: '22:00' },
+  tuesday: { is_open: true, open_time: '08:00', close_time: '22:00' },
+  wednesday: { is_open: true, open_time: '08:00', close_time: '22:00' },
+  thursday: { is_open: true, open_time: '08:00', close_time: '22:00' },
+  friday: { is_open: true, open_time: '08:00', close_time: '23:00' },
+  saturday: { is_open: true, open_time: '09:00', close_time: '23:00' },
+  sunday: { is_open: true, open_time: '09:00', close_time: '21:00' },
+})
+
 const createDefaultBranch = (branchName = 'Main Branch', isMain = false) => ({
   id: generateUUID(),
   branch_name: branchName,
@@ -148,6 +123,7 @@ const createDefaultBranch = (branchName = 'Main Branch', isMain = false) => ({
   manager_name: '',
   email: '',
   phone_number: '',
+  schedule: createDefaultSchedule(),
 })
 
 const AddMerchantPage = () => {
@@ -216,7 +192,6 @@ const AddMerchantPage = () => {
           logo_url: existing.logo_url || existing.logo || DEFAULT_SAMPLE_LOGOS[0].url,
           cover_image_url: existing.cover_image_url || existing.banner_url || existing.cover || '',
           price_range: existing.price_range || '$$ (Moderate)',
-          dietary_flags: existing.dietary_flags || 'Halal, Vegetarian Options',
           is_featured: Boolean(existing.is_featured),
           eta_min: existing.eta_min || 20,
           eta_max: existing.eta_max || 40,
@@ -248,7 +223,6 @@ const AddMerchantPage = () => {
       logo_url: DEFAULT_SAMPLE_LOGOS[0].url,
       cover_image_url: '',
       price_range: '$$ (Moderate)',
-      dietary_flags: 'Halal, Vegetarian Options',
       is_featured: false,
       eta_min: 20,
       eta_max: 40,
@@ -281,6 +255,7 @@ const AddMerchantPage = () => {
           manager_name: b.manager_name || existing.manager_name || '',
           email: b.email || existing.email || '',
           phone_number: b.phone_number || b.manager_phone || b.phone || existing.phone || '',
+          schedule: b.schedule && typeof b.schedule === 'object' ? { ...createDefaultSchedule(), ...b.schedule } : createDefaultSchedule(),
         }))
       }
       if (existing) {
@@ -295,6 +270,7 @@ const AddMerchantPage = () => {
             manager_name: existing.manager_name || '',
             email: existing.email || '',
             phone_number: existing.phone_number || existing.phone || existing.manager_phone || '',
+            schedule: existing.schedule && typeof existing.schedule === 'object' ? { ...createDefaultSchedule(), ...existing.schedule } : createDefaultSchedule(),
           },
         ]
       }
@@ -305,6 +281,27 @@ const AddMerchantPage = () => {
   const [formErrors, setFormErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeGpsBranchIdx, setActiveGpsBranchIdx] = useState(null)
+  const [fullscreenGpsBranchIdx, setFullscreenGpsBranchIdx] = useState(null)
+  const [activeEditDay, setActiveEditDay] = useState(null)
+  const [toastNotice, setToastNotice] = useState(null)
+
+  const showNotification = (message, type = 'info') => {
+    setToastNotice({ message, type })
+    setTimeout(() => {
+      setToastNotice((curr) => (curr?.message === message ? null : curr))
+    }, 3500)
+  }
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (fullscreenGpsBranchIdx !== null) setFullscreenGpsBranchIdx(null)
+        if (activeEditDay !== null) setActiveEditDay(null)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [fullscreenGpsBranchIdx, activeEditDay])
 
   const categoriesForMerchantType = useMemo(() => {
     return getCategoriesForMerchantType(formData.type, availableCategories)
@@ -415,9 +412,11 @@ const AddMerchantPage = () => {
 
   const handleRemoveBranch = (index) => {
     if (branches.length === 1) {
-      alert('A merchant must have at least one branch.')
+      showNotification('A merchant must have at least one branch.', 'warning')
       return
     }
+    if (fullscreenGpsBranchIdx === index) setFullscreenGpsBranchIdx(null)
+    if (activeGpsBranchIdx === index) setActiveGpsBranchIdx(null)
     const updated = branches.filter((_, idx) => idx !== index)
     if (!updated.some((b) => b.is_main_branch) && updated.length > 0) {
       updated[0].is_main_branch = true
@@ -447,11 +446,99 @@ const AddMerchantPage = () => {
     setActiveGpsBranchIdx((prev) => (prev === branchIndex ? null : branchIndex))
   }
 
+  const handleBranchDayToggle = (branchIndex, dayKey) => {
+    setBranches((prev) =>
+      prev.map((branch, idx) => {
+        if (idx !== branchIndex) return branch
+        const currentSched = branch.schedule || createDefaultSchedule()
+        const dayInfo = currentSched[dayKey] || { is_open: true, open_time: '08:00', close_time: '22:00' }
+        return {
+          ...branch,
+          schedule: {
+            ...currentSched,
+            [dayKey]: {
+              ...dayInfo,
+              is_open: !dayInfo.is_open,
+            },
+          },
+        }
+      })
+    )
+  }
+
+  const handleBranchDayTimeChange = (branchIndex, dayKey, field, value) => {
+    setBranches((prev) =>
+      prev.map((branch, idx) => {
+        if (idx !== branchIndex) return branch
+        const currentSched = branch.schedule || createDefaultSchedule()
+        const dayInfo = currentSched[dayKey] || { is_open: true, open_time: '08:00', close_time: '22:00' }
+        return {
+          ...branch,
+          schedule: {
+            ...currentSched,
+            [dayKey]: {
+              ...dayInfo,
+              [field]: value,
+            },
+          },
+        }
+      })
+    )
+  }
+
+  const handleApplyTimeToAllOpenDays = (branchIndex, sourceDayKey) => {
+    setBranches((prev) =>
+      prev.map((branch, idx) => {
+        if (idx !== branchIndex) return branch
+        const currentSched = branch.schedule || createDefaultSchedule()
+        const sourceDay = currentSched[sourceDayKey] || { open_time: '08:00', close_time: '22:00' }
+        const nextSched = { ...currentSched }
+        DAYS_OF_WEEK.forEach((d) => {
+          if (nextSched[d.key]?.is_open) {
+            nextSched[d.key] = {
+              ...nextSched[d.key],
+              open_time: sourceDay.open_time,
+              close_time: sourceDay.close_time,
+            }
+          }
+        })
+        return { ...branch, schedule: nextSched }
+      })
+    )
+    showNotification(`Hours from ${sourceDayKey.charAt(0).toUpperCase() + sourceDayKey.slice(1)} copied to all open days!`, 'success')
+  }
+
+  const handleSetQuickPreset = (branchIndex, preset) => {
+    setBranches((prev) =>
+      prev.map((branch, idx) => {
+        if (idx !== branchIndex) return branch
+        const currentSched = branch.schedule || createDefaultSchedule()
+        const nextSched = {}
+        DAYS_OF_WEEK.forEach((d) => {
+          const prevDay = currentSched[d.key] || { open_time: '08:00', close_time: '22:00' }
+          let isOpen = true
+          if (preset === 'weekdays_only') {
+            isOpen = d.key !== 'saturday' && d.key !== 'sunday'
+          } else if (preset === 'weekends_only') {
+            isOpen = d.key === 'saturday' || d.key === 'sunday'
+          } else if (preset === 'everyday') {
+            isOpen = true
+          }
+          nextSched[d.key] = {
+            ...prevDay,
+            is_open: isOpen,
+          }
+        })
+        return { ...branch, schedule: nextSched }
+      })
+    )
+  }
+
   // Upload Handlers
   const handleLogoUpload = (e) => {
     const file = e.target.files?.[0]
     if (!file || !file.type.startsWith('image/')) {
-      alert('Please upload a valid image file.')
+      showNotification('Please upload a valid image file (PNG, JPG, WebP).', 'warning')
       return
     }
     const reader = new FileReader()
@@ -466,7 +553,7 @@ const AddMerchantPage = () => {
   const handleCoverUpload = (e) => {
     const file = e.target.files?.[0]
     if (!file || !file.type.startsWith('image/')) {
-      alert('Please upload a valid image file.')
+      showNotification('Please upload a valid image file (PNG, JPG, WebP).', 'warning')
       return
     }
     const reader = new FileReader()
@@ -535,7 +622,6 @@ const AddMerchantPage = () => {
       cover: formData.cover_image_url,
 
       price_range: formData.price_range,
-      dietary_flags: formData.dietary_flags,
       commission_rate: parseInt(formData.commission_rate, 10) || 15,
       eta_min: parseInt(formData.eta_min, 10) || 20,
       eta_max: parseInt(formData.eta_max, 10) || 40,
@@ -558,6 +644,9 @@ const AddMerchantPage = () => {
       phone_number: (formData.owner_phone || main.phone_number || '').trim(),
       phone: (formData.owner_phone || main.phone_number || '').trim(),
 
+      opening_hours: main.schedule?.monday?.open_time || '08:00 AM',
+      closing_hours: main.schedule?.monday?.close_time || '10:00 PM',
+
       branches: branches.map((b) => ({
         ...b,
         latitude: parseFloat(b.latitude) || 9.0016,
@@ -566,6 +655,7 @@ const AddMerchantPage = () => {
         email: (b.email || '').trim(),
         phone_number: (b.phone_number || '').trim(),
         phone: (b.phone_number || '').trim(),
+        schedule: b.schedule || createDefaultSchedule(),
       })),
     }
 
@@ -727,7 +817,7 @@ const AddMerchantPage = () => {
                 <div>
                   <div className="flex items-center justify-between">
                     <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                      Category <span className="text-rose-500">*</span>
+                      Merchant Category <span className="text-rose-500">*</span>
                     </label>
                     <span className="text-[10px] font-semibold text-[#FF6B35]">
                       {categoriesForMerchantType.length} {categoriesForMerchantType.length === 1 ? 'category' : 'categories'}
@@ -739,30 +829,17 @@ const AddMerchantPage = () => {
                     className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-800 transition focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                   >
                     <option value="all">
-                      All Categories for {formData.type || 'Merchant'} ({categoriesForMerchantType.length})
+                      All Categories ({availableCategories.length})
                     </option>
-                    {categoriesForMerchantType.map((cat) => {
+                    {availableCategories.map((cat) => {
                       const count = availableCuisines.filter((c) => c.category_id === cat.id).length
                       return (
                         <option key={cat.id} value={cat.id}>
-                          {cat.name} ({count} {count === 1 ? 'cuisine' : 'cuisines'})
+                          {cat.code ? `[${cat.code}] ` : ''}{cat.name} — {cat.description} ({count} {count === 1 ? 'specialization' : 'specializations'})
                         </option>
                       )
                     })}
                   </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                    Dietary & Specialty Flags
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.dietary_flags}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, dietary_flags: e.target.value }))}
-                    placeholder="e.g. Halal, Vegan Options, Organic"
-                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                  />
                 </div>
 
                 <div className="sm:col-span-2">
@@ -773,25 +850,29 @@ const AddMerchantPage = () => {
                     rows={2}
                     value={formData.description}
                     onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                    placeholder="Describe your culinary concept, specialties, and service standards..."
+                    placeholder="Describe your merchant concept, product line, specialties, and service standards..."
                     className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                   />
                 </div>
               </div>
 
-              {/* Cuisine Style Selector */}
+              {/* Specialization Types (cuisine_types) Selector */}
               <div className="mt-6 border-t border-slate-100 pt-5 dark:border-zinc-800">
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-base text-amber-500">restaurant</span>
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-200">
-                        Cuisine Types ({formData.cuisine_ids?.length || 0} selected) <span className="text-rose-500">*</span>
-                      </span>
+                      <span className="material-symbols-outlined text-base text-amber-500">dinner_dining</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-200">
+                          Specialization Types (<code className="font-mono text-[11px] text-[#FF6B35]">cuisine_types</code>) <span className="text-rose-500">*</span>
+                        </span>
+                        <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-800 dark:bg-orange-950/60 dark:text-orange-300">
+                          {formData.cuisine_ids?.length || 0} selected
+                        </span>
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2">
-                    
                       {formData.cuisine_ids?.length > 0 && (
                         <button
                           type="button"
@@ -804,14 +885,16 @@ const AddMerchantPage = () => {
                     </div>
                   </div>
 
-                  {/* Category Filter Pills for Current Merchant Type */}
-                
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                    Category-specific specializations allowing merchants to define their exact domain specializations (e.g., Food: Ethiopian, Italian; Grocery: Organic, Bulk; Pharmacy: Prescription, OTC; Retail: Electronics; Package: Standard, Express).
+                  </p>
+
                   <div className="relative">
                     <input
                       type="text"
                       value={cuisineSearch}
                       onChange={(e) => setCuisineSearch(e.target.value)}
-                      placeholder="Search cuisine types..."
+                      placeholder="Search specializations (e.g. Ethiopian, Italian, Organic, Prescription, Electronics, Cleaning...)"
                       className="w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                     />
                   </div>
@@ -819,7 +902,7 @@ const AddMerchantPage = () => {
                   {formData.cuisine_ids?.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-orange-100 bg-orange-50/50 p-2.5 dark:border-zinc-800 dark:bg-zinc-800/40">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400">
-                        Selected ({formData.cuisine_ids.length}):
+                        Selected Specializations ({formData.cuisine_ids.length}):
                       </span>
                       {formData.cuisine_ids.map((id) => {
                         const cObj = availableCuisines.find((c) => c.id === id)
@@ -834,7 +917,7 @@ const AddMerchantPage = () => {
                               type="button"
                               onClick={() => handleToggleCuisine(id)}
                               className="text-slate-400 transition hover:text-rose-500"
-                              title="Remove cuisine"
+                              title="Remove specialization"
                             >
                               ×
                             </button>
@@ -848,7 +931,7 @@ const AddMerchantPage = () => {
                     <p className="text-[11px] text-rose-500">{formErrors.cuisine_id}</p>
                   )}
 
-                  <div className="max-h-56 overflow-y-auto pr-1">
+                  <div className="max-h-64 overflow-y-auto pr-1">
                     {filteredCuisines.length > 0 ? (
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         {filteredCuisines.map((cuisine) => {
@@ -885,7 +968,7 @@ const AddMerchantPage = () => {
                               />
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                  {cuisine.image && (
+                                  {cuisine.image ? (
                                     <span className="flex h-4 w-4 shrink-0 items-center justify-center">
                                       <img
                                         src={cuisine.image}
@@ -893,13 +976,17 @@ const AddMerchantPage = () => {
                                         className="h-3.5 w-3.5 object-contain"
                                       />
                                     </span>
+                                  ) : (
+                                    <span className="material-symbols-outlined text-sm text-[#FF6B35]">
+                                      {cuisine.icon || 'star'}
+                                    </span>
                                   )}
                                   <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">
                                     {cuisine.name}
                                   </span>
                                   {parentCat && (
                                     <span className="inline-flex rounded bg-orange-100/70 px-1.5 py-0.2 text-[9px] font-semibold text-orange-700 dark:bg-orange-950/60 dark:text-orange-300">
-                                      {parentCat.name}
+                                      {parentCat.code || parentCat.name}
                                     </span>
                                   )}
                                 </div>
@@ -915,7 +1002,7 @@ const AddMerchantPage = () => {
                       </div>
                     ) : (
                       <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-xs text-slate-500 dark:border-zinc-700 dark:text-zinc-400">
-                        No cuisines found for category &ldquo;{selectedCategoryId === 'all' ? (formData.type || 'Merchant Type') : categoryMap.get(selectedCategoryId)?.name}&rdquo;.
+                        No specializations found for category &ldquo;{selectedCategoryId === 'all' ? (formData.type || 'Merchant Category') : categoryMap.get(selectedCategoryId)?.name}&rdquo;.
                       </div>
                     )}
                   </div>
@@ -1163,28 +1250,11 @@ const AddMerchantPage = () => {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {/* GPS Button: Toggles live map visible right on this page, does NOT forward to other page */}
-                        <button
-                          type="button"
-                          onClick={() => handleToggleGps(index)}
-                          className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-bold shadow-xs transition ${
-                            activeGpsBranchIdx === index
-                              ? 'bg-[#FF6B35] text-white ring-2 ring-orange-300 dark:ring-orange-800'
-                              : 'border border-orange-200 bg-orange-50/80 text-[#FF6B35] hover:bg-[#FF6B35] hover:text-white dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-400'
-                          }`}
-                          title="Show GPS Map on this page"
-                        >
-                          <span className="material-symbols-outlined text-[13px]">
-                            {activeGpsBranchIdx === index ? 'location_off' : 'directions'}
-                          </span>
-                          {activeGpsBranchIdx === index ? 'Hide GPS Map' : 'GPS'}
-                        </button>
-
                         {branches.length > 1 && (
                           <button
                             type="button"
                             onClick={() => handleRemoveBranch(index)}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400 transition"
                             title="Remove branch"
                           >
                             <span className="material-symbols-outlined text-sm">delete</span>
@@ -1193,151 +1263,425 @@ const AddMerchantPage = () => {
                       </div>
                     </div>
 
-                    <div className="mt-4 grid grid-cols-1 gap-3.5 sm:grid-cols-3">
-                      {/* Branch Name */}
-                      <div className="sm:col-span-2">
-                        <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
-                          Branch Name <span className="text-rose-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={branch.branch_name}
-                          onChange={(e) => handleBranchChange(index, 'branch_name', e.target.value)}
-                          placeholder="e.g. Bole Medhanialem Flagship"
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                        />
-                        {formErrors[`branch_${index}_name`] && (
-                          <p className="mt-1 text-[10px] text-rose-500">{formErrors[`branch_${index}_name`]}</p>
-                        )}
-                      </div>
-
-                      {/* Branch Manager Name */}
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
-                          Branch Manager Name
-                        </label>
-                        <input
-                          type="text"
-                          value={branch.manager_name || ''}
-                          onChange={(e) => handleBranchChange(index, 'manager_name', e.target.value)}
-                          placeholder="e.g. Dawit Haile"
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                        />
-                      </div>
-
-                      {/* email - Staff email (indexed) */}
-                      <div className="sm:col-span-2">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
-                            email - Staff email <span className="font-semibold text-emerald-600 dark:text-emerald-400">(indexed)</span>
-                          </label>
+                    {/* ======================================================== */}
+                    {/* SUB-CARD 1: Branch Location & GPS (Map below GPS button)  */}
+                    {/* ======================================================== */}
+                    <div className="mt-4 rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5 dark:border-zinc-800">
+                        <div className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-sm text-[#FF6B35]">location_on</span>
+                          <h4 className="text-xs font-bold text-slate-800 dark:text-zinc-200">
+                            Branch Location & Coordinates
+                          </h4>
                         </div>
-                        <input
-                          type="email"
-                          value={branch.email || ''}
-                          onChange={(e) => handleBranchChange(index, 'email', e.target.value)}
-                          placeholder="staff.manager@merchant.et"
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                        />
+
+                        {/* GPS Button: Positioned here with the map appearing directly below it */}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleGps(index)}
+                          className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold shadow-xs transition ${
+                            activeGpsBranchIdx === index
+                              ? 'bg-[#FF6B35] text-white ring-2 ring-orange-300 dark:ring-orange-800'
+                              : 'border border-orange-200 bg-orange-50 text-[#FF6B35] hover:bg-[#FF6B35] hover:text-white dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-400'
+                          }`}
+                          title="Toggle live GPS Map directly below"
+                        >
+                          <span className="material-symbols-outlined text-sm">
+                            {activeGpsBranchIdx === index ? 'location_off' : 'pin_drop'}
+                          </span>
+                          <span>{activeGpsBranchIdx === index ? 'Hide GPS Map' : 'GPS'}</span>
+                        </button>
                       </div>
 
-                      {/* phone_number - Contact number */}
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
-                          phone_number - Contact number
-                        </label>
-                        <input
-                          type="tel"
-                          value={branch.phone_number || ''}
-                          onChange={(e) => handleBranchChange(index, 'phone_number', e.target.value)}
-                          placeholder="+251 91 123 4567"
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                        />
-                      </div>
+                      {/* Map directly below the GPS button */}
+                      {activeGpsBranchIdx === index && (
+                        <div className="mt-3 overflow-hidden rounded-xl border border-orange-200 bg-orange-50/20 p-3 shadow-2xs dark:border-zinc-700 dark:bg-zinc-900">
+                          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="material-symbols-outlined text-sm text-[#FF6B35]">map</span>
+                              <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">
+                                Live GPS Pinpoint: {branch.branch_name || `Branch #${index + 1}`}
+                              </span>
+                              <span className="font-mono text-[10px] text-slate-500 dark:text-zinc-400">
+                                ({branch.latitude || 9.0016}, {branch.longitude || 38.7842})
+                              </span>
+                            </div>
 
-                      {/* Physical Address */}
-                      <div className="sm:col-span-3">
-                        <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
-                          Physical Address
-                        </label>
-                        <input
-                          type="text"
-                          value={branch.address}
-                          onChange={(e) => handleBranchChange(index, 'address', e.target.value)}
-                          placeholder="e.g. Bole Road, Near Medhanialem Mall, Addis Ababa"
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                        />
-                      </div>
+                            <div className="flex items-center gap-2">
+                              {/* Full Screen GPS Map Button (Takes whole page of Add New Merchant) */}
+                              <button
+                                type="button"
+                                onClick={() => setFullscreenGpsBranchIdx(index)}
+                                className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-2xs hover:border-[#FF6B35] hover:text-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 transition"
+                                title="Open full screen GPS map taking whole page"
+                              >
+                                <span className="material-symbols-outlined text-sm">open_in_full</span>
+                                <span>Full Screen</span>
+                              </button>
 
-                      {/* Latitude */}
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
-                          Latitude <span className="text-rose-500">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          step="any"
-                          value={branch.latitude}
-                          onChange={(e) => handleBranchChange(index, 'latitude', e.target.value)}
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                        />
-                        {formErrors[`branch_${index}_lat`] && (
-                          <p className="mt-1 text-[10px] text-rose-500">{formErrors[`branch_${index}_lat`]}</p>
-                        )}
-                      </div>
+                              <button
+                                type="button"
+                                onClick={() => setActiveGpsBranchIdx(null)}
+                                className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                                title="Close map"
+                              >
+                                <span className="material-symbols-outlined text-sm">close</span>
+                              </button>
+                            </div>
+                          </div>
 
-                      {/* Longitude */}
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
-                          Longitude <span className="text-rose-500">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          step="any"
-                          value={branch.longitude}
-                          onChange={(e) => handleBranchChange(index, 'longitude', e.target.value)}
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                        />
-                        {formErrors[`branch_${index}_lng`] && (
-                          <p className="mt-1 text-[10px] text-rose-500">{formErrors[`branch_${index}_lng`]}</p>
-                        )}
+                          <div className="h-60 w-full overflow-hidden rounded-lg bg-slate-100 dark:bg-zinc-800">
+                            <iframe
+                              title={`GPS map for branch ${index + 1}`}
+                              width="100%"
+                              height="100%"
+                              loading="lazy"
+                              src={`https://www.openstreetmap.org/export/embed.html?bbox=${(Number(branch.longitude) || 38.7842) - 0.008},${(Number(branch.latitude) || 9.0016) - 0.005},${(Number(branch.longitude) || 38.7842) + 0.008},${(Number(branch.latitude) || 9.0016) + 0.005}&layer=mapnik&marker=${Number(branch.latitude) || 9.0016},${Number(branch.longitude) || 38.7842}`}
+                              className="h-full w-full border-none"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Location & Coordinate Inputs */}
+                      <div className="mt-3.5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
+                            Branch Name <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={branch.branch_name}
+                            onChange={(e) => handleBranchChange(index, 'branch_name', e.target.value)}
+                            placeholder="e.g. Bole Medhanialem Flagship"
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                          />
+                          {formErrors[`branch_${index}_name`] && (
+                            <p className="mt-1 text-[10px] text-rose-500">{formErrors[`branch_${index}_name`]}</p>
+                          )}
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
+                            Physical Address
+                          </label>
+                          <input
+                            type="text"
+                            value={branch.address}
+                            onChange={(e) => handleBranchChange(index, 'address', e.target.value)}
+                            placeholder="e.g. Bole Road, Near Medhanialem Mall, Addis Ababa"
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
+                            Latitude <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            step="any"
+                            value={branch.latitude}
+                            onChange={(e) => handleBranchChange(index, 'latitude', e.target.value)}
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                          />
+                          {formErrors[`branch_${index}_lat`] && (
+                            <p className="mt-1 text-[10px] text-rose-500">{formErrors[`branch_${index}_lat`]}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
+                            Longitude <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            step="any"
+                            value={branch.longitude}
+                            onChange={(e) => handleBranchChange(index, 'longitude', e.target.value)}
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                          />
+                          {formErrors[`branch_${index}_lng`] && (
+                            <p className="mt-1 text-[10px] text-rose-500">{formErrors[`branch_${index}_lng`]}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Inline GPS Map: visible directly on this page */}
-                    {activeGpsBranchIdx === index && (
-                      <div className="mt-4 overflow-hidden rounded-xl border border-orange-200 bg-white p-3 shadow-xs dark:border-zinc-700 dark:bg-zinc-900">
-                        <div className="mb-2 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-sm text-[#FF6B35]">pin_drop</span>
-                            <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">
-                              Live GPS Map: {branch.branch_name || `Branch #${index + 1}`}
-                            </span>
-                            <span className="font-mono text-[11px] text-slate-500 dark:text-zinc-400">
-                              ({branch.latitude || 9.0016}, {branch.longitude || 38.7842})
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setActiveGpsBranchIdx(null)}
-                            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-                            title="Close map"
-                          >
-                            <span className="material-symbols-outlined text-sm">close</span>
-                          </button>
+                    {/* ======================================================== */}
+                    {/* SUB-CARD 2: Manager & Staff Personal Data                 */}
+                    {/* ======================================================== */}
+                    <div className="mt-4 rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                      <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5 dark:border-zinc-800">
+                        <span className="material-symbols-outlined text-sm text-indigo-500">badge</span>
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-800 dark:text-zinc-200">
+                            Manager & Staff Personal Data
+                          </h4>
+                          <p className="text-[10px] text-slate-500 dark:text-zinc-400">
+                            Staff contact credentials and personal details for this branch
+                          </p>
                         </div>
-                        <div className="h-56 w-full overflow-hidden rounded-lg bg-slate-100 dark:bg-zinc-800">
-                          <iframe
-                            title={`GPS map for branch ${index + 1}`}
-                            width="100%"
-                            height="100%"
-                            loading="lazy"
-                            src={`https://www.openstreetmap.org/export/embed.html?bbox=${(Number(branch.longitude) || 38.7842) - 0.008},${(Number(branch.latitude) || 9.0016) - 0.005},${(Number(branch.longitude) || 38.7842) + 0.008},${(Number(branch.latitude) || 9.0016) + 0.005}&layer=mapnik&marker=${Number(branch.latitude) || 9.0016},${Number(branch.longitude) || 38.7842}`}
-                            className="h-full w-full border-none"
+                      </div>
+
+                      <div className="mt-3.5 grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+                        {/* Branch Manager Name */}
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
+                            Branch Manager Name
+                          </label>
+                          <input
+                            type="text"
+                            value={branch.manager_name || ''}
+                            onChange={(e) => handleBranchChange(index, 'manager_name', e.target.value)}
+                            placeholder="e.g. Dawit Haile"
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                          />
+                        </div>
+
+                        {/* email - Staff email (indexed) */}
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
+                            email - Staff email <span className="font-semibold text-emerald-600 dark:text-emerald-400">(indexed)</span>
+                          </label>
+                          <input
+                            type="email"
+                            value={branch.email || ''}
+                            onChange={(e) => handleBranchChange(index, 'email', e.target.value)}
+                            placeholder="staff.manager@merchant.et"
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                          />
+                        </div>
+
+                        {/* phone_number - Contact number */}
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
+                            phone_number - Contact number
+                          </label>
+                          <input
+                            type="tel"
+                            value={branch.phone_number || ''}
+                            onChange={(e) => handleBranchChange(index, 'phone_number', e.target.value)}
+                            placeholder="+251 91 123 4567"
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                           />
                         </div>
                       </div>
-                    )}
+                    </div>
+
+                    {/* ======================================================== */}
+                    {/* SUB-CARD 3: Operating Days & Hours (Small & Easy UX)      */}
+                    {/* ======================================================== */}
+                    <div className="relative mt-4 overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                      {/* Tactical subtle grid pattern */}
+                      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(#94a3b8_1px,transparent_1px)] [background-size:16px_16px] opacity-15 dark:opacity-10" />
+
+                      {/* Top Control Bar */}
+                      <div className="relative z-10 flex flex-wrap items-center justify-between gap-2.5 border-b border-slate-100 pb-2.5 dark:border-zinc-800">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 text-amber-500 shadow-2xs dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-400">
+                            <span className="material-symbols-outlined text-base">calendar_month</span>
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold tracking-tight text-slate-800 dark:text-zinc-200">
+                              Operating Days & Working Hours
+                            </h4>
+                            <p className="text-[10px] text-slate-500 dark:text-zinc-400">
+                              Click any card to expand and adjust hours
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Quick Presets Bar */}
+                        <div className="flex items-center gap-1.5">
+                          {[
+                            { label: 'All 7 Days', preset: 'everyday' },
+                            { label: 'Mon – Fri', preset: 'weekdays_only' },
+                            { label: 'Weekends', preset: 'weekends_only' },
+                          ].map((btn) => (
+                            <button
+                              key={btn.preset}
+                              type="button"
+                              onClick={() => {
+                                setActiveEditDay(null)
+                                handleSetQuickPreset(index, btn.preset)
+                              }}
+                              className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600 transition hover:border-[#FF6B35] hover:text-[#FF6B35] active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-[#FF6B35] dark:hover:text-[#FF6B35]"
+                            >
+                              {btn.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Dynamic Focus Grid */}
+                      <div className="relative z-10 mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-7">
+                        {DAYS_OF_WEEK.map((day) => {
+                          const sched = (branch.schedule && branch.schedule[day.key]) || {
+                            is_open: true,
+                            open_time: '08:00',
+                            close_time: '22:00',
+                          }
+                          const isOpen = Boolean(sched.is_open)
+                          const dayId = `${index}_${day.key}`
+                          const isEditing = activeEditDay === dayId
+
+                          return (
+                            <div
+                              key={day.key}
+                              onClick={() => {
+                                if (isOpen && !isEditing) setActiveEditDay(dayId)
+                              }}
+          className={`group/day relative flex flex-col justify-between rounded-xl border transition-all duration-300 ease-out ${
+            isEditing
+              ? 'z-20 border-emerald-500 bg-emerald-50/70 p-3 shadow-lg ring-2 ring-emerald-500/20 sm:col-span-2 lg:col-span-2 dark:border-emerald-500 dark:bg-emerald-950/30'
+              : isOpen
+              ? 'cursor-pointer border-emerald-200/90 bg-emerald-50/30 p-2 shadow-2xs hover:-translate-y-0.5 hover:border-emerald-400 dark:border-emerald-900/50 dark:bg-emerald-950/20'
+              : 'border-slate-200 bg-slate-50/70 p-2 opacity-50 dark:border-zinc-800 dark:bg-zinc-900/40'
+          }`}
+        >
+          {/* Header Row: Label + Status/Close + Toggle */}
+          <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5 dark:border-zinc-800">
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`font-mono text-xs font-black tracking-wide uppercase ${
+                  isOpen
+                    ? 'text-emerald-700 dark:text-emerald-400'
+                    : 'text-slate-400 dark:text-zinc-500'
+                }`}
+              >
+                {day.short}
+              </span>
+
+              {isEditing && (
+                <span className="animate-pulse rounded bg-emerald-600 px-1.5 py-0.2 font-mono text-[8px] font-bold text-white uppercase">
+                  EDITING
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1">
+              {/* Done/Collapse button visible when expanded */}
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setActiveEditDay(null)
+                  }}
+                  className="rounded-md border border-slate-300 bg-white px-1.5 py-0.5 text-[9px] font-bold text-slate-600 shadow-2xs hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  title="Done editing"
+                >
+                  Done
+                </button>
+              )}
+
+              {/* Game Toggle Switch */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (isOpen && isEditing) setActiveEditDay(null)
+                  handleBranchDayToggle(index, day.key)
+                }}
+                className={`relative inline-flex h-4 w-7.5 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 focus:outline-hidden ${
+                  isOpen ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-zinc-700'
+                }`}
+                title={isOpen ? 'Click to close day' : 'Click to open day'}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-xs transition duration-200 ${
+                    isOpen ? 'translate-x-3.5' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Body Content */}
+          <div className="mt-2 flex flex-1 flex-col justify-between">
+            {isOpen ? (
+              isEditing ? (
+                /* EXPANDED EDIT MODE (Spacious, dual-column layout) */
+                <div className="space-y-2 pt-1" onClick={(e) => e.stopPropagation()}>
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* IN input */}
+                    <div className="rounded-lg border border-slate-200 bg-white p-1.5 shadow-2xs dark:border-zinc-700 dark:bg-zinc-800">
+                      <span className="block font-mono text-[9px] font-bold text-slate-400 uppercase">
+                        Opens At
+                      </span>
+                      <input
+                        type="time"
+                        value={sched.open_time || '08:00'}
+                        onChange={(e) =>
+                          handleBranchDayTimeChange(index, day.key, 'open_time', e.target.value)
+                        }
+                        className="mt-0.5 w-full bg-transparent font-mono text-xs font-bold text-slate-800 outline-hidden dark:text-zinc-100"
+                      />
+                    </div>
+
+                    {/* OUT input */}
+                    <div className="rounded-lg border border-slate-200 bg-white p-1.5 shadow-2xs dark:border-zinc-700 dark:bg-zinc-800">
+                      <span className="block font-mono text-[9px] font-bold text-slate-400 uppercase">
+                        Closes At
+                      </span>
+                      <input
+                        type="time"
+                        value={sched.close_time || '22:00'}
+                        onChange={(e) =>
+                          handleBranchDayTimeChange(index, day.key, 'close_time', e.target.value)
+                        }
+                        className="mt-0.5 w-full bg-transparent font-mono text-xs font-bold text-slate-800 outline-hidden dark:text-zinc-100"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Actions Bar */}
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleApplyTimeToAllOpenDays(index, day.key)}
+                      className="flex items-center gap-1 rounded-md px-2 py-1 font-mono text-[9px] font-bold text-slate-600 transition hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-zinc-300 dark:hover:text-emerald-400"
+                    >
+                      <span className="material-symbols-outlined text-xs">sync</span>
+                      Sync to all days
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveEditDay(null)}
+                      className="rounded-md bg-emerald-600 px-2.5 py-1 font-mono text-[9px] font-bold text-white shadow-xs transition hover:bg-emerald-700"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* COMPACT SUMMARY MODE (Click card to activate) */
+                <div className="flex min-h-[58px] flex-col justify-between py-0.5">
+                  <div className="flex flex-col items-center justify-center rounded-lg bg-white/70 py-1.5 shadow-2xs dark:bg-zinc-800/60">
+                    <span className="font-mono text-[11px] font-bold tracking-tight text-slate-700 dark:text-zinc-200">
+                      {sched.open_time || '08:00'} - {sched.close_time || '22:00'}
+                    </span>
+                  </div>
+                  <span className="pt-1 text-center font-mono text-[8px] font-semibold text-emerald-600 opacity-80 group-hover/day:opacity-100 dark:text-emerald-400">
+                    Click to adjust
+                  </span>
+                </div>
+              )
+            ) : (
+              /* CLOSED STATE */
+              <div className="flex min-h-[58px] items-center justify-center">
+                <span className="rounded-md border border-slate-200/60 bg-slate-100/60 px-2 py-0.5 font-mono text-[9px] font-bold text-slate-400 uppercase dark:border-zinc-800 dark:bg-zinc-800/40 dark:text-zinc-500">
+                  Closed
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    })}
+  </div>
+</div>
                   </div>
                 ))}
               </div>
@@ -1488,6 +1832,121 @@ const AddMerchantPage = () => {
           </aside>
 
         </div>
+
+        {/* Full Screen GPS Map: Takes the whole page of Add New Merchant */}
+        {fullscreenGpsBranchIdx !== null && branches[fullscreenGpsBranchIdx] && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-white animate-fade-in"
+          >
+            {/* Full Screen GPS Top Header */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 bg-zinc-900/95 px-6 py-3.5 backdrop-blur-md">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF6B35]/20 text-[#FF6B35]">
+                  <span className="material-symbols-outlined text-xl">explore</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-white">
+                      Full Screen GPS Map — {branches[fullscreenGpsBranchIdx].branch_name || `Branch #${fullscreenGpsBranchIdx + 1}`}
+                    </h3>
+                    {branches[fullscreenGpsBranchIdx].is_main_branch && (
+                      <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400">
+                        Primary Branch
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    {branches[fullscreenGpsBranchIdx].address || 'Addis Ababa, Ethiopia'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Coordinates inspection and edit inside fullscreen bar */}
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-800/80 px-3 py-1.5 text-xs font-mono text-zinc-300">
+                  <span className="text-zinc-400">Lat:</span>
+                  <input
+                    type="number"
+                    step="any"
+                    value={branches[fullscreenGpsBranchIdx].latitude}
+                    onChange={(e) =>
+                      handleBranchChange(fullscreenGpsBranchIdx, 'latitude', e.target.value)
+                    }
+                    className="w-24 rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-white focus:border-[#FF6B35] focus:outline-none"
+                  />
+                  <span className="ml-2 text-zinc-400">Lng:</span>
+                  <input
+                    type="number"
+                    step="any"
+                    value={branches[fullscreenGpsBranchIdx].longitude}
+                    onChange={(e) =>
+                      handleBranchChange(fullscreenGpsBranchIdx, 'longitude', e.target.value)
+                    }
+                    className="w-24 rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-white focus:border-[#FF6B35] focus:outline-none"
+                  />
+                </div>
+
+                {/* Exit Full Screen Button */}
+                <button
+                  type="button"
+                  onClick={() => setFullscreenGpsBranchIdx(null)}
+                  className="flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-[#e85a27] transition"
+                  title="Close full screen map"
+                >
+                  <span className="material-symbols-outlined text-sm">fullscreen_exit</span>
+                  <span>Exit Full Screen</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Map Canvas: Fills entire page */}
+            <div className="relative flex-1 w-full bg-zinc-900">
+              <iframe
+                title={`Full Screen GPS Map for ${branches[fullscreenGpsBranchIdx].branch_name}`}
+                width="100%"
+                height="100%"
+                loading="lazy"
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${(Number(branches[fullscreenGpsBranchIdx].longitude) || 38.7842) - 0.02},${(Number(branches[fullscreenGpsBranchIdx].latitude) || 9.0016) - 0.015},${(Number(branches[fullscreenGpsBranchIdx].longitude) || 38.7842) + 0.02},${(Number(branches[fullscreenGpsBranchIdx].latitude) || 9.0016) + 0.015}&layer=mapnik&marker=${Number(branches[fullscreenGpsBranchIdx].latitude) || 9.0016},${Number(branches[fullscreenGpsBranchIdx].longitude) || 38.7842}`}
+                className="h-full w-full border-none"
+              />
+
+              {/* Floating Helper Pill */}
+              <div className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-4 py-1.5 text-xs text-zinc-300 shadow-xl backdrop-blur-md flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm text-[#FF6B35]">info</span>
+                <span>Coordinates: {branches[fullscreenGpsBranchIdx].latitude}, {branches[fullscreenGpsBranchIdx].longitude} · Press Esc or click Exit to return</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Floating In-Page Toast Notification */}
+        {toastNotice && (
+          <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 animate-slide-up">
+            <span
+              className={`material-symbols-outlined text-lg ${
+                toastNotice.type === 'warning'
+                  ? 'text-amber-500'
+                  : toastNotice.type === 'success'
+                  ? 'text-emerald-500'
+                  : 'text-[#FF6B35]'
+              }`}
+            >
+              {toastNotice.type === 'warning' ? 'warning' : toastNotice.type === 'success' ? 'check_circle' : 'info'}
+            </span>
+            <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200">
+              {toastNotice.message}
+            </span>
+            <button
+              type="button"
+              onClick={() => setToastNotice(null)}
+              className="ml-2 rounded p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
+            >
+              <span className="material-symbols-outlined text-sm">close</span>
+            </button>
+          </div>
+        )}
       </div>
     </MainLayout>
   )
