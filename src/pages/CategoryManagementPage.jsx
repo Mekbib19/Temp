@@ -10,7 +10,6 @@ import {
   SUPPORTED_CATEGORIES,
   PRESET_ICON_ASSETS,
 } from '../data/demoCategories'
-import { loadStoredCuisines } from '../data/demoCuisines'
 
 const emptyCategoryForm = {
   id: '',
@@ -26,21 +25,9 @@ const emptyCategoryForm = {
 
 const CategoryManagementPage = () => {
   const [categories, setCategories] = useState(() => loadStoredCategories())
-  const [cuisines] = useState(() => loadStoredCuisines())
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all') // 'all' | 'active' | 'inactive'
   const [sortBy, setSortBy] = useState('sort_order_asc') // 'sort_order_asc' | 'sort_order_desc' | 'name_asc' | 'name_desc' | 'created_desc' | 'updated_desc'
-
-  // Map cuisines by category_id
-  const cuisinesMap = useMemo(() => {
-    const map = new Map()
-    cuisines.forEach((c) => {
-      const list = map.get(c.category_id) || []
-      list.push(c)
-      map.set(c.category_id, list)
-    })
-    return map
-  }, [cuisines])
 
   // Pagination states matching Merchant Management
   const [currentPage, setCurrentPage] = useState(1)
@@ -402,7 +389,7 @@ const CategoryManagementPage = () => {
     <MainLayout
       activeMenuKey="categoryManagement"
       breadcrumbParent="Dashboard"
-      breadcrumbCurrent="Categories"
+      breadcrumbCurrent="Merchant Categories"
     >
       <div className="space-y-6 pb-12">
         {/* Toast Alert */}
@@ -420,14 +407,11 @@ const CategoryManagementPage = () => {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-['Plus_Jakarta_Sans'] text-4xl font-extrabold tracking-tight text-slate-900 dark:text-zinc-100">
-                Category Management
+                Merchant Category Management
               </h1>
-              <span className="inline-flex items-center rounded-lg bg-orange-100 px-2.5 py-1 text-xs font-bold text-orange-800 dark:bg-orange-950/60 dark:text-orange-300">
-                7 Core Categories
-              </span>
             </div>
             <p className="mt-2 text-sm font-medium text-slate-500 dark:text-zinc-400">
-              Manage supported merchant categories and their category-specific specialization types (<code className="font-mono text-xs font-bold text-orange-600 dark:text-orange-400">cuisine_types</code>)
+              Manage and organize merchant categories across the platform.
             </p>
           </div>
 
@@ -634,13 +618,10 @@ const CategoryManagementPage = () => {
                     Order
                   </th>
                   <th scope="col" className="px-5 py-3.5">
-                    Category & Code
+                    Category Name
                   </th>
                   <th scope="col" className="px-5 py-3.5">
                     Description
-                  </th>
-                  <th scope="col" className="px-5 py-3.5">
-                    Specializations (cuisine_types)
                   </th>
                   <th scope="col" className="px-5 py-3.5 text-center">
                     Status
@@ -658,8 +639,6 @@ const CategoryManagementPage = () => {
                     const isExpanded = expandedDescIds.has(cat.id)
                     const isDragging = draggedCatId === cat.id
                     const isOver = dragOverCatId === cat.id
-                    const matchedCuisines = cuisinesMap.get(cat.id) || []
-
                     return (
                       <tr
                         key={cat.id}
@@ -706,7 +685,7 @@ const CategoryManagementPage = () => {
                           </div>
                         </td>
 
-                        {/* Category & Code Badge Column */}
+                        {/* Category Name Column */}
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
                             <span
@@ -725,21 +704,9 @@ const CategoryManagementPage = () => {
                                 </span>
                               )}
                             </span>
-                            <div>
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-['Plus_Jakarta_Sans'] font-bold text-slate-900 dark:text-zinc-100">
-                                  {cat.name}
-                                </span>
-                                {cat.code && (
-                                  <span className="inline-flex rounded-md bg-orange-100/80 px-1.5 py-0.5 font-mono text-[9px] font-bold text-orange-800 dark:bg-orange-950/60 dark:text-orange-300">
-                                    {cat.code}
-                                  </span>
-                                )}
-                              </div>
-                              <span className="font-mono text-[10px] text-slate-400 dark:text-zinc-500">
-                                /{cat.slug}
-                              </span>
-                            </div>
+                            <span className="font-['Plus_Jakarta_Sans'] font-bold text-slate-900 dark:text-zinc-100">
+                              {cat.name}
+                            </span>
                           </div>
                         </td>
 
@@ -808,36 +775,6 @@ const CategoryManagementPage = () => {
                             </td>
                           )
                         })()}
-
-                        {/* Specializations (cuisine_types) Cell */}
-                        <td className="px-5 py-4">
-                          <div className="flex flex-col gap-1.5">
-                            <div>
-                              <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700 ring-1 ring-amber-200/60 dark:bg-amber-950/40 dark:text-amber-400">
-                                {matchedCuisines.length} {matchedCuisines.length === 1 ? 'Type' : 'Types'}
-                              </span>
-                            </div>
-                            {matchedCuisines.length > 0 ? (
-                              <div className="flex flex-wrap gap-1 max-w-xs">
-                                {matchedCuisines.slice(0, 4).map((c) => (
-                                  <span
-                                    key={c.id}
-                                    className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-zinc-800 dark:text-zinc-300"
-                                  >
-                                    {c.name}
-                                  </span>
-                                ))}
-                                {matchedCuisines.length > 4 && (
-                                  <span className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
-                                    +{matchedCuisines.length - 4} more
-                                  </span>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-[11px] italic text-slate-400">No specializations</span>
-                            )}
-                          </div>
-                        </td>
 
                         {/* Status Toggle Switch */}
                         <td className="whitespace-nowrap px-5 py-4 text-center">

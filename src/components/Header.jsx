@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppTheme } from '../providers/theme-context'
+import ShimaLogo from './Logo'
 import usFlag from '../assets/flags/us.svg'
 import etFlag from '../assets/flags/et.svg'
 import erFlag from '../assets/flags/er.svg'
@@ -73,6 +74,11 @@ const Header = ({
         >
           <span className="material-symbols-outlined text-xl">menu</span>
         </button>
+        <div className="flex shrink-0 items-center gap-1.5 lg:hidden">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 p-1 dark:bg-red-950/40">
+            <ShimaLogo className="h-5 w-auto" />
+          </div>
+        </div>
         <button
           type="button"
           onClick={onToggleSidebar}

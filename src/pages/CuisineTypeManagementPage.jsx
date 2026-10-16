@@ -464,12 +464,10 @@ const CuisineTypeManagementPage = () => {
               <h1 className="font-['Plus_Jakarta_Sans'] text-4xl font-extrabold tracking-tight text-slate-900 dark:text-zinc-100">
                 Cuisine Types
               </h1>
-              <span className="inline-flex items-center rounded-lg bg-orange-100 px-2.5 py-1 font-mono text-xs font-bold text-orange-800 dark:bg-orange-950/60 dark:text-orange-300">
-                cuisine_types
-              </span>
+            
             </div>
             <p className="mt-2 text-sm font-medium text-slate-500 dark:text-zinc-400">
-              Specialization and cuisine types for merchants within each category (Food, Grocery, Pharmacy, Retail, Flowers & Gifts, Services, Package)
+              Specialization and cuisine types for merchants within each category 
             </p>
           </div>
 
@@ -574,76 +572,6 @@ const CuisineTypeManagementPage = () => {
         </section>
 
         {/* Category-Specific Specialization Tabs */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-              Filter by Merchant Category
-            </span>
-            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">
-              {filteredCuisines.length} {filteredCuisines.length === 1 ? 'specialization' : 'specializations'} displayed
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
-            <button
-              type="button"
-              onClick={() => handleFilterByCategory('all')}
-              className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
-                selectedCategoryFilter === 'all'
-                  ? 'bg-slate-900 text-white shadow-sm dark:bg-zinc-100 dark:text-zinc-900'
-                  : 'border border-slate-200/80 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800'
-              }`}
-            >
-              <span className="material-symbols-outlined text-base">apps</span>
-              <span>All Categories</span>
-              <span className={`rounded-full px-2 py-0.5 text-[10px] ${
-                selectedCategoryFilter === 'all'
-                  ? 'bg-white/20 text-white dark:bg-zinc-900/20 dark:text-zinc-900'
-                  : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
-              }`}>
-                {cuisines.length}
-              </span>
-            </button>
-
-            {categories.map((cat) => {
-              const isSelected = selectedCategoryFilter === cat.id
-              const count = cuisines.filter((c) => c.category_id === cat.id).length
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => handleFilterByCategory(cat.id)}
-                  className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
-                    isSelected
-                      ? 'bg-[#FF6B35] text-white shadow-sm ring-2 ring-[#FF6B35]/40'
-                      : 'border border-slate-200/80 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-base">
-                    {cat.icon || 'category'}
-                  </span>
-                  <span>{cat.name}</span>
-                  {cat.code && (
-                    <span className={`rounded font-mono text-[9px] px-1 py-0.2 ${
-                      isSelected
-                        ? 'bg-white/20 text-white'
-                        : 'bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400'
-                    }`}>
-                      {cat.code}
-                    </span>
-                  )}
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] ${
-                    isSelected
-                      ? 'bg-white/20 text-white'
-                      : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
-                  }`}>
-                    {count}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
 
         {/* Filter & Controls Bar - Order Management Filter Style with Matching Size Filters Icon and Search Engine */}
         <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200/80 bg-slate-100/90 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">

@@ -305,14 +305,6 @@ export default function MerchantDetailsPage() {
           <div className="flex flex-wrap items-center gap-2.5">
             <button
               type="button"
-              onClick={() => copyToClipboard(merchant.id, 'Merchant ID')}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-2xs transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-            >
-              <span className="material-symbols-outlined text-sm">content_copy</span>
-              Copy ID
-            </button>
-            <button
-              type="button"
               onClick={() => navigate(`/restaurants/${merchant.id}/edit`)}
               className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
             >
@@ -382,9 +374,6 @@ export default function MerchantDetailsPage() {
                   <h2 className="text-2xl font-extrabold text-slate-900 dark:text-zinc-50">
                     {merchant.name}
                   </h2>
-                  <span className="font-mono text-xs text-slate-400 dark:text-zinc-500">
-                    @{merchant.slug || merchant.id}
-                  </span>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-600 dark:text-zinc-300">
@@ -394,17 +383,6 @@ export default function MerchantDetailsPage() {
                     Category: {merchant.category_name || categoryObj?.name || 'General Category'}
                   </span>
 
-                  {/* Price Range */}
-                  <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 font-bold text-slate-700 dark:bg-zinc-800 dark:text-zinc-200">
-                    <span className="material-symbols-outlined text-sm text-emerald-600">payments</span>
-                    {merchant.price_range || '$$ (Moderate)'}
-                  </span>
-
-                  {/* Rating */}
-                  <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1 font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
-                    <span className="material-symbols-outlined text-sm text-amber-500">star</span>
-                    {Number(merchant.average_rating || 4.8).toFixed(1)} ({merchant.total_reviews || 14} reviews)
-                  </span>
 
                   {/* Locations */}
                   <span className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1 font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">

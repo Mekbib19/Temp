@@ -3,7 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import Pagination from '../components/Pagination'
 import { formatLatestUpdate } from '../utils/format'
-import { loadStoredMerchants, saveStoredMerchants, MERCHANT_TYPES } from '../data/demoMerchants'
+import {
+  loadStoredMerchants,
+  saveStoredMerchants,
+  MERCHANT_TYPES,
+  getCategoryMeta,
+} from '../data/demoMerchants'
 
 const RestaurantManagementPage = () => {
   const navigate = useNavigate()
@@ -101,14 +106,35 @@ const RestaurantManagementPage = () => {
   const filteredBrands = useMemo(() => {
     return brands
       .filter((b) => {
-        if (searchQuery && !b.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-          return false
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase()
+          const matchesName = b.name.toLowerCase().includes(q)
+          const matchesDesc = (b.description || '').toLowerCase().includes(q)
+          const matchesCat = (b.category_name || '').toLowerCase().includes(q)
+          const matchesType = (b.type || '').toLowerCase().includes(q)
+          const matchesLic = (b.license_number || '').toLowerCase().includes(q)
+          const matchesSpec = Array.isArray(b.specialties) && b.specialties.some((s) => s.toLowerCase().includes(q))
+          if (!matchesName && !matchesDesc && !matchesCat && !matchesType && !matchesLic && !matchesSpec) {
+            return false
+          }
         }
         if (statusFilter !== 'all' && (b.status || '').toUpperCase() !== statusFilter.toUpperCase()) {
           return false
         }
-        if (typeFilter !== 'all' && b.type !== typeFilter) {
-          return false
+        if (typeFilter !== 'all') {
+          const sel = typeFilter.toLowerCase()
+          const bCat = (b.category_name || '').toLowerCase()
+          const bCode = (b.category_code || '').toLowerCase()
+          const bType = (b.type || '').toLowerCase()
+          const matches =
+            bCat === sel ||
+            bCode === sel ||
+            bType.includes(sel) ||
+            (sel === 'food' && (bType.includes('restaurant') || bType.includes('bakery') || bType.includes('cafe'))) ||
+            (sel === 'grocery' && (bType.includes('supermarket') || bType.includes('market'))) ||
+            (sel === 'pharmacy' && (bType.includes('health') || bType.includes('care') || bType.includes('drug') || bType.includes('med'))) ||
+            (sel === 'retail' && (bType.includes('convenience') || bType.includes('spirit') || bType.includes('pet')))
+          if (!matches) return false
         }
         return true
       })
@@ -122,6 +148,8 @@ const RestaurantManagementPage = () => {
             return b.locations - a.locations
           case 'locations_asc':
             return a.locations - b.locations
+          case 'rating_desc':
+            return (b.average_rating || 0) - (a.average_rating || 0)
           case 'updated_desc':
             return new Date(b.updated_at || 0) - new Date(a.updated_at || 0)
           default:
@@ -288,7 +316,7 @@ const RestaurantManagementPage = () => {
                 setSearchQuery(e.target.value)
                 setCurrentPage(1)
               }}
-              placeholder="Search merchant name, description..."
+              placeholder="Search merchant name, category, license, specialties..."
               className="h-11 w-full rounded-xl border border-slate-200/80 bg-white pl-10 pr-9 text-sm font-medium text-slate-800 placeholder-slate-400 shadow-sm transition focus:border-[#FF6B35] focus:outline-none focus:ring-1 focus:ring-[#FF6B35]/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:placeholder-zinc-500"
             />
             {searchQuery && (
@@ -326,10 +354,10 @@ const RestaurantManagementPage = () => {
             </select>
           </div>
 
-          {/* Type Filter */}
+          {/* Category / Type Filter */}
           <div className="flex min-w-[160px] flex-col gap-1">
             <label className="px-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-              Merchant Type
+              Category Name
             </label>
             <select
               value={typeFilter}
@@ -339,7 +367,7 @@ const RestaurantManagementPage = () => {
               }}
               className="cursor-pointer border-none bg-transparent p-0 text-sm font-semibold text-slate-900 focus:ring-0 dark:text-zinc-100"
             >
-              <option value="all">All Merchant Types</option>
+              <option value="all">All Categories</option>
               {MERCHANT_TYPES.map((t) => (
                 <option key={t} value={t}>
                   {t}
@@ -360,6 +388,7 @@ const RestaurantManagementPage = () => {
             >
               <option value="name_asc">Name: A → Z</option>
               <option value="name_desc">Name: Z → A</option>
+              <option value="rating_desc">Highest Rated</option>
               <option value="locations_desc">Locations: Most</option>
               <option value="locations_asc">Locations: Fewest</option>
               <option value="updated_desc">Recently Updated</option>
@@ -452,7 +481,7 @@ const RestaurantManagementPage = () => {
                           </div>
                         </td>
 
-                        {/* Concept */}
+                        {/* Merchant Type */}
                         <td className="whitespace-nowrap px-5 py-4 font-medium text-slate-700 dark:text-zinc-300">
                           <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100/90 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-zinc-800/80 dark:text-zinc-200">
                             <span className="material-symbols-outlined text-[15px] text-[#FF6B35]">
@@ -469,7 +498,7 @@ const RestaurantManagementPage = () => {
                           </span>
                         </td>
 
-                        {/* Description Cell: Logical show more / show less (only when text is large) */}
+                        {/* Description Cell */}
                         {(() => {
                           const hasText = Boolean(brand.description && brand.description.trim().length > 0)
                           const isExpandable = Boolean(
@@ -882,6 +911,131 @@ const RestaurantManagementPage = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Category Domain Information & Regulatory Compliance Specifications */}
+                {(() => {
+                  const catMeta = getCategoryMeta(selectedBrandForView.category_name || selectedBrandForView.type)
+                  const isPharm = catMeta.code === 'PHARMACY'
+                  const isGroc = catMeta.code === 'GROCERY'
+
+                  return (
+                    <div
+                      className={`rounded-2xl border p-4.5 transition-all ${
+                        isPharm
+                          ? 'border-sky-200 bg-sky-50/50 dark:border-sky-900/40 dark:bg-sky-950/20'
+                          : isGroc
+                          ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/40 dark:bg-emerald-950/20'
+                          : 'border-slate-200/80 bg-slate-50/70 dark:border-zinc-800 dark:bg-zinc-800/40'
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
+                        <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-zinc-200">
+                          <span
+                            className="material-symbols-outlined text-[18px]"
+                            style={catMeta.accentColor ? { color: catMeta.accentColor } : { color: '#FF6B35' }}
+                          >
+                            {catMeta.icon}
+                          </span>
+                          Category Domain & Regulatory Specifications
+                        </h4>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className={`inline-flex items-center gap-1 rounded-md px-2.5 py-0.5 text-xs font-bold ${catMeta.badgeClass}`}>
+                            <span className="material-symbols-outlined text-[13px]">{catMeta.icon}</span>
+                            {selectedBrandForView.category_name || catMeta.label}
+                          </span>
+                          <span className="rounded-md bg-white/80 px-2 py-0.5 text-[11px] font-mono font-bold text-slate-700 shadow-2xs dark:bg-zinc-800 dark:text-zinc-200">
+                            {catMeta.code}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 pt-1">
+                        {/* Regulatory License */}
+                        <div className="rounded-xl border border-white/60 bg-white/80 p-3 shadow-2xs dark:border-zinc-700/60 dark:bg-zinc-800/80">
+                          <p className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 dark:text-zinc-400">
+                            <span className="material-symbols-outlined text-xs text-emerald-500">verified</span>
+                            Regulatory License
+                          </p>
+                          <p className="mt-1 font-mono text-xs font-bold text-slate-900 dark:text-zinc-100">
+                            {selectedBrandForView.license_number || 'REG-STANDARD-2024'}
+                          </p>
+                          <p className="mt-0.5 text-[10px] text-slate-500 dark:text-zinc-400">
+                            {isPharm ? 'EFDA Certified Medical Dispensary' : isGroc ? 'Ministry of Agriculture / EFDA Food' : 'Standard Commercial License'}
+                          </p>
+                        </div>
+
+                        {/* Cold-Chain / Storage */}
+                        <div className="rounded-xl border border-white/60 bg-white/80 p-3 shadow-2xs dark:border-zinc-700/60 dark:bg-zinc-800/80">
+                          <p className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 dark:text-zinc-400">
+                            <span className="material-symbols-outlined text-xs text-blue-500">ac_unit</span>
+                            Temperature & Logistics
+                          </p>
+                          <div className="mt-1 flex items-center gap-1.5">
+                            <span
+                              className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-bold ${
+                                selectedBrandForView.is_cold_chain
+                                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+                                  : 'bg-slate-100 text-slate-600 dark:bg-zinc-700 dark:text-zinc-300'
+                              }`}
+                            >
+                              {selectedBrandForView.is_cold_chain ? '❄️ Active Cold-Chain (2°C - 8°C)' : 'Ambient Storage'}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-[10px] text-slate-500 dark:text-zinc-400">
+                            {isPharm
+                              ? 'Insulin, vaccines & biologics compliant'
+                              : isGroc
+                              ? 'Chilled farm produce & dairy transit'
+                              : 'Standard courier transit'}
+                          </p>
+                        </div>
+
+                        {/* Fulfillment SLA & Min Order */}
+                        <div className="rounded-xl border border-white/60 bg-white/80 p-3 shadow-2xs dark:border-zinc-700/60 dark:bg-zinc-800/80">
+                          <p className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 dark:text-zinc-400">
+                            <span className="material-symbols-outlined text-xs text-orange-500">local_shipping</span>
+                            Fulfillment SLA & Min Order
+                          </p>
+                          <p className="mt-1 text-xs font-bold text-slate-900 dark:text-zinc-100">
+                            {selectedBrandForView.delivery_sla || '20-35 min'} SLA • Min: {selectedBrandForView.min_order || 'ETB 150'}
+                          </p>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {isPharm && selectedBrandForView.is_rx_licensed && (
+                              <span className="rounded bg-sky-100 px-1 py-0.2 text-[9px] font-bold text-sky-800 dark:bg-sky-950/80 dark:text-sky-300">
+                                Rx Prescriptions Authorized
+                              </span>
+                            )}
+                            {selectedBrandForView.is_emergency_247 && (
+                              <span className="rounded bg-rose-100 px-1 py-0.2 text-[9px] font-bold text-rose-800 dark:bg-rose-950/80 dark:text-rose-300">
+                                24/7 Emergency Dispatch
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Specialties list */}
+                      {Array.isArray(selectedBrandForView.specialties) && selectedBrandForView.specialties.length > 0 && (
+                        <div className="mt-3 rounded-xl border border-white/60 bg-white/80 p-3 dark:border-zinc-700/60 dark:bg-zinc-800/80">
+                          <p className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">
+                            Category Domain Focus & Specialties ({selectedBrandForView.specialties.length}):
+                          </p>
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {selectedBrandForView.specialties.map((spec, i) => (
+                              <span
+                                key={i}
+                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200/80 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-800 shadow-2xs dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+                              >
+                                <span className="h-1.5 w-1.5 rounded-full bg-[#FF6B35]" />
+                                {spec}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
 
                 {/* Operating Hours & Fulfillment Card */}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
