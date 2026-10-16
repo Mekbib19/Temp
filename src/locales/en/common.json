@@ -1,5 +1,5 @@
 {
-  "appName": "Deliver-App",
+  "appName": "Shima Delivery",
   "adminConsole": "Admin Console",
   "premiumAdmin": "Premium Admin",
   "driverPanel": "Driver Panel",
@@ -21,8 +21,9 @@
     "customerManagement": "Customers",
     "restaurantManagement": "Merchants",
     "merchantManagement": "Merchants",
-    "categoryManagement": "Categories",
+    "categoryManagement": "Merchant Categories",
     "cuisineManagement": "Cuisine",
+    "menuCategory": "Menu Category",
     "deliveryManagement": "Delivery",
     "staffManagement": "Staff",
     "orderManagement": "Orders",

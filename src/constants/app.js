@@ -1,1 +1,1 @@
-export const APP_NAME = "Deliver App"
+export const APP_NAME = "Shima Delivery"

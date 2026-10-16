@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { NavLink } from 'react-router-dom'
+import ShimaLogo from './Logo'
 
 const menuSections = [
   {
@@ -16,6 +17,7 @@ const menuSections = [
       { key: 'merchantManagement', icon: 'storefront', path: '/restaurants' },
       { key: 'categoryManagement', icon: 'category', path: '/categories' },
       { key: 'cuisineManagement', icon: 'dinner_dining', path: '/cuisines' },
+      { key: 'menuCategory', icon: 'restaurant_menu', path: '/menu-categories' },
       { key: 'deliveryManagement', icon: 'local_shipping', path: '/delivery' },
       { key: 'staffManagement', icon: 'badge', path: '/staff' },
     ],
@@ -52,21 +54,33 @@ const Sidebar = ({
         isCollapsed ? 'lg:w-20' : 'lg:w-64'
       }`}
     >
-      <div className={`${isCompact ? 'mb-4 px-3 text-center' : 'mb-6 px-6'}`}>
-        <h1 className="font-['Plus_Jakarta_Sans'] text-xl font-bold tracking-tighter text-[#FF6B35]">
-          {isCompact ? 'CC' : t('appName')}
-        </h1>
-        {!isCompact ? (
-          <div className="mt-1.5 flex flex-col gap-1">
-            <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300">{t('adminConsole')}</p>
-            <div className="inline-flex w-fit items-center gap-1.5 rounded-md border border-orange-200/80 bg-orange-50/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#ab3500] dark:border-orange-900/50 dark:bg-orange-950/40 dark:text-orange-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#FF6B35]" />
-              Platform Super Admin
+      <div className={`${isCompact ? 'mb-4 px-2 text-center' : 'mb-6 px-5'}`}>
+        {isCompact ? (
+          <div className="flex flex-col items-center gap-1.5" title="Shima Delivery - Super Admin">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50/80 p-2 shadow-xs transition hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/40">
+              <ShimaLogo className="h-7 w-auto" />
+            </div>
+            <div className="flex justify-center" title="Platform Super Admin Level">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#CC0033]" />
             </div>
           </div>
         ) : (
-          <div className="mt-1 flex justify-center" title="Platform Super Admin Level">
-            <span className="h-2 w-2 rounded-full bg-[#FF6B35]" />
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50/90 p-2 shadow-xs ring-1 ring-red-200/70 transition hover:bg-red-100 dark:bg-red-950/50 dark:ring-red-900/50">
+              <ShimaLogo className="h-7 w-auto" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate font-['Plus_Jakarta_Sans'] text-base font-extrabold tracking-tight text-slate-900 dark:text-white">
+                {t('appName')}
+              </h1>
+              <div className="mt-0.5 flex items-center gap-1.5">
+                <p className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">{t('adminConsole')}</p>
+                <div className="inline-flex items-center gap-1 rounded-md border border-red-200/80 bg-red-50/80 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#CC0033] dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400">
+                  <span className="h-1 w-1 rounded-full bg-[#CC0033]" />
+                  Admin
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

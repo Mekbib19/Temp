@@ -1,5 +1,5 @@
 {
-  "appName": "ዴሊቨር-አፕ",
+  "appName": "ሺማ ዴሊቨሪ",
   "adminConsole": "አስተዳዳሪ ኮንሶል",
   "premiumAdmin": "ፕሪሚየም አድሚን",
   "driverPanel": "የአሽከርካሪ ፓነል",
@@ -21,8 +21,9 @@
     "customerManagement": "ደንበኞች",
     "restaurantManagement": "ነጋዴዎች",
     "merchantManagement": "ነጋዴዎች",
-    "categoryManagement": "ምድቦች",
+    "categoryManagement": "የነጋዴ ምድቦች",
     "cuisineManagement": "የምግብ ዓይነቶች",
+    "menuCategory": "የሜኑ ምድቦች",
     "deliveryManagement": "ዴሊቨሪ",
     "staffManagement": "ሰራተኞች",
     "orderManagement": "ትዕዛዞች",

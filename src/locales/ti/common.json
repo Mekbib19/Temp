@@ -1,5 +1,5 @@
 {
-  "appName": "Deliver-App",
+  "appName": "Shima Delivery",
   "adminConsole": "ኣድሚን ኮንሶል",
   "premiumAdmin": "ፕሪሚየም ኣድሚን",
   "driverPanel": "ፓነል መራሒ",
@@ -21,8 +21,9 @@
     "customerManagement": "ዓማዊል",
     "restaurantManagement": "ነጋዶ",
     "merchantManagement": "ነጋዶ",
-    "categoryManagement": "ምድባት",
+    "categoryManagement": "ምድባት ነጋዶ",
     "cuisineManagement": "ዓይነታት መግቢ",
+    "menuCategory": "ምድባት ሜኑ",
     "deliveryManagement": "ዴሊቨሪ",
     "staffManagement": "ሰራሕተኛታት",
     "orderManagement": "ትእዛዛት",

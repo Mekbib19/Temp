@@ -1,5 +1,5 @@
 {
-  "appName": "Deliver-App",
+  "appName": "Shima Delivery",
   "adminConsole": "Konsolii Admin",
   "premiumAdmin": "Admin Olaanaa",
   "driverPanel": "Paanaalii Konkolaachisaa",
@@ -21,8 +21,9 @@
     "customerManagement": "Maamiltoota",
     "restaurantManagement": "Daldaltoota",
     "merchantManagement": "Daldaltoota",
-    "categoryManagement": "Gareewwan",
+    "categoryManagement": "Gareewwan Daldaltootaa",
     "cuisineManagement": "Gosa Nyaataa",
+    "menuCategory": "Kattaa Meenyuu",
     "deliveryManagement": "Geejjiba",
     "staffManagement": "Hojjettoota",
     "orderManagement": "Ajajoota",
