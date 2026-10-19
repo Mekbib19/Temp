@@ -938,7 +938,7 @@ const CategoryManagementPage = () => {
                 <div>
                   <div className="flex items-center justify-between">
                     <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                      Category Code <span className="text-rose-500">*</span>
+                      Category <span className="text-rose-500">*</span>
                     </label>
                     <span className="text-[10px] font-semibold text-slate-400">System Unique Key</span>
                   </div>

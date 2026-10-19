@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import MainLayout from '../layouts/MainLayout'
+import RealTimeLogisticsMap from '../components/RealTimeLogisticsMap'
 
 const deliveries = [
   {
     id: 'ORD-9021',
     date: 'Mar 24, 14:32',
     driver: { name: 'Marcus Thorne', rating: '4.9', avatarBg: 'bg-indigo-100', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCHe2a24dFoMyuM8QLaEBRNmbXo9s1uYPvPJJU4fSDuJbvY5nFJrMjr5Py26pOR5RP80KAOMnC1qf-pQwO2Lz6Vl6HDIszJBLnrfglcHlUyiKBtE9--yT_uU65fIQ7fccrbLTLErP5feQcJyt8WuQbAO67X7FHkuH_Y7CEVmlWjWzUdRDv2FihKCi8383im7XxXJ0rjlLxxbKWxS8Yl526U-fAsOoAK0E0V1b-qbiAJx4ONL0wolt8kRJXFVbUNxo5fnMWJtvthnEk' },
-    brand: { letter: 'V', name: 'Verde Kitchen', logoBg: 'bg-orange-600' },
+    brand: { letter: 'V', name: 'Verde Kitchen', logoBg: 'bg-emerald-600' },
     destination: { line1: '224 Baker Street, Apt 4B', distance: '2.4 miles away' },
-    eta: { type: 'time', text: '12 mins', color: 'text-[#ab3500]' },
+    eta: { type: 'time', text: '12 mins', color: 'text-emerald-600 dark:text-emerald-400' },
     status: { label: 'On the way', variant: 'blue' },
   },
   {
@@ -29,6 +30,51 @@ const deliveries = [
     eta: { type: 'time', text: '28 mins', color: 'text-slate-400' },
     status: { label: 'Picked up', variant: 'muted' },
   },
+  {
+    id: 'ORD-9102',
+    date: 'Mar 24, 14:48',
+    driver: { name: 'Dawit Mengistu', rating: '4.95', avatarBg: 'bg-emerald-100', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBIvL7eX9jDEOipCFcw_dAQqTAR-U8ji5GDMLAVuoaA1ztVhIhUVzhSKUd8a81aHArT2Uz6OKhn4aJOlfw3lNScx9Ra9kojATj1gdb49fjSZ7PNDnfpiuRo_OivaOdnguYVqZAtcX5_27MRq7Jmvc5fp-B7CxNfQkptyt2AOc_QduqCP74MPzH4Y706g8_WHkZUcodbhVhRqRQCA6dQj7MRMZW4MLspoZS5dosZO3cDZCC0_gsmTikjE6-BHNMcson_UonclOsgBPg' },
+    brand: { letter: 'B', name: 'Bella Pasta & Grill', logoBg: 'bg-red-600' },
+    destination: { line1: 'Churchill Ave Tower', distance: '1.8 miles away' },
+    eta: { type: 'time', text: '8 mins', color: 'text-emerald-600 dark:text-emerald-400' },
+    status: { label: 'On the way', variant: 'blue' },
+  },
+  {
+    id: 'ORD-9140',
+    date: 'Mar 24, 14:50',
+    driver: { name: 'Bethlehem Tefera', rating: '4.9', avatarBg: 'bg-purple-100', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDN1IEczdcvsariAG9A6Vs5ZNASqpGwItGRxE68F8417M7l3BWDzFsPoMCd-dMYKsyAViCmKCvv5t2vsum4pJVj7Bt4tzilNI_2nXQ4tvJEcXQCeH5N1VZKXBMn1zNnK_1nz2zNcSgc2lokp2sHfHKhrBRydscH61RaFANOPk--IjHOqyxWogn5QG6ak9785C8Q07tbV4e4oexTSccE0F6NZpsshuB0wPDzU-0CdkH5ISwo9Hz6fmBhbx1GdvHymCOg6c-YdAYb3Do' },
+    brand: { letter: 'G', name: 'Golden Roast Cafe', logoBg: 'bg-amber-600' },
+    destination: { line1: 'Bole Medhanialem Rd', distance: '3.2 miles away' },
+    eta: { type: 'time', text: '15 mins', color: 'text-emerald-600 dark:text-emerald-400' },
+    status: { label: 'On the way', variant: 'blue' },
+  },
+  {
+    id: 'ORD-9188',
+    date: 'Mar 24, 14:52',
+    driver: { name: 'Henok Assefa', rating: '4.85', avatarBg: 'bg-blue-100', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC6e2X3H-LBCZr7eod1uLCWjUxgD4BPDD8KWKcYnqH2rTr6cZzlNFVhJZhCOvfBk2H8PJX5ycJNMRlaE2nHgJe7HN_MG45wd842dOTYCCxEfygddpi6e1_iCpBW55xs9DFMxf8gWwmZT0hPkWFQCX_7UceFcjIvWQoD6x5PXE-9dyoM6LmRFA9JHKLMBBrDUQim3C8Pw_2ftLrNhbK4Qj-CnWp70TIy2zHhdhM6FQD_B794NSToY1X4WGnO034nkOp5W7Wc3X4u70o' },
+    brand: { letter: 'H', name: 'Habesha Delight', logoBg: 'bg-amber-700' },
+    destination: { line1: 'Embassy Row Residence', distance: '3.7 miles away' },
+    eta: { type: 'time', text: '19 mins', color: 'text-indigo-600 dark:text-indigo-400' },
+    status: { label: 'On the way', variant: 'blue' },
+  },
+  {
+    id: 'ORD-9215',
+    date: 'Mar 24, 14:55',
+    driver: { name: 'Meron Kebede', rating: '4.92', avatarBg: 'bg-rose-100', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCLVT6LJ5SNoe5pqpOfeTC2TX5uOgS67eVnlHBmHq7xfSVfFHfCS7XFQACr7DzdcYfcFBzcLHHTp9HTry1ZMX5DDgkMa0R2rnD6Xh1viCXYtk6ZgvMISUB6ilmHAVYv5ws_mcNGh1ynO4umgY7J3y3KOqrE017wd1ubfPmPiCEMRGoII7JTgl4WvrbcCQ11diaMjiYtWB56HbAQnQY_TBNR8F_wajd8IAzkRUnTRUd47qpMpRfjEQRVaO-eLzEPdrtTNxYxiNCocpM' },
+    brand: { letter: 'A', name: 'Artisan Pastry & Bakery', logoBg: 'bg-pink-600' },
+    destination: { line1: 'Golf Club Residence Villa 4', distance: '1.2 miles away' },
+    eta: { type: 'time', text: '5 mins', color: 'text-emerald-600 dark:text-emerald-400' },
+    status: { label: 'On the way', variant: 'blue' },
+  },
+  {
+    id: 'ORD-9240',
+    date: 'Mar 24, 14:58',
+    driver: { name: 'Yared Tadesse', rating: '4.78', avatarBg: 'bg-amber-100', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDiwbJTH8PJz-0KfOrYaMXqs-vhXJog8J7LtWvfxEVEQBQ1uspvbxwSDetybesHliThOrsLYv0d1BZolvo72z6A9Zi-4CYtd2KBg69LKSTGI_Igvbm150beVX_ggWpRp8YzY1z3rgJJej0ZCZ5Qrmve2H5KqVmHsHyZkF-loBpZ3wqf3eTDWxf9TqX19hlJVPyhsdRtHNerSaW8PK3znv1_XAvjW0YI-BT_HTdG3K_u_bTO5bw4gppt3izOpCFQq-tZ7IP1LTnbRLo' },
+    brand: { letter: 'D', name: 'Downtown Grill Club', logoBg: 'bg-red-800' },
+    destination: { line1: 'Ras Abebe Aregay Ave #80', distance: '2.9 miles away' },
+    eta: { type: 'time', text: '22 mins', color: 'text-slate-400' },
+    status: { label: 'Picked up', variant: 'muted' },
+  },
 ]
 
 const statusPill = {
@@ -42,6 +88,8 @@ const DeliveryManagementPage = () => {
   const [branchFilter, setBranchFilter] = useState('All Central Branches')
   const [driverStatusFilter, setDriverStatusFilter] = useState('All Statuses')
   const [timeframeFilter, setTimeframeFilter] = useState('Live Rush')
+  const [selectedMapOrderId, setSelectedMapOrderId] = useState('ORD-9021')
+  const mapSectionRef = useRef(null)
 
   const filteredDeliveries = deliveries.filter((row) => {
     if (searchQuery.trim()) {
@@ -404,10 +452,18 @@ const DeliveryManagementPage = () => {
                         <td className="px-6 py-6 text-right sm:px-8">
                           <button
                             type="button"
-                            className="text-slate-400 transition-all hover:text-[#ab3500] dark:hover:text-orange-400"
+                            onClick={() => {
+                              setSelectedMapOrderId(row.id)
+                              mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                            }}
+                            className="group inline-flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-600 shadow-2xs transition-all hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-emerald-500/60 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-300"
                             aria-label="View on map"
+                            title="Focus and track live green arrow on map"
                           >
-                            <span className="material-symbols-outlined">map</span>
+                            <span className="material-symbols-outlined text-sm text-emerald-500 group-hover:scale-110 transition-transform">
+                              navigation
+                            </span>
+                            <span className="text-[11px]">Track Route</span>
                           </button>
                         </td>
                       </tr>
@@ -479,40 +535,11 @@ const DeliveryManagementPage = () => {
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          <div className="relative h-96 overflow-hidden rounded-[24px] border border-slate-100 lg:col-span-2 dark:border-zinc-800">
-            <div className="absolute inset-0 z-0">
-              <img
-                alt=""
-                className="h-full w-full object-cover"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGyRDJCR9Zox7aEcm6FPFQIQ6moUxu0_4z4oxWQ09PZ0RBP9dYoiT6yohC1yRMz4Vzpzd62LtyHikmVhQLEwxC4t4nFWLRuv_8EF2pmqKEbN50NvoB4QMXvHWBfh3wS-e2VYAW-NxBMBXPs5edb1yI3PE4Xwx3-LcNkhA84RtgBCTaUGt9WN6WsDy9b4T2gPV5Y-GhoS1D0MGCDANeT_0dJs3BnI8OhOF0jR9jTueVvgcGi3eQoEmnMA1KdDQWEa1nrd0Tz71bQIs"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-            </div>
-            <div className="relative z-10 flex h-full flex-col p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-['Plus_Jakarta_Sans'] text-xl font-bold text-white">Real-time Logistics Map</h3>
-                  <p className="text-sm text-white/70">Visualizing active routes across the city.</p>
-                </div>
-                <button
-                  type="button"
-                  className="rounded-xl bg-white/20 p-2 text-white backdrop-blur-md transition-all hover:bg-white/30"
-                  aria-label="Fullscreen map"
-                >
-                  <span className="material-symbols-outlined">fullscreen</span>
-                </button>
-              </div>
-              <div className="mt-auto flex flex-wrap gap-3">
-                <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-lg">
-                  <p className="text-[10px] font-bold uppercase text-white/60">Congestion</p>
-                  <p className="font-bold text-white">Low</p>
-                </div>
-                <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-lg">
-                  <p className="text-[10px] font-bold uppercase text-white/60">Weather</p>
-                  <p className="font-bold text-white">Clear Sky</p>
-                </div>
-              </div>
-            </div>
+          <div ref={mapSectionRef} className="lg:col-span-2">
+            <RealTimeLogisticsMap
+              selectedOrderId={selectedMapOrderId}
+              onSelectOrder={(id) => setSelectedMapOrderId(id)}
+            />
           </div>
 
           <div className="flex flex-col rounded-[24px] border border-slate-100 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900">

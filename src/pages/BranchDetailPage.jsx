@@ -719,6 +719,179 @@ export default function BranchDetailPage() {
   const [staffRoleFilter, setStaffRoleFilter] = useState('all')
   const [staffStatusFilter, setStaffStatusFilter] = useState('all')
 
+  const staffColumns = useMemo(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'Staff Member',
+        cell: (info) => {
+          const member = info.row.original
+          const initials = member.name
+            ? member.name
+                .split(' ')
+                .map((n) => n[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase()
+            : 'ST'
+          return (
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 font-bold text-xs text-slate-700 dark:bg-zinc-800 dark:text-zinc-300">
+                {initials}
+              </span>
+              <div className="min-w-0">
+                <p className="font-bold text-slate-900 dark:text-zinc-100 truncate">
+                  {member.name}
+                </p>
+                <p className="text-[11px] text-slate-400 truncate">
+                  {member.email}
+                </p>
+              </div>
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: 'role',
+        header: 'Role / Position',
+        cell: (info) => {
+          const member = info.row.original
+          return (
+            <span
+              className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${
+                member.roleVariant === 'orange'
+                  ? 'bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400'
+                  : member.roleVariant === 'blue'
+                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400'
+                  : member.roleVariant === 'emerald'
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                  : 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400'
+              }`}
+            >
+              {member.role}
+            </span>
+          )
+        },
+      },
+      {
+        accessorKey: 'shift',
+        header: 'Assigned Shift',
+        cell: (info) => (
+          <span className="font-medium text-slate-700 dark:text-zinc-300">
+            {info.getValue() || '08:00 AM - 05:00 PM'}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'phone',
+        header: 'Contact Hotline',
+        cell: (info) => (
+          <span className="font-mono text-slate-600 dark:text-zinc-400">
+            {info.getValue() || '—'}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Duty Status',
+        meta: {
+          headerClassName: 'px-4 py-4 sm:px-6 sm:py-5 text-center',
+          cellClassName: 'px-4 py-4 sm:px-6 sm:py-5 text-center',
+        },
+        cell: (info) => {
+          const member = info.row.original
+          return (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => {
+                  const nextStatus = member.status === 'On Duty' ? 'Off Duty' : 'On Duty'
+                  setStaffList((prev) =>
+                    prev.map((s) => (s.id === member.id ? { ...s, status: nextStatus } : s))
+                  )
+                  showToast(`${member.name} switched to ${nextStatus}`)
+                }}
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold transition ${
+                  member.status === 'On Duty'
+                    ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400'
+                }`}
+                title="Click to toggle staff on/off duty status"
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    member.status === 'On Duty' ? 'bg-emerald-500' : 'bg-slate-400'
+                  }`}
+                />
+                <span>{member.status}</span>
+                <span className="material-symbols-outlined text-[10px]">sync</span>
+              </button>
+            </div>
+          )
+        },
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        enableSorting: false,
+        meta: {
+          headerClassName: 'px-4 py-4 sm:px-6 sm:py-5 text-right',
+          cellClassName: 'px-4 py-4 sm:px-6 sm:py-5 text-right',
+        },
+        cell: (info) => {
+          const member = info.row.original
+          return (
+            <div className="flex items-center justify-end gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setStaffForm(member)
+                  setStaffModalMode('edit')
+                  setStaffModalOpen(true)
+                }}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-[#FF6B35] hover:text-[#FF6B35] dark:border-zinc-700 dark:text-zinc-400"
+                title="Edit staff details"
+              >
+                <span className="material-symbols-outlined text-sm">edit</span>
+              </button>
+              {!member.isManager && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(`Are you sure you want to remove ${member.name} from branch staff?`)) {
+                      setStaffList((prev) => prev.filter((s) => s.id !== member.id))
+                      showToast(`${member.name} removed from branch staff`)
+                    }
+                  }}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-rose-500 transition hover:bg-rose-50 dark:border-zinc-700 dark:hover:bg-rose-950/30"
+                  title="Remove staff member"
+                >
+                  <span className="material-symbols-outlined text-sm">delete</span>
+                </button>
+              )}
+            </div>
+          )
+        },
+      },
+    ],
+    []
+  )
+
+  const filteredStaffList = useMemo(() => {
+    return staffList.filter((s) => {
+      if (staffSearchQuery.trim()) {
+        const q = staffSearchQuery.toLowerCase()
+        const matchesName = (s.name || '').toLowerCase().includes(q)
+        const matchesEmail = (s.email || '').toLowerCase().includes(q)
+        const matchesPhone = (s.phone || '').toLowerCase().includes(q)
+        if (!matchesName && !matchesEmail && !matchesPhone) return false
+      }
+      if (staffRoleFilter !== 'all' && s.role !== staffRoleFilter) return false
+      if (staffStatusFilter !== 'all' && s.status !== staffStatusFilter) return false
+      return true
+    })
+  }, [staffList, staffSearchQuery, staffRoleFilter, staffStatusFilter])
+
   const currentBranchKey = branch?.id ?? branchIndex
   if (currentBranchKey !== prevBranchKey) {
     setPrevBranchKey(currentBranchKey)
@@ -1710,11 +1883,20 @@ export default function BranchDetailPage() {
                     value={staffSearchQuery}
                     onChange={(e) => setStaffSearchQuery(e.target.value)}
                     placeholder="Search staff name, email, or phone..."
-                    className="h-9 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-xs font-medium text-slate-800 placeholder-slate-400 shadow-2xs transition focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+                    className="h-9 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-8 text-xs font-medium text-slate-800 placeholder-slate-400 shadow-2xs transition focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
                   />
+                  {staffSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setStaffSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
+                    >
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <select
                     value={staffRoleFilter}
                     onChange={(e) => setStaffRoleFilter(e.target.value)}
@@ -1737,138 +1919,33 @@ export default function BranchDetailPage() {
                     <option value="On Duty">On Duty</option>
                     <option value="Off Duty">Off Duty</option>
                   </select>
+
+                  {(staffSearchQuery || staffRoleFilter !== 'all' || staffStatusFilter !== 'all') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStaffSearchQuery('')
+                        setStaffRoleFilter('all')
+                        setStaffStatusFilter('all')
+                      }}
+                      className="h-9 rounded-xl px-3 text-xs font-bold text-[#FF6B35] transition hover:bg-orange-50 dark:hover:bg-orange-950/40"
+                    >
+                      Reset Filters
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Staff Table / Cards */}
-              <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-400">
-                      <tr>
-                        <th className="px-5 py-3.5">Staff Member</th>
-                        <th className="px-5 py-3.5">Role / Position</th>
-                        <th className="px-5 py-3.5">Assigned Shift</th>
-                        <th className="px-5 py-3.5">Contact Hotline</th>
-                        <th className="px-5 py-3.5 text-center">Duty Status</th>
-                        <th className="px-5 py-3.5 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                      {staffList
-                        .filter((s) => {
-                          if (staffSearchQuery.trim()) {
-                            const q = staffSearchQuery.toLowerCase()
-                            const matchesName = s.name.toLowerCase().includes(q)
-                            const matchesEmail = s.email.toLowerCase().includes(q)
-                            const matchesPhone = s.phone.toLowerCase().includes(q)
-                            if (!matchesName && !matchesEmail && !matchesPhone) return false
-                          }
-                          if (staffRoleFilter !== 'all' && s.role !== staffRoleFilter) return false
-                          if (staffStatusFilter !== 'all' && s.status !== staffStatusFilter) return false
-                          return true
-                        })
-                        .map((member) => (
-                          <tr key={member.id} className="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40">
-                            <td className="whitespace-nowrap px-5 py-3.5">
-                              <div className="flex items-center gap-3">
-                                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 font-bold text-xs text-slate-700 dark:bg-zinc-800 dark:text-zinc-300">
-                                  {member.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
-                                </span>
-                                <div>
-                                  <p className="font-bold text-slate-900 dark:text-zinc-100">
-                                    {member.name}
-                                  </p>
-                                  <p className="text-[11px] text-slate-400">
-                                    {member.email}
-                                  </p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="whitespace-nowrap px-5 py-3.5">
-                              <span
-                                className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${
-                                  member.roleVariant === 'orange'
-                                    ? 'bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400'
-                                    : member.roleVariant === 'blue'
-                                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400'
-                                    : member.roleVariant === 'emerald'
-                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                                    : 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400'
-                                }`}
-                              >
-                                {member.role}
-                              </span>
-                            </td>
-                            <td className="whitespace-nowrap px-5 py-3.5 font-medium text-slate-700 dark:text-zinc-300">
-                              {member.shift}
-                            </td>
-                            <td className="whitespace-nowrap px-5 py-3.5 font-mono text-slate-600 dark:text-zinc-400">
-                              {member.phone}
-                            </td>
-                            <td className="whitespace-nowrap px-5 py-3.5 text-center">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const nextStatus = member.status === 'On Duty' ? 'Off Duty' : 'On Duty'
-                                  setStaffList((prev) =>
-                                    prev.map((s) => (s.id === member.id ? { ...s, status: nextStatus } : s))
-                                  )
-                                  showToast(`${member.name} switched to ${nextStatus}`)
-                                }}
-                                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold transition ${
-                                  member.status === 'On Duty'
-                                    ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400'
-                                }`}
-                                title="Click to toggle staff on/off duty status"
-                              >
-                                <span
-                                  className={`h-1.5 w-1.5 rounded-full ${
-                                    member.status === 'On Duty' ? 'bg-emerald-500' : 'bg-slate-400'
-                                  }`}
-                                />
-                                <span>{member.status}</span>
-                                <span className="material-symbols-outlined text-[10px]">sync</span>
-                              </button>
-                            </td>
-                            <td className="whitespace-nowrap px-5 py-3.5 text-right">
-                              <div className="flex items-center justify-end gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setStaffForm(member)
-                                    setStaffModalMode('edit')
-                                    setStaffModalOpen(true)
-                                  }}
-                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-[#FF6B35] hover:text-[#FF6B35] dark:border-zinc-700 dark:text-zinc-400"
-                                  title="Edit staff details"
-                                >
-                                  <span className="material-symbols-outlined text-sm">edit</span>
-                                </button>
-                                {!member.isManager && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      if (window.confirm(`Are you sure you want to remove ${member.name} from branch staff?`)) {
-                                        setStaffList((prev) => prev.filter((s) => s.id !== member.id))
-                                        showToast(`${member.name} removed from branch staff`)
-                                      }
-                                    }}
-                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-rose-500 transition hover:bg-rose-50 dark:border-zinc-700 dark:hover:bg-rose-950/30"
-                                    title="Remove staff member"
-                                  >
-                                    <span className="material-symbols-outlined text-sm">delete</span>
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              {/* Staff Table matching DRY shared DataTable pattern */}
+              <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                <DataTable
+                  columns={staffColumns}
+                  data={filteredStaffList}
+                  enablePagination={true}
+                  pageSize={10}
+                  itemName="staff members"
+                />
+              </section>
             </div>
 
             {/* Operational Delegation & Permissions Control */}
