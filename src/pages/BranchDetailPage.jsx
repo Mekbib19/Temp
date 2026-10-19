@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import DataTable from '../components/DataTable'
-import { getMerchantById, loadStoredMerchants } from '../data/demoMerchants'
+import { getMerchantById, loadStoredMerchants, saveStoredMerchants } from '../data/demoMerchants'
 import { orderStatusConfig, generateOrdersForBranch } from '../data/demoOrders'
 import { getMenuItemsForBranch, getCategoriesForBranch } from '../data/demoMenuItems'
 import BranchMenuItemsTabContent from '../components/BranchMenuItemsTabContent'
@@ -621,6 +621,15 @@ export default function BranchDetailPage() {
   const merchantCategories = useMemo(() => {
     return getCategoriesForBranch(merchant, menuItems)
   }, [merchant, menuItems])
+
+  // Settings tab edit mode state
+  const [isEditingSettings, setIsEditingSettings] = useState(false)
+  const [settingsForm, setSettingsForm] = useState(() => ({
+    schedule: branch?.schedule || {},
+    accepts_orders: branch?.accepts_orders !== false,
+    direct_pickup: branch?.direct_pickup !== false,
+    kitchen_prep_buffer: branch?.kitchen_prep_buffer || '15 - 20 mins',
+  }))
 
   // Branch Manager & Staff Management Control State
   const [managerData, setManagerData] = useState(() => ({
@@ -2262,7 +2271,7 @@ export default function BranchDetailPage() {
           </div>
         )}
 
-        {/* TAB 5: SETTINGS (Includes Working Hours Schedule, Order Acceptance, and Operating Controls) */}
+   {/* TAB 5: SETTINGS (Includes Working Hours Schedule, Order Acceptance, and Operating Controls) */}
         {activeTab === 'settings' && (
           <div className="space-y-6 animate-fade-in">
             {/* Weekly Operating Schedule */}
@@ -2281,46 +2290,208 @@ export default function BranchDetailPage() {
                     </p>
                   </div>
                 </div>
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  {isBranchOpen ? 'Branch Open Today' : 'Closed Today'}
-                </span>
+
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    {isBranchOpen ? 'Branch Open Today' : 'Closed Today'}
+                  </span>
+
+                  {/* Edit Mode Toggle Button */}
+                  {!isEditingSettings ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSettingsForm({
+                          schedule: branch?.schedule || {},
+                          accepts_orders: branch?.accepts_orders !== false,
+                          direct_pickup: branch?.direct_pickup !== false,
+                          kitchen_prep_buffer: branch?.kitchen_prep_buffer || '15 - 20 mins',
+                        })
+                        setIsEditingSettings(true)
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition hover:border-[#FF6B35] hover:text-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                    >
+                      <span className="material-symbols-outlined text-sm">edit</span>
+                      <span>Edit Settings</span>
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingSettings(false)}
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // Apply local changes to branch object
+                          Object.assign(branch, {
+                            schedule: settingsForm.schedule,
+                            accepts_orders: settingsForm.accepts_orders,
+                            direct_pickup: settingsForm.direct_pickup,
+                            kitchen_prep_buffer: settingsForm.kitchen_prep_buffer,
+                          })
+                          if (merchant) {
+                            try {
+                              const stored = loadStoredMerchants()
+                              const updated = stored.map((m) => {
+                                if (m.id === merchant.id) {
+                                  const updatedBranches = (m.branches || []).map((b, idx) => {
+                                    if (String(b.id) === String(branch?.id) || idx === branchIndex) {
+                                      return { ...b, ...branch }
+                                    }
+                                    return b
+                                  })
+                                  return { ...m, branches: updatedBranches }
+                                }
+                                return m
+                              })
+                              saveStoredMerchants(updated)
+                            } catch (err) {
+                              console.error(err)
+                            }
+                          }
+                          setIsEditingSettings(false)
+                          showToast('Branch operational settings updated successfully')
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
+                      >
+                        <span className="material-symbols-outlined text-sm">check</span>
+                        <span>Save Changes</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-7">
                 {DAYS_OF_WEEK.map((d) => {
-                  const dayData = branch.schedule?.[d.key] || {
+                  const activeScheduleSource = isEditingSettings
+                    ? settingsForm.schedule
+                    : branch.schedule
+
+                  const dayData = activeScheduleSource?.[d.key] || {
                     is_open: true,
                     open_time: branch.opening_hours || '08:00',
                     close_time: branch.closing_hours || '22:00',
                   }
                   const isOpen = Boolean(dayData.is_open)
+
                   return (
                     <div
                       key={d.key}
-                      className={`rounded-xl border p-3.5 text-center transition ${
+                      className={`flex flex-col justify-between rounded-xl border p-3.5 text-center transition ${
                         isOpen
                           ? 'border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/40 dark:bg-emerald-950/20'
                           : 'border-slate-200 bg-slate-100/50 opacity-60 dark:border-zinc-800 dark:bg-zinc-800/20'
                       }`}
                     >
-                      <span className="block text-xs font-bold text-slate-800 dark:text-zinc-200">
-                        {d.full}
-                      </span>
-                      <span
-                        className={`mt-1.5 inline-block rounded px-2 py-0.5 text-[10px] font-bold ${
-                          isOpen
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
-                            : 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
-                        }`}
-                      >
-                        {isOpen ? 'Open' : 'Closed'}
-                      </span>
-                      {isOpen && (
-                        <p className="mt-2 font-mono text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
-                          {dayData.open_time} - {dayData.close_time}
-                        </p>
-                      )}
+                      <div>
+                        <span className="block text-xs font-bold text-slate-800 dark:text-zinc-200">
+                          {d.full}
+                        </span>
+
+                        {isEditingSettings ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSettingsForm((prev) => ({
+                                ...prev,
+                                schedule: {
+                                  ...prev.schedule,
+                                  [d.key]: {
+                                    ...dayData,
+                                    is_open: !isOpen,
+                                  },
+                                },
+                              }))
+                            }}
+                            className={`mt-1.5 inline-block cursor-pointer rounded px-2.5 py-0.5 text-[10px] font-bold transition hover:opacity-80 ${
+                              isOpen
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                                : 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
+                            }`}
+                          >
+                            {isOpen ? 'Open' : 'Closed'}
+                          </button>
+                        ) : (
+                          <span
+                            className={`mt-1.5 inline-block rounded px-2 py-0.5 text-[10px] font-bold ${
+                              isOpen
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                                : 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
+                            }`}
+                          >
+                            {isOpen ? 'Open' : 'Closed'}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-3">
+                        {isOpen ? (
+                          isEditingSettings ? (
+                            <div className="space-y-1.5 text-left">
+                              <div>
+                                <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                                  From
+                                </span>
+                                <input
+                                  type="time"
+                                  value={dayData.open_time}
+                                  onChange={(e) => {
+                                    const val = e.target.value
+                                    setSettingsForm((prev) => ({
+                                      ...prev,
+                                      schedule: {
+                                        ...prev.schedule,
+                                        [d.key]: {
+                                          ...dayData,
+                                          open_time: val,
+                                        },
+                                      },
+                                    }))
+                                  }}
+                                  className="w-full rounded border border-slate-200 bg-white px-1.5 py-1 font-mono text-[11px] font-semibold text-slate-700 shadow-2xs focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                                />
+                              </div>
+                              <div>
+                                <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                                  To
+                                </span>
+                                <input
+                                  type="time"
+                                  value={dayData.close_time}
+                                  onChange={(e) => {
+                                    const val = e.target.value
+                                    setSettingsForm((prev) => ({
+                                      ...prev,
+                                      schedule: {
+                                        ...prev.schedule,
+                                        [d.key]: {
+                                          ...dayData,
+                                          close_time: val,
+                                        },
+                                      },
+                                    }))
+                                  }}
+                                  className="w-full rounded border border-slate-200 bg-white px-1.5 py-1 font-mono text-[11px] font-semibold text-slate-700 shadow-2xs focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="mt-2 font-mono text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
+                              {dayData.open_time} - {dayData.close_time}
+                            </p>
+                          )
+                        ) : (
+                          <p className="py-2 text-[11px] font-medium text-slate-400 dark:text-zinc-500">
+                            Closed
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )
                 })}
@@ -2331,95 +2502,127 @@ export default function BranchDetailPage() {
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
                 <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3 dark:border-zinc-800">
-                  <span className="material-symbols-outlined text-base text-[#FF6B35]">tune</span>
+                  <span className="material-symbols-outlined text-base text-[#FF6B35]">
+                    tune
+                  </span>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
                     Order Dispatch & Delivery Settings
                   </h3>
                 </div>
+
                 <div className="mt-4 space-y-4 text-xs">
+                  {/* Accept Online Orders */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="font-bold text-slate-800 dark:text-zinc-200 block">
+                      <span className="block font-bold text-slate-800 dark:text-zinc-200">
                         Accept Online Orders
                       </span>
                       <span className="text-[11px] text-slate-500 dark:text-zinc-400">
                         Allow customers to checkout from this branch
                       </span>
                     </div>
-                    <span className="rounded-full bg-emerald-100 px-3 py-1 font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-                      {branch.accepts_orders !== false ? 'Enabled' : 'Paused'}
-                    </span>
+                    {isEditingSettings ? (
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={settingsForm.accepts_orders}
+                        onClick={() =>
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            accepts_orders: !prev.accepts_orders,
+                          }))
+                        }
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          settingsForm.accepts_orders
+                            ? 'bg-emerald-500'
+                            : 'bg-slate-300 dark:bg-zinc-700'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                            settingsForm.accepts_orders ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    ) : (
+                      <span className="rounded-full bg-emerald-100 px-3 py-1 font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                        {branch.accepts_orders !== false ? 'Enabled' : 'Paused'}
+                      </span>
+                    )}
                   </div>
 
-                  <div className="border-t border-slate-100 pt-3 dark:border-zinc-800 flex items-center justify-between">
+                  {/* Direct Customer Pickup */}
+                  <div className="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-zinc-800">
                     <div>
-                      <span className="font-bold text-slate-800 dark:text-zinc-200 block">
+                      <span className="block font-bold text-slate-800 dark:text-zinc-200">
                         Direct Customer Pickup
                       </span>
                       <span className="text-[11px] text-slate-500 dark:text-zinc-400">
                         Takeout at branch counter
                       </span>
                     </div>
-                    <span className="rounded-full bg-blue-100 px-3 py-1 font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
-                      Active
-                    </span>
+                    {isEditingSettings ? (
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={settingsForm.direct_pickup}
+                        onClick={() =>
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            direct_pickup: !prev.direct_pickup,
+                          }))
+                        }
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          settingsForm.direct_pickup
+                            ? 'bg-blue-600'
+                            : 'bg-slate-300 dark:bg-zinc-700'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                            settingsForm.direct_pickup ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    ) : (
+                      <span className="rounded-full bg-blue-100 px-3 py-1 font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
+                        {branch.direct_pickup !== false ? 'Active' : 'Disabled'}
+                      </span>
+                    )}
                   </div>
 
-                  <div className="border-t border-slate-100 pt-3 dark:border-zinc-800 flex items-center justify-between">
+                  {/* Kitchen Prep Buffer */}
+                  <div className="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-zinc-800">
                     <div>
-                      <span className="font-bold text-slate-800 dark:text-zinc-200 block">
+                      <span className="block font-bold text-slate-800 dark:text-zinc-200">
                         Kitchen Prep Buffer
                       </span>
                       <span className="text-[11px] text-slate-500 dark:text-zinc-400">
                         Default kitchen preparation time
                       </span>
                     </div>
-                    <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">
-                      15 - 20 mins
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Geolocation & Service Radius Settings */}
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
-                <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3 dark:border-zinc-800">
-                  <span className="material-symbols-outlined text-base text-indigo-500">pin_drop</span>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
-                    Location & Service Coordinates
-                  </h3>
-                </div>
-                <div className="mt-4 space-y-3 text-xs">
-                  <div>
-                    <span className="text-[11px] font-semibold text-slate-400">Branch Address</span>
-                    <p className="mt-0.5 font-bold text-slate-800 dark:text-zinc-200">
-                      {branch.address || 'Central Commercial Boulevard, Addis Ababa'}
-                    </p>
-                  </div>
-                  <div className="border-t border-slate-100 pt-2.5 dark:border-zinc-800 grid grid-cols-2 gap-3">
-                    <div>
-                      <span className="text-[11px] font-semibold text-slate-400">Latitude</span>
-                      <p className="mt-0.5 font-mono font-bold text-slate-800 dark:text-zinc-200">
-                        {Number(branch.latitude || 9.0016).toFixed(6)}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-semibold text-slate-400">Longitude</span>
-                      <p className="mt-0.5 font-mono font-bold text-slate-800 dark:text-zinc-200">
-                        {Number(branch.longitude || 38.7842).toFixed(6)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="border-t border-slate-100 pt-2.5 dark:border-zinc-800 flex items-center justify-between">
-                    <div>
-                      <span className="text-[11px] font-semibold text-slate-400">Delivery Coverage Zone</span>
-                      <p className="mt-0.5 font-semibold text-slate-800 dark:text-zinc-200">
-                        12 km Radial Radius
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-                      GPS Geofenced
-                    </span>
+                    {isEditingSettings ? (
+                      <select
+                        value={settingsForm.kitchen_prep_buffer}
+                        onChange={(e) =>
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            kitchen_prep_buffer: e.target.value,
+                          }))
+                        }
+                        className="cursor-pointer rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 font-mono text-xs font-semibold text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                      >
+                        <option value="5 - 10 mins">5 - 10 mins</option>
+                        <option value="10 - 15 mins">10 - 15 mins</option>
+                        <option value="15 - 20 mins">15 - 20 mins</option>
+                        <option value="20 - 30 mins">20 - 30 mins</option>
+                        <option value="30+ mins">30+ mins</option>
+                      </select>
+                    ) : (
+                      <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">
+                        {branch.kitchen_prep_buffer || '15 - 20 mins'}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
