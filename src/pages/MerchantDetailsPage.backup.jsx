@@ -913,7 +913,6 @@ export default function MerchantDetailsPage() {
               <table className="w-full text-left text-xs">
                 <thead className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-400">
                   <tr>
-                    <th className="px-5 py-3.5">Order ID</th>
                     <th className="px-5 py-3.5">Customer</th>
                     <th className="px-5 py-3.5">Timestamp</th>
                     <th className="px-5 py-3.5">Items Summary</th>

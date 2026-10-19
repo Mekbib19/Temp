@@ -120,15 +120,6 @@ function BranchOrdersTabContent({
 
   const columns = useMemo(() => [
     {
-      accessorKey: 'id',
-      header: 'Order ID',
-      cell: (info) => (
-        <span className="font-mono font-bold text-[#FF6B35] dark:text-orange-400">
-          {info.getValue()}
-        </span>
-      ),
-    },
-    {
       accessorKey: 'customer',
       header: 'Customer',
       cell: (info) => {
@@ -631,6 +622,103 @@ export default function BranchDetailPage() {
     return getCategoriesForBranch(merchant, menuItems)
   }, [merchant, menuItems])
 
+  // Branch Manager & Staff Management Control State
+  const [managerData, setManagerData] = useState(() => ({
+    name: branch?.manager_name || 'Yonas Alemu',
+    phone: branch?.phone_number || branch?.phone || branch?.manager_phone || '+251 91 123 4567',
+    email: branch?.email || 'manager.branch@merchant.et',
+    shift: 'Full Shift (08:00 AM - 05:00 PM)',
+    status: 'On Duty',
+  }))
+
+  const [staffList, setStaffList] = useState(() => [
+    {
+      id: 'st-1',
+      name: branch?.manager_name || 'Yonas Alemu',
+      role: 'Branch Manager',
+      roleVariant: 'orange',
+      phone: branch?.phone_number || branch?.phone || branch?.manager_phone || '+251 91 123 4567',
+      email: branch?.email || 'yonas.a@merchant.et',
+      shift: '08:00 AM - 05:00 PM',
+      status: 'On Duty',
+      statusVariant: 'active',
+      isManager: true,
+    },
+    {
+      id: 'st-2',
+      name: 'Bethlehem Tsegaye',
+      role: 'Kitchen Head Chef',
+      roleVariant: 'blue',
+      phone: '+251 92 334 1122',
+      email: 'bethlehem.t@merchant.et',
+      shift: '07:00 AM - 03:30 PM',
+      status: 'On Duty',
+      statusVariant: 'active',
+    },
+    {
+      id: 'st-3',
+      name: 'Kassahun Bekele',
+      role: 'Cashier & Dispatch Lead',
+      roleVariant: 'emerald',
+      phone: '+251 94 887 6655',
+      email: 'kassahun.b@merchant.et',
+      shift: '02:00 PM - 10:30 PM',
+      status: 'On Duty',
+      statusVariant: 'active',
+    },
+    {
+      id: 'st-4',
+      name: 'Hanan Mohammed',
+      role: 'Fulfillment & Packing Associate',
+      roleVariant: 'purple',
+      phone: '+251 93 555 8899',
+      email: 'hanan.m@merchant.et',
+      shift: '09:00 AM - 06:00 PM',
+      status: 'Off Duty',
+      statusVariant: 'leave',
+    },
+    {
+      id: 'st-5',
+      name: 'Dawit Girma',
+      role: 'Inventory & Expediter',
+      roleVariant: 'orange',
+      phone: '+251 91 444 3322',
+      email: 'dawit.g@merchant.et',
+      shift: '04:00 PM - 11:00 PM',
+      status: 'On Duty',
+      statusVariant: 'active',
+    },
+  ])
+
+  // Modals & controls
+  const [isEditingManager, setIsEditingManager] = useState(false)
+  const [managerEditForm, setManagerEditForm] = useState(managerData)
+  const [staffModalOpen, setStaffModalOpen] = useState(false)
+  const [staffModalMode, setStaffModalMode] = useState('add')
+  const [staffForm, setStaffForm] = useState({
+    id: '',
+    name: '',
+    role: 'Kitchen Head Chef',
+    roleVariant: 'blue',
+    phone: '',
+    email: '',
+    shift: '08:00 AM - 05:00 PM',
+    status: 'On Duty',
+    statusVariant: 'active',
+  })
+
+  // Branch operational permission controls
+  const [permissions, setPermissions] = useState({
+    allowStaffOrderAdvance: true,
+    allowStaffItemStockToggle: true,
+    allowCashierRefunds: false,
+    requireManagerPinForOverrides: true,
+  })
+
+  const [staffSearchQuery, setStaffSearchQuery] = useState('')
+  const [staffRoleFilter, setStaffRoleFilter] = useState('all')
+  const [staffStatusFilter, setStaffStatusFilter] = useState('all')
+
   const currentBranchKey = branch?.id ?? branchIndex
   if (currentBranchKey !== prevBranchKey) {
     setPrevBranchKey(currentBranchKey)
@@ -868,20 +956,45 @@ export default function BranchDetailPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-600 dark:text-zinc-300">
-                  <span className="inline-flex items-center gap-1 rounded-lg bg-orange-50 px-2.5 py-1 font-bold text-[#FF6B35] ring-1 ring-orange-200/60 dark:bg-orange-950/40 dark:ring-orange-800/40">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('staff')}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-orange-50 px-2.5 py-1 font-bold text-[#FF6B35] ring-1 ring-orange-200/60 transition hover:bg-orange-100 dark:bg-orange-950/40 dark:ring-orange-800/40 dark:text-orange-400"
+                    title="View manager & staff"
+                  >
                     <span className="material-symbols-outlined text-sm">badge</span>
-                    Manager: {branch.manager_name || 'Designated Staff'}
-                  </span>
+                    <span>Manager: {branch.manager_name || 'Designated Staff'}</span>
+                  </button>
 
-                  <span className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1 font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('settings')}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1 font-bold text-blue-700 transition hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400"
+                    title="View branch settings & address"
+                  >
                     <span className="material-symbols-outlined text-sm">near_me</span>
-                    {branch.address || 'Central Addis Ababa'}
-                  </span>
+                    <span>{branch.address || 'Central Addis Ababa'}</span>
+                  </button>
 
-                  <span className="inline-flex items-center gap-1 rounded-lg bg-purple-50 px-2.5 py-1 font-bold text-purple-700 dark:bg-purple-950/40 dark:text-purple-400">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('menu_items')}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-purple-50 px-2.5 py-1 font-bold text-purple-700 transition hover:bg-purple-100 dark:bg-purple-950/40 dark:text-purple-400"
+                    title="View branch menu items"
+                  >
                     <span className="material-symbols-outlined text-sm">restaurant_menu</span>
-                    {menuItems.length} Products & Menu Items
-                  </span>
+                    <span>{menuItems.length} Products & Menu Items</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('orders')}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 font-bold text-emerald-700 transition hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300"
+                    title="View recent orders"
+                  >
+                    <span className="material-symbols-outlined text-sm">receipt_long</span>
+                    <span>{orders.length} Orders</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -996,8 +1109,8 @@ export default function BranchDetailPage() {
               { id: 'overview', label: 'Overview & Statistics', icon: 'analytics' },
               { id: 'orders', label: `Recent Orders (${orders.length})`, icon: 'receipt_long' },
               { id: 'menu_items', label: `Menu Items (${menuItems.length})`, icon: 'restaurant_menu' },
-              { id: 'settings', label: 'Settings', icon: 'settings' },
               { id: 'staff', label: 'Manager & Staff', icon: 'badge' },
+              { id: 'settings', label: 'Settings', icon: 'settings' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -1450,93 +1563,625 @@ export default function BranchDetailPage() {
           </div>
         )}
 
-        {/* TAB 4: MANAGER & STAFF */}
+        {/* TAB 4: MANAGER & STAFF CONTROLS */}
         {activeTab === 'staff' && (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 animate-fade-in">
-            <div className="space-y-6 lg:col-span-8">
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
-                <div className="flex items-center gap-2.5 border-b border-slate-100 pb-4 dark:border-zinc-800">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40">
-                    <span className="material-symbols-outlined text-lg">badge</span>
+          <div className="space-y-6 animate-fade-in">
+            {/* Top Branch Manager Command Card */}
+            <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="border-b border-slate-100 bg-slate-50/70 p-5 dark:border-zinc-800 dark:bg-zinc-850/50">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3.5">
+                    <div className="relative">
+                      <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-[#FF6B35] font-extrabold text-lg shadow-sm dark:bg-orange-950/60">
+                        {managerData.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </span>
+                      <span
+                        className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-zinc-900 ${
+                          managerData.status === 'On Duty' ? 'bg-emerald-500' : 'bg-slate-400'
+                        }`}
+                        title={managerData.status}
+                      />
+                    </div>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-base font-bold text-slate-900 dark:text-zinc-100">
+                          {managerData.name}
+                        </h3>
+                        <span className="rounded-md bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-[#FF6B35] dark:bg-orange-950/60">
+                          Store General Manager
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextStatus = managerData.status === 'On Duty' ? 'Off Duty' : 'On Duty'
+                            setManagerData((prev) => ({ ...prev, status: nextStatus }))
+                            showToast(`Manager status switched to ${nextStatus}`)
+                          }}
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition ${
+                            managerData.status === 'On Duty'
+                              ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400'
+                          }`}
+                          title="Click to toggle manager duty status"
+                        >
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              managerData.status === 'On Duty' ? 'bg-emerald-500' : 'bg-slate-400'
+                            }`}
+                          />
+                          <span>{managerData.status}</span>
+                          <span className="material-symbols-outlined text-[10px]">sync</span>
+                        </button>
+                      </div>
+                      <p className="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
+                        Primary designated operational lead for {branch.branch_name}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setManagerEditForm(managerData)
+                        setIsEditingManager(true)
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:text-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                    >
+                      <span className="material-symbols-outlined text-sm">edit</span>
+                      <span>Edit Manager Credentials</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Manager Detail Grid */}
+              <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-4 text-xs">
+                <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 dark:border-zinc-800 dark:bg-zinc-850/50">
+                  <span className="text-[11px] font-semibold text-slate-400 block">Direct Hotline</span>
+                  <p className="mt-1 font-mono font-bold text-slate-900 dark:text-zinc-100">
+                    {managerData.phone}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 dark:border-zinc-800 dark:bg-zinc-850/50">
+                  <span className="text-[11px] font-semibold text-slate-400 block">Official Email</span>
+                  <p className="mt-1 font-mono font-bold text-slate-900 dark:text-zinc-100 truncate">
+                    {managerData.email}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 dark:border-zinc-800 dark:bg-zinc-850/50">
+                  <span className="text-[11px] font-semibold text-slate-400 block">Assigned Shift</span>
+                  <p className="mt-1 font-bold text-slate-900 dark:text-zinc-100">
+                    {managerData.shift}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 dark:border-zinc-800 dark:bg-zinc-850/50">
+                  <span className="text-[11px] font-semibold text-slate-400 block">Branch Assigned</span>
+                  <p className="mt-1 font-bold text-slate-900 dark:text-zinc-100">
+                    {branch.branch_name} {branch.is_main_branch && '★ Main'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Staff Team Roster Control Section */}
+            <div className="space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
+                    Branch Staff Roster & Personnel ({staffList.length} Members)
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400">
+                    Control team duty statuses, assign operational roles, and manage shift schedules
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStaffForm({
+                      id: `st-${Date.now()}`,
+                      name: '',
+                      role: 'Kitchen Head Chef',
+                      roleVariant: 'blue',
+                      phone: '+251 91 ',
+                      email: '',
+                      shift: '08:00 AM - 05:00 PM',
+                      status: 'On Duty',
+                      statusVariant: 'active',
+                    })
+                    setStaffModalMode('add')
+                    setStaffModalOpen(true)
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
+                >
+                  <span className="material-symbols-outlined text-sm">person_add</span>
+                  <span>Add Staff Member</span>
+                </button>
+              </div>
+
+              {/* Filters Bar */}
+              <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200/80 bg-slate-100/90 p-3 dark:border-zinc-800 dark:bg-zinc-800/60">
+                <div className="relative min-w-[220px] flex-1">
+                  <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+                    search
+                  </span>
+                  <input
+                    type="text"
+                    value={staffSearchQuery}
+                    onChange={(e) => setStaffSearchQuery(e.target.value)}
+                    placeholder="Search staff name, email, or phone..."
+                    className="h-9 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-xs font-medium text-slate-800 placeholder-slate-400 shadow-2xs transition focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    value={staffRoleFilter}
+                    onChange={(e) => setStaffRoleFilter(e.target.value)}
+                    className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs transition focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                  >
+                    <option value="all">All Roles</option>
+                    <option value="Branch Manager">Branch Manager</option>
+                    <option value="Kitchen Head Chef">Kitchen Head Chef</option>
+                    <option value="Cashier & Dispatch Lead">Cashier & Dispatch</option>
+                    <option value="Fulfillment & Packing Associate">Packing Associate</option>
+                    <option value="Inventory & Expediter">Inventory & Expediter</option>
+                  </select>
+
+                  <select
+                    value={staffStatusFilter}
+                    onChange={(e) => setStaffStatusFilter(e.target.value)}
+                    className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs transition focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="On Duty">On Duty</option>
+                    <option value="Off Duty">Off Duty</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Staff Table / Cards */}
+              <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-400">
+                      <tr>
+                        <th className="px-5 py-3.5">Staff Member</th>
+                        <th className="px-5 py-3.5">Role / Position</th>
+                        <th className="px-5 py-3.5">Assigned Shift</th>
+                        <th className="px-5 py-3.5">Contact Hotline</th>
+                        <th className="px-5 py-3.5 text-center">Duty Status</th>
+                        <th className="px-5 py-3.5 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                      {staffList
+                        .filter((s) => {
+                          if (staffSearchQuery.trim()) {
+                            const q = staffSearchQuery.toLowerCase()
+                            const matchesName = s.name.toLowerCase().includes(q)
+                            const matchesEmail = s.email.toLowerCase().includes(q)
+                            const matchesPhone = s.phone.toLowerCase().includes(q)
+                            if (!matchesName && !matchesEmail && !matchesPhone) return false
+                          }
+                          if (staffRoleFilter !== 'all' && s.role !== staffRoleFilter) return false
+                          if (staffStatusFilter !== 'all' && s.status !== staffStatusFilter) return false
+                          return true
+                        })
+                        .map((member) => (
+                          <tr key={member.id} className="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40">
+                            <td className="whitespace-nowrap px-5 py-3.5">
+                              <div className="flex items-center gap-3">
+                                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 font-bold text-xs text-slate-700 dark:bg-zinc-800 dark:text-zinc-300">
+                                  {member.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                                </span>
+                                <div>
+                                  <p className="font-bold text-slate-900 dark:text-zinc-100">
+                                    {member.name}
+                                  </p>
+                                  <p className="text-[11px] text-slate-400">
+                                    {member.email}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="whitespace-nowrap px-5 py-3.5">
+                              <span
+                                className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${
+                                  member.roleVariant === 'orange'
+                                    ? 'bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400'
+                                    : member.roleVariant === 'blue'
+                                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400'
+                                    : member.roleVariant === 'emerald'
+                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                    : 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400'
+                                }`}
+                              >
+                                {member.role}
+                              </span>
+                            </td>
+                            <td className="whitespace-nowrap px-5 py-3.5 font-medium text-slate-700 dark:text-zinc-300">
+                              {member.shift}
+                            </td>
+                            <td className="whitespace-nowrap px-5 py-3.5 font-mono text-slate-600 dark:text-zinc-400">
+                              {member.phone}
+                            </td>
+                            <td className="whitespace-nowrap px-5 py-3.5 text-center">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const nextStatus = member.status === 'On Duty' ? 'Off Duty' : 'On Duty'
+                                  setStaffList((prev) =>
+                                    prev.map((s) => (s.id === member.id ? { ...s, status: nextStatus } : s))
+                                  )
+                                  showToast(`${member.name} switched to ${nextStatus}`)
+                                }}
+                                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold transition ${
+                                  member.status === 'On Duty'
+                                    ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400'
+                                }`}
+                                title="Click to toggle staff on/off duty status"
+                              >
+                                <span
+                                  className={`h-1.5 w-1.5 rounded-full ${
+                                    member.status === 'On Duty' ? 'bg-emerald-500' : 'bg-slate-400'
+                                  }`}
+                                />
+                                <span>{member.status}</span>
+                                <span className="material-symbols-outlined text-[10px]">sync</span>
+                              </button>
+                            </td>
+                            <td className="whitespace-nowrap px-5 py-3.5 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setStaffForm(member)
+                                    setStaffModalMode('edit')
+                                    setStaffModalOpen(true)
+                                  }}
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-[#FF6B35] hover:text-[#FF6B35] dark:border-zinc-700 dark:text-zinc-400"
+                                  title="Edit staff details"
+                                >
+                                  <span className="material-symbols-outlined text-sm">edit</span>
+                                </button>
+                                {!member.isManager && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (window.confirm(`Are you sure you want to remove ${member.name} from branch staff?`)) {
+                                        setStaffList((prev) => prev.filter((s) => s.id !== member.id))
+                                        showToast(`${member.name} removed from branch staff`)
+                                      }
+                                    }}
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-rose-500 transition hover:bg-rose-50 dark:border-zinc-700 dark:hover:bg-rose-950/30"
+                                    title="Remove staff member"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">delete</span>
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Operational Delegation & Permissions Control */}
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="border-b border-slate-100 pb-4 dark:border-zinc-800">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-950/40">
+                    <span className="material-symbols-outlined text-lg">admin_panel_settings</span>
                   </span>
                   <div>
                     <h3 className="text-base font-extrabold text-slate-900 dark:text-zinc-100">
-                      Manager & Staff Credentials
+                      Branch Operational Authority & Access Controls
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-zinc-400">
-                      Branch personnel contact credentials and management assignments
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 text-xs">
-                  <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-850/60">
-                    <span className="text-[11px] font-semibold text-slate-400">Branch Manager</span>
-                    <p className="mt-1 text-sm font-bold text-slate-900 dark:text-zinc-100">
-                      {branch.manager_name || 'Designated Store Manager'}
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
-                      Operational Lead & Floor Supervisor
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-850/60">
-                    <span className="text-[11px] font-semibold text-slate-400">Official Contact Number</span>
-                    <p className="mt-1 text-sm font-mono font-bold text-slate-900 dark:text-zinc-100">
-                      {branch.phone_number || branch.phone || branch.manager_phone || '+251 91 123 4567'}
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
-                      Direct branch hotline
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-850/60">
-                    <span className="text-[11px] font-semibold text-slate-400">Staff Email (indexed)</span>
-                    <p className="mt-1 text-sm font-mono font-bold text-slate-900 dark:text-zinc-100">
-                      {branch.email || 'staff.branch@merchant.et'}
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
-                      Indexed for customer receipts & system notifications
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-850/60">
-                    <span className="text-[11px] font-semibold text-slate-400">Branch Identifier</span>
-                    <p className="mt-1 text-sm font-mono font-bold text-slate-900 dark:text-zinc-100">
-                      {branch.id || `branch-${branchIndex}`}
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
-                      {branch.is_main_branch ? 'Primary Main Branch' : 'Satellite Location'}
+                      Configure what on-duty personnel are authorized to perform in this branch console
                     </p>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-6 lg:col-span-4">
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
-                <h4 className="text-xs font-bold text-slate-900 dark:text-zinc-100">
-                  Quick Actions
-                </h4>
-                <div className="mt-3 space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('orders')}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-orange-50 py-2.5 text-center text-xs font-bold text-[#FF6B35] transition hover:bg-orange-100 dark:bg-orange-950/40 dark:text-orange-400"
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 text-xs">
+                {[
+                  {
+                    key: 'allowStaffOrderAdvance',
+                    title: 'Live Order Ticket Dispatch',
+                    desc: 'Allow kitchen and cashier staff to advance tickets (Kitchen -> Ready -> Picked Up).',
+                  },
+                  {
+                    key: 'allowStaffItemStockToggle',
+                    title: 'Menu Item Stock Override',
+                    desc: 'Authorize floor staff to instantly toggle items In Stock or Out of Stock during peak rush.',
+                  },
+                  {
+                    key: 'allowCashierRefunds',
+                    title: 'Cashier Direct Order Cancellations',
+                    desc: 'Enable designated cashiers to void tickets without requiring manager approval override.',
+                  },
+                  {
+                    key: 'requireManagerPinForOverrides',
+                    title: 'Manager Approval Code for SLA Exceptions',
+                    desc: 'Require Store General Manager PIN verification for delayed tickets exceeding 45 minutes.',
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.key}
+                    className="flex items-start justify-between rounded-xl border border-slate-100 bg-slate-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-850/60"
                   >
-                    <span className="material-symbols-outlined text-sm">receipt_long</span>
-                    <span>View Branch Recent Orders ({orders.length})</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/merchants/${merchant.id}`)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-center text-xs font-bold text-slate-700 transition hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                  >
-                    Return to Merchant Details
-                  </button>
-                </div>
+                    <div className="pr-4">
+                      <p className="font-bold text-slate-900 dark:text-zinc-100">
+                        {item.title}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
+                        {item.desc}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPermissions((prev) => {
+                          const updated = { ...prev, [item.key]: !prev[item.key] }
+                          showToast(`Permission '${item.title}' ${updated[item.key] ? 'enabled' : 'disabled'}`)
+                          return updated
+                        })
+                      }}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        permissions[item.key] ? 'bg-[#FF6B35]' : 'bg-slate-300 dark:bg-zinc-700'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                          permissions[item.key] ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
+
+            {/* Modal: Edit Branch Manager Info */}
+            {isEditingManager && (
+              <div
+                role="dialog"
+                aria-modal="true"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-fade-in"
+              >
+                <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-zinc-800">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-zinc-100">
+                      Edit Store Manager Credentials
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingManager(false)}
+                      className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                    >
+                      <span className="material-symbols-outlined text-lg">close</span>
+                    </button>
+                  </div>
+
+                  <div className="mt-4 space-y-3.5 text-xs">
+                    <div>
+                      <label className="mb-1 block font-semibold text-slate-700 dark:text-zinc-300">
+                        Manager Full Name
+                      </label>
+                      <input
+                        type="text"
+                        value={managerEditForm.name}
+                        onChange={(e) => setManagerEditForm({ ...managerEditForm, name: e.target.value })}
+                        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-900 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-semibold text-slate-700 dark:text-zinc-300">
+                        Official Contact Phone
+                      </label>
+                      <input
+                        type="text"
+                        value={managerEditForm.phone}
+                        onChange={(e) => setManagerEditForm({ ...managerEditForm, phone: e.target.value })}
+                        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 font-mono text-xs font-medium text-slate-900 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-semibold text-slate-700 dark:text-zinc-300">
+                        Staff Email Address
+                      </label>
+                      <input
+                        type="email"
+                        value={managerEditForm.email}
+                        onChange={(e) => setManagerEditForm({ ...managerEditForm, email: e.target.value })}
+                        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 font-mono text-xs font-medium text-slate-900 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-semibold text-slate-700 dark:text-zinc-300">
+                        Shift & Hours Assignment
+                      </label>
+                      <input
+                        type="text"
+                        value={managerEditForm.shift}
+                        onChange={(e) => setManagerEditForm({ ...managerEditForm, shift: e.target.value })}
+                        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-900 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex justify-end gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingManager(false)}
+                      className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setManagerData(managerEditForm)
+                        setStaffList((prev) =>
+                          prev.map((s) => (s.isManager ? { ...s, name: managerEditForm.name, phone: managerEditForm.phone, email: managerEditForm.email, shift: managerEditForm.shift } : s))
+                        )
+                        setIsEditingManager(false)
+                        showToast('Manager credentials updated successfully')
+                      }}
+                      className="rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Modal: Add or Edit Staff Member */}
+            {staffModalOpen && (
+              <div
+                role="dialog"
+                aria-modal="true"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-fade-in"
+              >
+                <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-zinc-800">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-zinc-100">
+                      {staffModalMode === 'add' ? 'Add Branch Staff Member' : 'Edit Staff Details'}
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setStaffModalOpen(false)}
+                      className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                    >
+                      <span className="material-symbols-outlined text-lg">close</span>
+                    </button>
+                  </div>
+
+                  <div className="mt-4 space-y-3.5 text-xs">
+                    <div>
+                      <label className="mb-1 block font-semibold text-slate-700 dark:text-zinc-300">
+                        Full Name
+                      </label>
+                      <input
+                        type="text"
+                        value={staffForm.name}
+                        onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}
+                        placeholder="e.g. Almaz Bekele"
+                        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-900 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block font-semibold text-slate-700 dark:text-zinc-300">
+                        Position / Role
+                      </label>
+                      <select
+                        value={staffForm.role}
+                        onChange={(e) => {
+                          const r = e.target.value
+                          let variant = 'blue'
+                          if (r.includes('Chef')) variant = 'blue'
+                          else if (r.includes('Cashier') || r.includes('Dispatch')) variant = 'emerald'
+                          else if (r.includes('Packing') || r.includes('Fulfillment')) variant = 'purple'
+                          else if (r.includes('Inventory') || r.includes('Manager')) variant = 'orange'
+                          setStaffForm({ ...staffForm, role: r, roleVariant: variant })
+                        }}
+                        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-900 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                      >
+                        <option value="Kitchen Head Chef">Kitchen Head Chef</option>
+                        <option value="Cashier & Dispatch Lead">Cashier & Dispatch Lead</option>
+                        <option value="Fulfillment & Packing Associate">Fulfillment & Packing Associate</option>
+                        <option value="Inventory & Expediter">Inventory & Expediter</option>
+                        <option value="Line Cook / Prep Staff">Line Cook / Prep Staff</option>
+                        <option value="Assistant Store Manager">Assistant Store Manager</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block font-semibold text-slate-700 dark:text-zinc-300">
+                        Contact Phone
+                      </label>
+                      <input
+                        type="text"
+                        value={staffForm.phone}
+                        onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })}
+                        placeholder="+251 91 234 5678"
+                        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 font-mono text-xs font-medium text-slate-900 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block font-semibold text-slate-700 dark:text-zinc-300">
+                        Staff Email
+                      </label>
+                      <input
+                        type="email"
+                        value={staffForm.email}
+                        onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
+                        placeholder="staff.name@merchant.et"
+                        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 font-mono text-xs font-medium text-slate-900 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block font-semibold text-slate-700 dark:text-zinc-300">
+                        Assigned Shift Hours
+                      </label>
+                      <select
+                        value={staffForm.shift}
+                        onChange={(e) => setStaffForm({ ...staffForm, shift: e.target.value })}
+                        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-900 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                      >
+                        <option value="Morning Shift (07:00 AM - 03:30 PM)">Morning Shift (07:00 AM - 03:30 PM)</option>
+                        <option value="Full Day Shift (08:00 AM - 05:00 PM)">Full Day Shift (08:00 AM - 05:00 PM)</option>
+                        <option value="Afternoon & Evening (02:00 PM - 10:30 PM)">Afternoon & Evening (02:00 PM - 10:30 PM)</option>
+                        <option value="Closing Shift (04:00 PM - 11:30 PM)">Closing Shift (04:00 PM - 11:30 PM)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex justify-end gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setStaffModalOpen(false)}
+                      className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!staffForm.name.trim()) {
+                          showToast('Please enter staff member name')
+                          return
+                        }
+                        if (staffModalMode === 'add') {
+                          const newMember = { ...staffForm, id: `st-${Date.now()}` }
+                          setStaffList((prev) => [...prev, newMember])
+                          showToast(`${newMember.name} added to branch staff`)
+                        } else {
+                          setStaffList((prev) =>
+                            prev.map((s) => (s.id === staffForm.id ? { ...staffForm } : s))
+                          )
+                          showToast(`Updated details for ${staffForm.name}`)
+                        }
+                        setStaffModalOpen(false)
+                      }}
+                      className="rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
+                    >
+                      {staffModalMode === 'add' ? 'Add Member' : 'Save Changes'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

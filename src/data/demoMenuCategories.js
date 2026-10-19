@@ -100,7 +100,7 @@ export const initialMenuCategories = [
     description: 'Organic crisp apples, tropical mangoes, sweet berries, citrus fruits, and seasonal whole produce.',
     is_active: true,
     sort_order: 1,
-    merchant_ids: ['m-002'],
+    merchant_ids: ['m-002', 'm-007', 'm-017', 'm-018', 'm-025'],
     created_at: getDynamicOffset(40),
     updated_at: getDynamicOffset(1),
   },
@@ -112,7 +112,7 @@ export const initialMenuCategories = [
     description: 'Fresh farm-picked greens, root vegetables, crisp bell peppers, vine tomatoes, and aromatic culinary herbs.',
     is_active: true,
     sort_order: 2,
-    merchant_ids: ['m-002'],
+    merchant_ids: ['m-002', 'm-007', 'm-017', 'm-018', 'm-025'],
     created_at: getDynamicOffset(38),
     updated_at: getDynamicOffset(2),
   },
@@ -124,7 +124,7 @@ export const initialMenuCategories = [
     description: 'Whole milk, unsalted butter, artisanal cheeses, organic yogurts, and plant-based milk alternatives.',
     is_active: true,
     sort_order: 3,
-    merchant_ids: ['m-002'],
+    merchant_ids: ['m-002', 'm-007', 'm-017', 'm-018', 'm-026'],
     created_at: getDynamicOffset(35),
     updated_at: getDynamicOffset(3),
   },
@@ -136,7 +136,7 @@ export const initialMenuCategories = [
     description: 'Fresh sourdough loaves, artisan baguettes, butter croissants, gluten-free sandwich bread, and breakfast muffins.',
     is_active: true,
     sort_order: 4,
-    merchant_ids: ['m-002', 'm-006'],
+    merchant_ids: ['m-002', 'm-007', 'm-018', 'm-006'],
     created_at: getDynamicOffset(32),
     updated_at: getDynamicOffset(0, 10),
   },
@@ -148,9 +148,45 @@ export const initialMenuCategories = [
     description: 'Eco-friendly kitchen detergents, disinfectant multi-surface sprays, recycled paper towels, and trash bags.',
     is_active: true,
     sort_order: 5,
-    merchant_ids: ['m-002'],
+    merchant_ids: ['m-002', 'm-007', 'm-018'],
     created_at: getDynamicOffset(30),
     updated_at: getDynamicOffset(5),
+  },
+  {
+    id: 'mcat-groc-006',
+    category_id: CATEGORY_IDS.GROCERY,
+    category_code: 'GROCERY',
+    name: 'Meat & Deli',
+    description: 'Prime butchery beef cuts, fresh poultry, minced meat for kitfo, and hygienic cold deli charcuterie.',
+    is_active: true,
+    sort_order: 6,
+    merchant_ids: ['m-007', 'm-018', 'm-019'],
+    created_at: getDynamicOffset(28),
+    updated_at: getDynamicOffset(1),
+  },
+  {
+    id: 'mcat-groc-007',
+    category_id: CATEGORY_IDS.GROCERY,
+    category_code: 'GROCERY',
+    name: 'Pantry & Grains',
+    description: 'Ethiopian white maganaja teff, organic highland berbere, basmati rice, pasta, and pure cooking oils.',
+    is_active: true,
+    sort_order: 7,
+    merchant_ids: ['m-002', 'm-007', 'm-017', 'm-018'],
+    created_at: getDynamicOffset(26),
+    updated_at: getDynamicOffset(2),
+  },
+  {
+    id: 'mcat-groc-008',
+    category_id: CATEGORY_IDS.GROCERY,
+    category_code: 'GROCERY',
+    name: 'Beverages',
+    description: 'Bottled spring water, cold-pressed cane and tropical juices, milkshakes, and sparkling sodas.',
+    is_active: true,
+    sort_order: 8,
+    merchant_ids: ['m-002', 'm-007', 'm-018', 'm-025', 'm-026'],
+    created_at: getDynamicOffset(25),
+    updated_at: getDynamicOffset(1),
   },
 
   // --- Pharmacy Category ---
@@ -373,12 +409,25 @@ export const loadStoredMenuCategories = () => {
     }
     const parsed = JSON.parse(raw)
     if (Array.isArray(parsed) && parsed.length > 0) {
-      // Clean any legacy slug attributes if present
-      return parsed.map((item) => {
+      // Merge missing initial menu categories and ensure updated merchant_ids
+      const existingMap = new Map(parsed.map((item) => [item.id, item]))
+      initialMenuCategories.forEach((initCat) => {
+        if (!existingMap.has(initCat.id)) {
+          existingMap.set(initCat.id, initCat)
+        } else {
+          // Merge merchant_ids if initial has more (e.g. newly linked grocery merchants)
+          const curr = existingMap.get(initCat.id)
+          const mergedMids = Array.from(new Set([...(curr.merchant_ids || []), ...(initCat.merchant_ids || [])]))
+          existingMap.set(initCat.id, { ...curr, merchant_ids: mergedMids })
+        }
+      })
+      const mergedList = Array.from(existingMap.values()).map((item) => {
         const clean = { ...item }
         delete clean.slug
         return clean
       })
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedList))
+      return mergedList
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(initialMenuCategories))
     return initialMenuCategories
