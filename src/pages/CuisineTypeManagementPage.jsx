@@ -1067,10 +1067,10 @@ const CuisineTypeManagementPage = () => {
                   </span>
                   <div>
                     <h2 className="font-['Plus_Jakarta_Sans'] text-lg font-bold text-slate-900 dark:text-zinc-50">
-                      {editingCuisine ? 'Edit Specialization Type' : 'Add New Specialization Type'}
+                      {editingCuisine ? 'Edit Specialization Type' : 'Add New Cuisine Type'}
                     </h2>
                     <p className="text-xs text-slate-500 dark:text-zinc-400">
-                      Define a category-specific specialization type (<code className="font-mono text-[11px] text-[#FF6B35]">cuisine_types</code>) for merchants.
+                      Define a category-specific Cuisine type for merchants.
                     </p>
                   </div>
                 </div>

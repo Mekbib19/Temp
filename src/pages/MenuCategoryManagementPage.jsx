@@ -242,7 +242,7 @@ const MenuCategoryManagementPage = () => {
     }
 
     if (!formData.category_id) {
-      errors.category_id = 'Please select a parent category.'
+      errors.category_id = 'Please select a Merchant category.'
     }
 
     if (Object.keys(errors).length > 0) {
@@ -943,7 +943,7 @@ const MenuCategoryManagementPage = () => {
                 {/* Category Selection */}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-                    Parent Category <span className="text-red-500">*</span>
+                    Merchant Category <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={formData.category_id}

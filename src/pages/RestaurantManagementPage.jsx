@@ -895,18 +895,6 @@ const RestaurantManagementPage = () => {
                             {Number(selectedBrandForView.longitude || 38.7842).toFixed(6)}
                           </span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const coords = `${selectedBrandForView.latitude || 9.0016}, ${selectedBrandForView.longitude || 38.7842}`
-                            navigator.clipboard?.writeText(coords)
-                            showToast(`Coordinates copied: ${coords}`)
-                          }}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-                        >
-                          <span className="material-symbols-outlined text-[13px]">content_copy</span>
-                          Copy Coordinates
-                        </button>
                       </div>
                     </div>
                   </div>

@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
+import DataTable from '../components/DataTable'
 import {
   getMerchantById,
   loadStoredMerchants,
@@ -23,7 +24,6 @@ export default function MerchantDetailsPage() {
 
   const [merchantsList, setMerchantsList] = useState(() => loadStoredMerchants())
   const [activeTab, setActiveTab] = useState('overview')
-  const [selectedBranchIndex, setSelectedBranchIndex] = useState(null)
   const [branchMapViewMode, setBranchMapViewMode] = useState('network')
   const [toastMessage, setToastMessage] = useState(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -418,22 +418,60 @@ export default function MerchantDetailsPage() {
     }
   }, [orders, merchant])
 
-  const currentBranch = branches[selectedBranchIndex] || branches[0]
+  const currentBranch = branches[0]
 
-  // Map Embed URL
-  const mapData = useMemo(() => {
-    const lat = Number(currentBranch?.latitude ?? 9.0016)
-    const lng = Number(currentBranch?.longitude ?? 38.7842)
-    const validLat = Number.isFinite(lat) ? lat : 9.0016
-    const validLng = Number.isFinite(lng) ? lng : 38.7842
-    const bbox = `${validLng - 0.008},${validLat - 0.005},${validLng + 0.008},${validLat + 0.005}`
-    return {
-      lat: validLat,
-      lng: validLng,
-      src: `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${validLat},${validLng}`,
-      directionsUrl: `https://www.google.com/maps?q=${validLat},${validLng}`,
+  // Multi-branch bounding box and center that encloses ALL branches on one map
+  const allBranchesMapData = useMemo(() => {
+    if (!branches.length) {
+      const lat = 9.0016
+      const lng = 38.7842
+      return {
+        centerLat: lat,
+        centerLng: lng,
+        bbox: `${lng - 0.04},${lat - 0.03},${lng + 0.04},${lat + 0.03}`,
+        src: `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.04},${lat - 0.03},${lng + 0.04},${lat + 0.03}&layer=mapnik`,
+        directionsUrl: `https://www.google.com/maps?q=${lat},${lng}`,
+      }
     }
-  }, [currentBranch?.latitude, currentBranch?.longitude])
+    const lats = branches.map((b) => Number(b.latitude) || 9.0016)
+    const lngs = branches.map((b) => Number(b.longitude) || 38.7842)
+    const minLat = Math.min(...lats)
+    const maxLat = Math.max(...lats)
+    const minLng = Math.min(...lngs)
+    const maxLng = Math.max(...lngs)
+    const padLat = Math.max(0.015, (maxLat - minLat) * 0.45)
+    const padLng = Math.max(0.018, (maxLng - minLng) * 0.45)
+    const centerLat = Number(((minLat + maxLat) / 2).toFixed(6))
+    const centerLng = Number(((minLng + maxLng) / 2).toFixed(6))
+    const bbox = `${(minLng - padLng).toFixed(6)},${(minLat - padLat).toFixed(6)},${(maxLng + padLng).toFixed(6)},${(maxLat + padLat).toFixed(6)}`
+    return {
+      centerLat,
+      centerLng,
+      minLat,
+      maxLat,
+      minLng,
+      maxLng,
+      bbox,
+      src: `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${centerLat},${centerLng}`,
+      directionsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        (merchant?.name || 'Restaurant') + ' Addis Ababa'
+      )}`,
+    }
+  }, [branches, merchant?.name])
+
+  const handleCopyAllCoordinates = () => {
+    if (!branches.length) return
+    const text = branches
+      .map(
+        (b, i) =>
+          `${i + 1}. ${b.branch_name}: ${Number(b.latitude || 9.0016).toFixed(6)}, ${Number(
+            b.longitude || 38.7842
+          ).toFixed(6)} (${b.address || 'Addis Ababa'})`
+      )
+      .join('\n')
+    navigator.clipboard?.writeText(text)
+    showToast(`All ${branches.length} branch coordinates copied to clipboard!`)
+  }
 
   const handleToggleStatus = () => {
     if (!merchant) return
@@ -456,6 +494,113 @@ export default function MerchantDetailsPage() {
     navigator.clipboard?.writeText(text)
     showToast(`${label} copied to clipboard!`)
   }
+
+const cuisineColumns = useMemo(
+  () => [
+    {
+      accessorKey: 'name',
+      header: 'Cuisine / Specialization',
+      meta: { headerClassName: 'px-6 py-3.5 text-left font-bold' },
+      cell: ({ row }) => {
+        const cuisine = row.original
+        return (
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-white shadow-2xs dark:border-zinc-800 dark:bg-zinc-850">
+              {cuisine.image ? (
+                <img
+                  src={cuisine.image}
+                  alt={cuisine.name}
+                  className="h-6 w-6 object-contain"
+                />
+              ) : (
+                <span className="material-symbols-outlined text-xl text-amber-500">
+                  {cuisine.icon || 'restaurant'}
+                </span>
+              )}
+            </span>
+            <div>
+              <p className="text-xs font-bold text-slate-900 dark:text-zinc-100">{cuisine.name}</p>
+              <span className="font-mono text-[10px] text-slate-400">/{cuisine.slug}</span>
+            </div>
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: 'category_id',
+      header: 'Merchant Category',
+      meta: { headerClassName: 'px-4 py-3.5 text-left font-bold' },
+      cell: ({ getValue }) => {
+        const catId = getValue()
+        const parentCat = categoriesList.find((cat) => cat.id === catId)
+        return (
+          <span className="inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700 dark:bg-zinc-800 dark:text-zinc-300">
+            {parentCat ? parentCat.name : 'General'}
+          </span>
+        )
+      },
+    },
+    {
+      accessorKey: 'description',
+      header: 'Description',
+      meta: { headerClassName: 'px-4 py-3.5 text-left font-bold' },
+      cell: ({ getValue }) => (
+        <p className="max-w-xs truncate text-xs text-slate-500 dark:text-zinc-400">
+          {getValue() || '—'}
+        </p>
+      ),
+    },
+    {
+      accessorKey: 'is_active',
+      header: 'Status',
+      meta: { headerClassName: 'px-4 py-3.5 text-left font-bold' },
+      cell: ({ getValue }) => {
+        const isActive = getValue() !== false
+        return (
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+              isActive
+                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
+            }`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+            {isActive ? 'Active' : 'Inactive'}
+          </span>
+        )
+      },
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      meta: { headerClassName: 'px-6 py-3.5 text-right font-bold' },
+      cell: ({ row }) => {
+        const cuisine = row.original
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <button
+              type="button"
+              onClick={(e) => openEditCuisineModal(cuisine, e)}
+              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-[#FF6B35] dark:hover:bg-zinc-800"
+              title="Edit cuisine details"
+            >
+              <span className="material-symbols-outlined text-base">edit</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => handleRemoveAssignedCuisine(cuisine.id, e)}
+              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-zinc-800"
+              title="Remove specialization"
+            >
+              <span className="material-symbols-outlined text-base">close</span>
+            </button>
+          </div>
+        )
+      },
+    },
+  ],
+  [categoriesList]
+)
 
   if (!merchant) {
     return (
@@ -580,25 +725,6 @@ export default function MerchantDetailsPage() {
                 Merchant Partner Profile & Detailed Operations Console
               </p>
             </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => navigate(`/restaurants/${merchant.id}/edit`)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
-            >
-              <span className="material-symbols-outlined text-base">edit</span>
-              Edit Merchant
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowDeleteModal(true)}
-              className="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 p-2 text-rose-600 transition hover:bg-rose-100 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-400"
-              title="Delete Merchant"
-            >
-              <span className="material-symbols-outlined text-base">delete</span>
-            </button>
           </div>
         </section>
 
@@ -803,7 +929,7 @@ export default function MerchantDetailsPage() {
           <nav className="flex space-x-6 overflow-x-auto">
             {[
               { id: 'overview', label: 'Overview & Statistics', icon: 'analytics' },
-              { id: 'branches', label: `Branches & Locations (${branches.length})`, icon: 'store' },
+              { id: 'branches', label: `Location Indicator & Branches (${branches.length})`, icon: 'pin_drop' },
               { id: 'cuisines', label: `Category & Cuisines (${assignedCuisines.length})`, icon: 'restaurant' },
             ].map((tab) => (
               <button
@@ -952,7 +1078,7 @@ export default function MerchantDetailsPage() {
                           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 transition group-hover:bg-red-500 group-hover:text-white dark:bg-red-950/40 dark:text-red-400 dark:group-hover:bg-red-600 dark:group-hover:text-white">
                             <span className="material-symbols-outlined text-xl">storefront</span>
                           </span>
-                          <div>
+                          <div>-
                             <div className="flex flex-wrap items-center gap-2">
                               <h4 className="text-xs font-bold text-slate-900 group-hover:text-red-600 transition dark:text-zinc-100 dark:group-hover:text-red-400">
                                 {b.branch_name}
@@ -1268,436 +1394,287 @@ export default function MerchantDetailsPage() {
           </div>
         )}
 
-        {/* Tab 2: Branches & GPS Geolocation */}
+        {/* Tab 2: Branches Directory on Left, Map on Right */}
         {activeTab === 'branches' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-              {/* Left: Branch List */}
-              <div className="space-y-4 lg:col-span-5">
-                <div className="flex items-center justify-between gap-2">
+          <div className="space-y-5">
+            {/* Header Toolbar */}
+            <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-4.5 shadow-xs sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] ring-1 ring-orange-200/60 dark:bg-orange-950/40 dark:ring-orange-900/40">
+                  <span className="material-symbols-outlined text-xl">pin_drop</span>
+                </span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
+                      Location Indicator & Branches
+                    </h3>
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                      {branches.length} Branches Plotted
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                    Full branch directory on the left, and small unified map on the right showing all branch coordinates.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/merchants/${merchant.id}/branches/new`)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
+                >
+                  <span className="material-symbols-outlined text-sm">add_business</span>
+                  <span>Add Branch</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Split Grid: Left Branches Directory (vertical), Right Small Map */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
+              {/* Left Column: All Branches Directory Cards (Vertical) */}
+              <div className="space-y-4 lg:col-span-7 xl:col-span-8">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2.5 dark:border-zinc-800">
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
-                      Select Branch ({branches.length})
+                      Branches Directory ({branches.length})
                     </h3>
                     <p className="text-[11px] text-slate-500 dark:text-zinc-400">
-                      Click any branch to view on map or open dedicated branch page
+                      All physical store locations.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/merchants/${merchant.id}/branches/new`)}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
-                  >
-                    <span className="material-symbols-outlined text-sm">add_business</span>
-                    <span>Add New Branch</span>
-                  </button>
+                  <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    {branches.filter((b) => b.is_open !== false).length} Open Now
+                  </span>
                 </div>
 
-                {branches.map((b, idx) => {
-                  const branchKey = b.id || idx
-                  return (
-                    <div
-                      key={branchKey}
-                      onClick={() => navigate(`/merchants/${merchant.id}/branches/${b.id || idx}`)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          navigate(`/merchants/${merchant.id}/branches/${b.id || idx}`)
-                        }
-                      }}
-                      className="group relative w-full cursor-pointer rounded-2xl border border-slate-200 bg-white p-4.5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[#FF6B35] hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-[#FF6B35]"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] transition group-hover:bg-[#FF6B35] group-hover:text-white dark:bg-orange-950/40 dark:group-hover:bg-[#FF6B35]">
-                            <span className="material-symbols-outlined text-xl">storefront</span>
+                {/* Vertical list of simplified branch cards */}
+                <div className="grid grid-cols-1 gap-3">
+                  {branches.map((b, idx) => {
+                    const branchKey = b.id || idx
+                    return (
+                      <div
+                        key={branchKey}
+                        id={`branch-card-${idx}`}
+                        className="group flex items-center justify-between gap-3 rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-[#FF6B35] hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-[#FF6B35]"
+                      >
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <span
+                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-bold transition ${
+                              b.is_main_branch
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
+                                : 'bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40'
+                            }`}
+                          >
+                            <span className="material-symbols-outlined text-lg">storefront</span>
                           </span>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-sm font-bold text-slate-900 group-hover:text-[#FF6B35] transition dark:text-zinc-100">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-1">
+                              <h4 className="truncate text-xs font-bold text-slate-900 group-hover:text-[#FF6B35] transition dark:text-zinc-100">
                                 {b.branch_name}
                               </h4>
                               {b.is_main_branch && (
-                                <span className="rounded-md bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
-                                  Main Branch
+                                <span className="rounded bg-blue-100 px-1 py-0.2 text-[9px] font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
+                                  HQ
                                 </span>
                               )}
                             </div>
-                            <span className="text-[11px] text-slate-400 group-hover:text-slate-600 dark:text-zinc-500 dark:group-hover:text-zinc-400">
-                              Click card to open branch details & map
-                            </span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 group-hover:bg-orange-50 group-hover:text-[#FF6B35] transition dark:bg-zinc-800 dark:group-hover:bg-orange-950/50">
-                            <span className="material-symbols-outlined text-base">arrow_forward</span>
-                          </span>
-                        </div>
-                      </div>
 
-                      <p className="mt-2.5 text-xs text-slate-600 dark:text-zinc-400 line-clamp-1">
-                        {b.address || 'Address not set'}
-                      </p>
-
-                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-2.5 text-[11px] text-slate-500 dark:border-zinc-800 dark:text-zinc-400">
-                        <span className="font-mono text-[10px]">
-                          GPS: {Number(b.latitude ?? 9.0016).toFixed(4)}, {Number(b.longitude ?? 38.7842).toFixed(4)}
-                        </span>
-                        <div className="flex items-center gap-3">
-                          <span className="font-medium">
-                            {b.manager_name ? `Mgr: ${b.manager_name}` : 'Staff Assigned'}
-                          </span>
-                          <span className={`font-bold ${b.is_open !== false ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
-                            {b.is_open !== false ? '● Open' : '○ Closed'}
-                          </span>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/merchants/${merchant.id}/branches/${b.id || idx}`)}
+                          className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-orange-50 px-2.5 py-1.5 text-xs font-bold text-[#FF6B35] ring-1 ring-orange-200/80 hover:bg-[#FF6B35] hover:text-white transition dark:bg-orange-950/40 dark:ring-orange-900/60 dark:text-orange-400"
+                        >
+                          <span>Manage</span>
+                          <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                        </button>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
 
-              {/* Right: Selected Branch Full Map & Info (Displayed after admin selects a branch) */}
-              <div className="space-y-6 lg:col-span-7">
-                {selectedBranchIndex !== null && currentBranch ? (
-                  <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900 transition-all duration-300">
-                    <div className="border-b border-slate-100 p-4 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2.5">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40">
-                          <span className="material-symbols-outlined text-lg">storefront</span>
-                        </span>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
-                              {currentBranch.branch_name}
-                            </h3>
-                            {currentBranch.is_main_branch && (
-                              <span className="rounded-md bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
-                                Main
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-slate-500 dark:text-zinc-400">
-                            GPS: {Number(currentBranch.latitude || 9.0016).toFixed(6)},{' '}
-                            {Number(currentBranch.longitude || 38.7842).toFixed(6)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            navigate(
-                              `/merchants/${merchant.id}/branches/${currentBranch.id || selectedBranchIndex}`
-                            )
-                          }
-                          className="inline-flex items-center gap-1 rounded-lg bg-orange-50 px-2.5 py-1 text-xs font-bold text-[#FF6B35] ring-1 ring-orange-200/80 hover:bg-[#FF6B35] hover:text-white transition dark:bg-orange-950/40 dark:ring-orange-900/60 dark:text-orange-400"
-                        >
-                          <span>Open Full Page</span>
-                          <span className="material-symbols-outlined text-xs">open_in_new</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            copyToClipboard(
-                              `${currentBranch.latitude || 9.0016}, ${currentBranch.longitude || 38.7842}`,
-                              'Coordinates'
-                            )
-                          }
-                          className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                        >
-                          Copy Coordinates
-                        </button>
-                        <a
-                          href={mapData.directionsUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 rounded-lg bg-[#FF6B35] px-2.5 py-1 text-xs font-bold text-white hover:bg-[#e0531f]"
-                        >
-                          <span>Google Maps</span>
-                          <span className="material-symbols-outlined text-xs">open_in_new</span>
-                        </a>
-                      </div>
-                    </div>
-
-                    {/* Map Mode View Switcher */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/80 px-4 py-2 dark:border-zinc-800 dark:bg-zinc-800/50">
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setBranchMapViewMode('network')}
-                          className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition ${
-                            branchMapViewMode === 'network'
-                              ? 'bg-emerald-500 text-slate-950 shadow-xs'
-                              : 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white'
-                          }`}
-                        >
-                          <span className="material-symbols-outlined text-xs">navigation</span>
-                          <span>Network & Green Direction Arrows ({branches.length})</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setBranchMapViewMode('single')}
-                          className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition ${
-                            branchMapViewMode === 'single'
-                              ? 'bg-[#FF6B35] text-white shadow-xs'
-                              : 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white'
-                          }`}
-                        >
-                          <span className="material-symbols-outlined text-xs">pin_drop</span>
-                          <span>Street Level GPS</span>
-                        </button>
-                      </div>
-                      <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        {branchMapViewMode === 'network' ? 'Showing All Connected Routes' : 'Single Coordinate Mode'}
+              {/* Right Column: Small Compact Map (Location Indicator) — sticky */}
+              <div className="space-y-4 lg:col-span-5 xl:col-span-4 lg:sticky lg:top-4">
+                <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                  {/* Map Header with View Switcher */}
+                  <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-3.5 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/50">
+                    <div className="flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-sm text-[#FF6B35]">map</span>
+                      <span className="text-xs font-bold text-slate-900 dark:text-zinc-100">
+                        Location Indicator
                       </span>
                     </div>
 
-                    {branchMapViewMode === 'network' ? (
-                      /* Multi-Branch Vector Network Map with Multiple Green Direction Arrows */
-                      <div className="relative h-80 w-full overflow-hidden bg-[#0A0E17] select-none">
-                        {/* Street Grid pattern */}
-                        <div className="absolute inset-0 pointer-events-none opacity-30">
-                          <svg className="h-full w-full" preserveAspectRatio="none" viewBox="0 0 500 300">
-                            <defs>
-                              <pattern id="merchantGrid" width="30" height="30" patternUnits="userSpaceOnUse">
-                                <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#1E293B" strokeWidth="0.5" />
-                              </pattern>
-                            </defs>
-                            <rect width="100%" height="100%" fill="url(#merchantGrid)" />
-                            <path d="M 0 220 Q 200 180 500 240" fill="none" stroke="#0369a1" strokeWidth="14" opacity="0.25" />
-                            <path d="M 50 0 L 450 300" fill="none" stroke="#334155" strokeWidth="6" opacity="0.3" />
-                            <path d="M 450 0 L 50 300" fill="none" stroke="#334155" strokeWidth="6" opacity="0.3" />
-                          </svg>
-                        </div>
-
-                        {/* Interactive SVG Network & Green Direction Arrows */}
-                        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 600 320" preserveAspectRatio="xMidYMid meet">
-                          {/* Inter-branch dispatch lines with glowing effect */}
-                          {branches.map((b, idx) => {
-                            if (idx === 0) return null
-                            // Spread satellite branches in a fan from HQ at (140, 160)
-                            const angles = [45, 120, -35, 75, -70, 160]
-                            const angle = (angles[(idx - 1) % angles.length] * Math.PI) / 180
-                            const dist = 180 + ((idx * 35) % 110)
-                            const targetX = Math.min(540, Math.max(300, Math.round(140 + Math.cos(angle) * dist)))
-                            const targetY = Math.min(270, Math.max(50, Math.round(160 + Math.sin(angle) * dist)))
-                            const midX = Math.round((140 + targetX) / 2)
-                            const midY = Math.round((160 + targetY) / 2 - 25)
-                            const isBranchSelected = (selectedBranchIndex ?? 0) === idx
-
-                            // Heading angle from HQ to target
-                            const deg = (Math.atan2(targetY - 160, targetX - 140) * 180) / Math.PI + 90
-
-                            return (
-                              <g key={`branch-net-${b.id || idx}`}>
-                                {/* Outer Glow */}
-                                <path
-                                  d={`M 140 160 Q ${midX} ${midY} ${targetX} ${targetY}`}
-                                  fill="none"
-                                  stroke={isBranchSelected ? '#10B981' : '#059669'}
-                                  strokeWidth={isBranchSelected ? '5' : '3'}
-                                  strokeOpacity={isBranchSelected ? '0.4' : '0.2'}
-                                />
-                                {/* Main Route Polyline */}
-                                <path
-                                  d={`M 140 160 Q ${midX} ${midY} ${targetX} ${targetY}`}
-                                  fill="none"
-                                  stroke={isBranchSelected ? '#34D399' : '#10B981'}
-                                  strokeWidth="2.5"
-                                  strokeDasharray="5 4"
-                                />
-
-                                {/* GREEN DIRECTION ARROW 1: At 35% distance */}
-                                <g
-                                  transform={`translate(${Math.round(140 * 0.65 + targetX * 0.35)}, ${Math.round(160 * 0.65 + targetY * 0.35)}) rotate(${deg - 90})`}
-                                >
-                                  <polygon points="-5,-6 6,0 -5,6 -2,0" fill="#22C55E" stroke="#064E3B" strokeWidth="1" />
-                                </g>
-
-                                {/* GREEN DIRECTION ARROW 2: At 70% distance */}
-                                <g
-                                  transform={`translate(${Math.round(140 * 0.3 + targetX * 0.7)}, ${Math.round(160 * 0.3 + targetY * 0.7)}) rotate(${deg - 90})`}
-                                >
-                                  <polygon points="-5,-6 6,0 -5,6 -2,0" fill="#22C55E" stroke="#064E3B" strokeWidth="1" />
-                                </g>
-
-                                {/* Satellite Branch Node Marker */}
-                                <g
-                                  transform={`translate(${targetX}, ${targetY})`}
-                                  className="cursor-pointer"
-                                  onClick={() => setSelectedBranchIndex(idx)}
-                                >
-                                  {isBranchSelected && (
-                                    <circle r="18" fill="#10B981" fillOpacity="0.3" className="animate-ping" />
-                                  )}
-                                  <circle r={isBranchSelected ? '14' : '11'} fill="#0F172A" stroke={isBranchSelected ? '#10B981' : '#047857'} strokeWidth="2.5" />
-                                  <circle r="4" fill={b.is_open !== false ? '#22C55E' : '#94A3B8'} />
-
-                                  {/* Branch Name Label */}
-                                  <text
-                                    x="0"
-                                    y="24"
-                                    textAnchor="middle"
-                                    fill="#F8FAFC"
-                                    fontSize="10"
-                                    fontWeight="bold"
-                                    fontFamily="system-ui"
-                                  >
-                                    {b.branch_name}
-                                  </text>
-                                </g>
-                              </g>
-                            )
-                          })}
-
-                          {/* HQ / Main Branch Center Node */}
-                          <g transform="translate(140, 160)" className="cursor-pointer" onClick={() => setSelectedBranchIndex(0)}>
-                            <circle r="22" fill="#3B82F6" fillOpacity="0.25" className="animate-ping" />
-                            <circle r="16" fill="#1E3A8A" stroke="#3B82F6" strokeWidth="3" />
-                            <circle r="6" fill="#60A5FA" />
-                            <text
-                              x="0"
-                              y="30"
-                              textAnchor="middle"
-                              fill="#93C5FD"
-                              fontSize="11"
-                              fontWeight="bold"
-                              fontFamily="system-ui"
-                            >
-                              ★ HQ ({branches[0]?.branch_name || 'Main'})
-                            </text>
-                          </g>
-                        </svg>
-
-                        {/* Top Overlay Legend */}
-                        <div className="absolute top-3 left-3 z-10 flex items-center gap-3 rounded-lg bg-slate-900/90 px-3 py-1.5 text-[11px] text-slate-300 backdrop-blur-md border border-slate-800">
-                          <span className="flex items-center gap-1">
-                            <span className="material-symbols-outlined text-xs text-emerald-400">navigation</span>
-                            <span className="font-semibold text-emerald-300">Green Map Direction Arrows</span>
-                          </span>
-                          <span className="text-slate-500">•</span>
-                          <span>Click any branch pin to view telemetry</span>
-                        </div>
-                      </div>
-                    ) : (
-                      /* Single OpenStreetMap Iframe */
-                      <div className="h-72 w-full bg-slate-100 dark:bg-zinc-800">
-                        <iframe
-                          title={`${currentBranch.branch_name} Map Location`}
-                          src={mapData.src}
-                          className="h-full w-full border-0"
-                          loading="lazy"
-                        />
-                      </div>
-                    )}
-
-                  <div className="p-4 grid grid-cols-2 gap-4 text-xs sm:grid-cols-4">
-                    <div>
-                      <span className="text-[11px] font-semibold text-slate-400">Branch Phone</span>
-                      <p className="mt-0.5 font-bold text-slate-800 dark:text-zinc-200">
-                        {currentBranch.phone || '+251 91 123 4567'}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-semibold text-slate-400">Manager</span>
-                      <p className="mt-0.5 font-bold text-slate-800 dark:text-zinc-200">
-                        {currentBranch.manager_name || 'Store Supervisor'}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-semibold text-slate-400">Hours</span>
-                      <p className="mt-0.5 font-bold text-slate-800 dark:text-zinc-200">
-                        {currentBranch.opening_hours || '08:00 AM'} - {currentBranch.closing_hours || '10:00 PM'}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-semibold text-slate-400">Orders</span>
-                      <p className="mt-0.5 font-bold text-emerald-600 dark:text-emerald-400">
-                        {currentBranch.accepts_orders !== false ? 'Accepting' : 'Paused'}
-                      </p>
+                    {/* View Switcher Toggle */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setBranchMapViewMode('network')}
+                        className={`rounded-md px-2 py-0.5 text-[10px] font-bold transition ${
+                          branchMapViewMode === 'network'
+                            ? 'bg-emerald-500 text-slate-950 shadow-xs'
+                            : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-white'
+                        }`}
+                        title="Network View with Direction Arrows"
+                      >
+                        Routes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBranchMapViewMode('osm')}
+                        className={`rounded-md px-2 py-0.5 text-[10px] font-bold transition ${
+                          branchMapViewMode === 'osm'
+                            ? 'bg-[#FF6B35] text-white shadow-xs'
+                            : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-white'
+                        }`}
+                        title="City OpenStreetMap View"
+                      >
+                        Map
+                      </button>
                     </div>
                   </div>
 
-                  {/* Weekly Operating Days Schedule Cards */}
-                  {currentBranch.schedule && (
-                    <div className="border-t border-slate-100 p-4 dark:border-zinc-800">
-                      <div className="mb-2.5 flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-sm text-amber-500">schedule</span>
-                        <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">
-                          Weekly Operating Schedule
-                        </span>
+                  {/* Small Map Canvas */}
+                  {branchMapViewMode === 'network' ? (
+                    <div className="relative h-64 w-full overflow-hidden bg-[#0A0E17] select-none">
+                      {/* Grid background */}
+                      <div className="absolute inset-0 pointer-events-none opacity-25">
+                        <svg className="h-full w-full" preserveAspectRatio="none" viewBox="0 0 360 250">
+                          <defs>
+                            <pattern id="smallGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+                              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1E293B" strokeWidth="0.5" />
+                            </pattern>
+                          </defs>
+                          <rect width="100%" height="100%" fill="url(#smallGrid)" />
+                          <path d="M 0 170 Q 180 130 360 190" fill="none" stroke="#0369a1" strokeWidth="10" opacity="0.25" />
+                          <path d="M 40 0 L 320 250" fill="none" stroke="#334155" strokeWidth="5" opacity="0.3" />
+                        </svg>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-7">
-                        {[
-                          { key: 'monday', label: 'Mon' },
-                          { key: 'tuesday', label: 'Tue' },
-                          { key: 'wednesday', label: 'Wed' },
-                          { key: 'thursday', label: 'Thu' },
-                          { key: 'friday', label: 'Fri' },
-                          { key: 'saturday', label: 'Sat' },
-                          { key: 'sunday', label: 'Sun' },
-                        ].map((d) => {
-                          const dayData = currentBranch.schedule?.[d.key] || { is_open: true, open_time: '08:00', close_time: '22:00' }
-                          const isOpen = Boolean(dayData.is_open)
+
+                      {/* Small SVG network plotting all branches */}
+                      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 360 250" preserveAspectRatio="xMidYMid meet">
+                        {branches.map((b, idx) => {
+                          if (idx === 0) return null
+                          const angles = [28, 95, -35, 65, -80, 140]
+                          const angle = (angles[(idx - 1) % angles.length] * Math.PI) / 180
+                          const dist = 115 + ((idx * 20) % 50)
+                          const targetX = Math.min(320, Math.max(180, Math.round(95 + Math.cos(angle) * dist)))
+                          const targetY = Math.min(215, Math.max(35, Math.round(125 + Math.sin(angle) * dist)))
+                          const midX = Math.round((95 + targetX) / 2)
+                          const midY = Math.round((125 + targetY) / 2 - 15)
+                          const deg = (Math.atan2(targetY - 125, targetX - 95) * 180) / Math.PI + 90
+
                           return (
-                            <div
-                              key={d.key}
-                              className={`rounded-xl border p-2 text-center transition ${
-                                isOpen
-                                  ? 'border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/40 dark:bg-emerald-950/20'
-                                  : 'border-slate-200 bg-slate-100/50 opacity-60 dark:border-zinc-800 dark:bg-zinc-800/20'
-                              }`}
-                            >
-                              <span className="block text-[11px] font-bold text-slate-800 dark:text-zinc-200">
-                                {d.label}
-                              </span>
-                              <span
-                                className={`mt-0.5 inline-block rounded px-1.5 py-0.2 text-[9px] font-bold ${
-                                  isOpen
-                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
-                                    : 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
-                                }`}
+                            <g key={`small-branch-net-${b.id || idx}`}>
+                              {/* Route Line */}
+                              <path
+                                d={`M 95 125 Q ${midX} ${midY} ${targetX} ${targetY}`}
+                                fill="none"
+                                stroke="#10B981"
+                                strokeWidth="2"
+                                strokeDasharray="4 3"
+                              />
+                              {/* Green direction arrow */}
+                              <g
+                                transform={`translate(${Math.round(95 * 0.5 + targetX * 0.5)}, ${Math.round(125 * 0.5 + targetY * 0.5)}) rotate(${deg - 90})`}
                               >
-                                {isOpen ? 'Open' : 'Closed'}
-                              </span>
-                              {isOpen && (
-                                <p className="mt-1 font-mono text-[10px] text-slate-600 dark:text-zinc-400">
-                                  {dayData.open_time} - {dayData.close_time}
-                                </p>
-                              )}
-                            </div>
+                                <polygon points="-4,-5 5,0 -4,5 -1,0" fill="#22C55E" stroke="#064E3B" strokeWidth="0.8" />
+                              </g>
+                              {/* Satellite Pin */}
+                              <g
+                                transform={`translate(${targetX}, ${targetY})`}
+                                className="cursor-pointer"
+                                onClick={() => {
+                                  const el = document.getElementById(`branch-card-${idx}`)
+                                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                                }}
+                              >
+                                <circle r="9" fill="#0F172A" stroke="#10B981" strokeWidth="2" />
+                                <circle r="3.5" fill={b.is_open !== false ? '#22C55E' : '#94A3B8'} />
+                                <text
+                                  x="0"
+                                  y="18"
+                                  textAnchor="middle"
+                                  fill="#F8FAFC"
+                                  fontSize="8.5"
+                                  fontWeight="bold"
+                                  fontFamily="system-ui"
+                                >
+                                  {b.branch_name}
+                                </text>
+                              </g>
+                            </g>
                           )
                         })}
+
+                        {/* HQ Pin at (95, 125) */}
+                        <g
+                          transform="translate(95, 125)"
+                          className="cursor-pointer"
+                          onClick={() => {
+                            const el = document.getElementById('branch-card-0')
+                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                          }}
+                        >
+                          <circle r="18" fill="#3B82F6" fillOpacity="0.25" className="animate-ping" />
+                          <circle r="13" fill="#1E3A8A" stroke="#3B82F6" strokeWidth="2.5" />
+                          <circle r="5" fill="#60A5FA" />
+                          <text
+                            x="0"
+                            y="23"
+                            textAnchor="middle"
+                            fill="#93C5FD"
+                            fontSize="9"
+                            fontWeight="bold"
+                            fontFamily="system-ui"
+                          >
+                            ★ HQ
+                          </text>
+                        </g>
+                      </svg>
+
+                      {/* Small Top Overlay */}
+                      <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 rounded-md bg-slate-900/90 px-2 py-1 text-[10px] text-slate-300 backdrop-blur-md border border-slate-800">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>All {branches.length} branches mapped</span>
                       </div>
                     </div>
+                  ) : (
+                    /* Small OpenStreetMap Iframe */
+                    <div className="relative h-64 w-full bg-slate-100 dark:bg-zinc-800">
+                      <iframe
+                        title={`${merchant.name} Small Map`}
+                        src={allBranchesMapData.src}
+                        className="h-full w-full border-0"
+                        loading="lazy"
+                      />
+                    </div>
                   )}
+
+                  {/* Map Footer: Quick Links & Branch Pills */}
+                  <div className="border-t border-slate-100 p-3 bg-slate-50/50 dark:border-zinc-800 dark:bg-zinc-800/30">
+                 
+                    <div className="flex flex-wrap gap-1.5">
+                      {branches.map((b, idx) => (
+                        <button
+                          key={`map-chip-${b.id || idx}`}
+                          type="button"
+                          onClick={() => {
+                            const el = document.getElementById(`branch-card-${idx}`)
+                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                          }}
+                          className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700 hover:border-[#FF6B35] hover:text-[#FF6B35] transition dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                        >
+                          <span className={`h-1.5 w-1.5 rounded-full ${idx === 0 ? 'bg-blue-500' : 'bg-emerald-500'}`} />
+                          <span className="truncate max-w-[100px]">{b.branch_name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <div className="flex h-full min-h-[360px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/60 p-8 text-center dark:border-zinc-800 dark:bg-zinc-900/40">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-100 text-[#FF6B35] dark:bg-orange-950/40">
-                    <span className="material-symbols-outlined text-3xl">map</span>
-                  </div>
-                  <h4 className="mt-4 text-sm font-bold text-slate-900 dark:text-zinc-100">
-                    No Branch Selected
-                  </h4>
-                  <p className="mt-1.5 max-w-sm text-xs text-slate-500 dark:text-zinc-400">
-                    Click any branch on the left to inspect its live geolocation map, operating coordinates, and weekly business hours.
-                  </p>
-                  {branches.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedBranchIndex(0)}
-                      className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
-                    >
-                      <span className="material-symbols-outlined text-sm">storefront</span>
-                      <span>View {branches[0].branch_name} Map</span>
-                    </button>
-                  )}
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -1706,216 +1683,48 @@ export default function MerchantDetailsPage() {
         {/* Tab 3: Category & Cuisines */}
         {activeTab === 'cuisines' && (
           <div className="space-y-6">
-            {/* Primary Category Card */}
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5 dark:border-zinc-800">
-                <div className="flex items-start sm:items-center gap-4">
-                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orange-100 text-[#FF6B35] ring-1 ring-orange-200/60 dark:bg-orange-950/60 dark:ring-orange-800/60 overflow-hidden">
-                    {categoryObj?.image ? (
-                      <img src={categoryObj.image} alt={categoryObj.name} className="h-8 w-8 object-contain" />
-                    ) : (
-                      <span className="material-symbols-outlined text-3xl">
-                        {categoryObj?.icon || 'category'}
-                      </span>
-                    )}
-                  </span>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-bold text-slate-900 dark:text-zinc-100">
-                        Primary Category: {categoryObj?.name || merchant?.category_name || 'General Category'}
-                      </h3>
-                      <span className="rounded-md bg-orange-100 px-2 py-0.5 font-mono text-[11px] font-bold text-[#FF6B35] dark:bg-orange-950/60 dark:text-orange-400">
-                        {categoryObj?.code || 'FOOD'}
-                      </span>
-                      <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                        {categoryObj?.is_active !== false ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
-                      Merchant Business Type: <span className="font-semibold text-slate-700 dark:text-zinc-200">{merchant?.type || 'Restaurant & Dining'}</span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={openCategoryModal}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                    title="Change primary category for this merchant"
-                  >
-                    <span className="material-symbols-outlined text-base text-[#FF6B35]">edit</span>
-                    Change Category
-                  </button>
-                  <Link
-                    to="/categories"
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                    title="Open categories directory"
-                  >
-                    <span className="material-symbols-outlined text-base">open_in_new</span>
-                    Directory
-                  </Link>
-                </div>
-              </div>
-
-              {categoryObj?.description ? (
-                <p className="mt-4 text-xs leading-relaxed text-slate-600 dark:text-zinc-300">
-                  {categoryObj.description}
-                </p>
-              ) : (
-                <p className="mt-4 text-xs italic text-slate-400">
-                  General food & dining merchant categorization across delivery network.
-                </p>
-              )}
-            </div>
-
             {/* Assigned Cuisines Grid */}
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5 dark:border-zinc-800">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-amber-500 text-xl">restaurant</span>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-zinc-100">
-                      Assigned Cuisine Types ({assignedCuisines.length})
-                    </h3>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
-                    Specializations mapped to this merchant. Used for search filters, dietary tagging, and customer menus.
-                  </p>
-                </div>
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5 dark:border-zinc-800">
+    <div>
+      <div className="flex items-center gap-2">
+        <span className="material-symbols-outlined text-amber-500 text-xl">restaurant</span>
+        <h3 className="text-base font-bold text-slate-900 dark:text-zinc-100">
+          Assigned Cuisine Types ({assignedCuisines.length})
+        </h3>
+      </div>
+      <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
+        Specializations mapped to this merchant. Used for search filters, dietary tagging, and customer menus.
+      </p>
+    </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={openAssignCuisinesModal}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
-                    title="Open in-modal cuisine assignment"
-                  >
-                    <span className="material-symbols-outlined text-base">checklist</span>
-                    Edit / Assign Cuisines
-                  </button>
-                  <button
-                    type="button"
-                    onClick={openCreateCuisineModal}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                    title="Create a new cuisine specialization"
-                  >
-                    <span className="material-symbols-outlined text-base text-[#FF6B35]">add</span>
-                    + New Cuisine
-                  </button>
-                </div>
-              </div>
+    <div className="flex items-center gap-2 shrink-0">
+      <button
+        type="button"
+        onClick={openAssignCuisinesModal}
+        className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
+        title="Open in-modal cuisine assignment"
+      >
+        <span className="material-symbols-outlined text-base">checklist</span>
+        Edit / Assign Cuisines
+      </button>
+    </div>
+  </div>
 
-              {assignedCuisines.length > 0 ? (
-                <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {assignedCuisines.map((cuisine) => {
-                    const parentCat = categoriesList.find((cat) => cat.id === cuisine.category_id)
-                    return (
-                      <div
-                        key={cuisine.id}
-                        className="group relative flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/50 p-4 transition hover:border-[#FF6B35]/50 hover:bg-orange-50/30 hover:shadow-xs dark:border-zinc-800 dark:bg-zinc-800/40"
-                      >
-                        <div>
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-center gap-3">
-                              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-amber-500 shadow-2xs dark:bg-zinc-900 overflow-hidden ring-1 ring-slate-100 dark:ring-zinc-800">
-                                {cuisine.image ? (
-                                  <img
-                                    src={cuisine.image}
-                                    alt={cuisine.name}
-                                    className="h-7 w-7 object-contain"
-                                  />
-                                ) : (
-                                  <span className="material-symbols-outlined text-2xl">
-                                    {cuisine.icon || 'restaurant'}
-                                  </span>
-                                )}
-                              </span>
-                              <div>
-                                <h4 className="text-xs font-bold text-slate-900 dark:text-zinc-100">
-                                  {cuisine.name}
-                                </h4>
-                                <span className="font-mono text-[10px] text-slate-400">
-                                  /{cuisine.slug}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Actions on card: Edit in modal and Remove */}
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={(e) => openEditCuisineModal(cuisine, e)}
-                                className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-[#FF6B35] dark:hover:bg-zinc-800 transition"
-                                title="Edit cuisine details in modal"
-                              >
-                                <span className="material-symbols-outlined text-base">edit</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => handleRemoveAssignedCuisine(cuisine.id, e)}
-                                className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-rose-500 dark:hover:bg-zinc-800 transition"
-                                title="Remove specialization from this merchant"
-                              >
-                                <span className="material-symbols-outlined text-base">close</span>
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="mt-3 flex items-center gap-2">
-                            {parentCat && (
-                              <span className="rounded bg-slate-200/80 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-zinc-700 dark:text-zinc-300">
-                                {parentCat.name}
-                              </span>
-                            )}
-                            <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                              Active
-                            </span>
-                          </div>
-
-                          {cuisine.description && (
-                            <p className="mt-2.5 line-clamp-2 text-[11px] leading-relaxed text-slate-600 dark:text-zinc-400">
-                              {cuisine.description}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="mt-5 rounded-2xl border-2 border-dashed border-slate-200 p-10 text-center dark:border-zinc-800">
-                  <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40">
-                    <span className="material-symbols-outlined text-2xl">restaurant_menu</span>
-                  </span>
-                  <h4 className="mt-3 text-sm font-bold text-slate-800 dark:text-zinc-200">
-                    No Cuisines Assigned
-                  </h4>
-                  <p className="mx-auto mt-1 max-w-sm text-xs text-slate-500 dark:text-zinc-400">
-                    Assign culinary specializations to improve customer discovery, search ranking, and category mapping.
-                  </p>
-                  <div className="mt-4 flex items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={openAssignCuisinesModal}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
-                    >
-                      <span className="material-symbols-outlined text-base">checklist</span>
-                      Assign Cuisines
-                    </button>
-                    <button
-                      type="button"
-                      onClick={openCreateCuisineModal}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                    >
-                      <span className="material-symbols-outlined text-base">add</span>
-                      Create New Cuisine
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+  <div className="mt-5">
+    <DataTable
+      columns={cuisineColumns}
+      data={assignedCuisines}
+      enablePagination={assignedCuisines.length > 8}
+      pageSize={8}
+      itemName="cuisines"
+      containerClassName="overflow-x-auto rounded-xl border border-slate-100 dark:border-zinc-800"
+      tableClassName="w-full border-collapse text-left text-xs"
+      headerRowClassName="bg-slate-50/70 dark:bg-zinc-800/40 text-[11px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 dark:border-zinc-800"
+      rowClassName="group transition-colors hover:bg-slate-50/60 dark:hover:bg-zinc-800/40"
+    />
+  </div>
+</div>
           </div>
         )}
 
@@ -1978,18 +1787,6 @@ export default function MerchantDetailsPage() {
                       </button>
                     )}
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAssignCuisinesModalOpen(false)
-                      openCreateCuisineModal()
-                    }}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                  >
-                    <span className="material-symbols-outlined text-base text-[#FF6B35]">add_circle</span>
-                    + Create New Cuisine
-                  </button>
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
@@ -2235,7 +2032,7 @@ export default function MerchantDetailsPage() {
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
-                        Parent Category
+                        Merchant Category
                       </label>
                       <select
                         value={cuisineFormData.category_id}

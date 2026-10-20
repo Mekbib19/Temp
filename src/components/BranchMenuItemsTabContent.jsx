@@ -4,6 +4,7 @@ import {
   deleteMenuItem,
   getCategoriesForBranch,
 } from '../data/demoMenuItems'
+import DataTable from '../components/DataTable'
 
 export default function BranchMenuItemsTabContent({
   menuItems,

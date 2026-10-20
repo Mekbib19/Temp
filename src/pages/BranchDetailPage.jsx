@@ -726,7 +726,6 @@ export default function BranchDetailPage() {
 
   const [staffSearchQuery, setStaffSearchQuery] = useState('')
   const [staffRoleFilter, setStaffRoleFilter] = useState('all')
-  const [staffStatusFilter, setStaffStatusFilter] = useState('all')
 
   const staffColumns = useMemo(
     () => [
@@ -748,17 +747,21 @@ export default function BranchDetailPage() {
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 font-bold text-xs text-slate-700 dark:bg-zinc-800 dark:text-zinc-300">
                 {initials}
               </span>
-              <div className="min-w-0">
-                <p className="font-bold text-slate-900 dark:text-zinc-100 truncate">
-                  {member.name}
-                </p>
-                <p className="text-[11px] text-slate-400 truncate">
-                  {member.email}
-                </p>
-              </div>
+              <p className="font-bold text-slate-900 dark:text-zinc-100 truncate">
+                {member.name}
+              </p>
             </div>
           )
         },
+      },
+      {
+        accessorKey: 'email',
+        header: 'Email',
+        cell: (info) => (
+          <span className="font-mono text-xs text-slate-600 dark:text-zinc-400">
+            {info.getValue() || '—'}
+          </span>
+        ),
       },
       {
         accessorKey: 'role',
@@ -783,61 +786,22 @@ export default function BranchDetailPage() {
         },
       },
       {
-        accessorKey: 'shift',
-        header: 'Assigned Shift',
-        cell: (info) => (
-          <span className="font-medium text-slate-700 dark:text-zinc-300">
-            {info.getValue() || '08:00 AM - 05:00 PM'}
-          </span>
-        ),
-      },
-      {
         accessorKey: 'phone',
-        header: 'Contact Hotline',
+        header: 'Phone Number',
         cell: (info) => (
-          <span className="font-mono text-slate-600 dark:text-zinc-400">
+          <span className="font-mono text-xs text-slate-600 dark:text-zinc-400">
             {info.getValue() || '—'}
           </span>
         ),
       },
       {
-        accessorKey: 'status',
-        header: 'Duty Status',
-        meta: {
-          headerClassName: 'px-4 py-4 sm:px-6 sm:py-5 text-center',
-          cellClassName: 'px-4 py-4 sm:px-6 sm:py-5 text-center',
-        },
-        cell: (info) => {
-          const member = info.row.original
-          return (
-            <div className="flex justify-center">
-              <button
-                type="button"
-                onClick={() => {
-                  const nextStatus = member.status === 'On Duty' ? 'Off Duty' : 'On Duty'
-                  setStaffList((prev) =>
-                    prev.map((s) => (s.id === member.id ? { ...s, status: nextStatus } : s))
-                  )
-                  showToast(`${member.name} switched to ${nextStatus}`)
-                }}
-                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold transition ${
-                  member.status === 'On Duty'
-                    ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400'
-                }`}
-                title="Click to toggle staff on/off duty status"
-              >
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    member.status === 'On Duty' ? 'bg-emerald-500' : 'bg-slate-400'
-                  }`}
-                />
-                <span>{member.status}</span>
-                <span className="material-symbols-outlined text-[10px]">sync</span>
-              </button>
-            </div>
-          )
-        },
+        accessorKey: 'shift',
+        header: 'Assigned Shift',
+        cell: (info) => (
+          <span className="font-medium text-xs text-slate-700 dark:text-zinc-300">
+            {info.getValue() || '08:00 AM - 05:00 PM'}
+          </span>
+        ),
       },
       {
         id: 'actions',
@@ -896,10 +860,9 @@ export default function BranchDetailPage() {
         if (!matchesName && !matchesEmail && !matchesPhone) return false
       }
       if (staffRoleFilter !== 'all' && s.role !== staffRoleFilter) return false
-      if (staffStatusFilter !== 'all' && s.status !== staffStatusFilter) return false
       return true
     })
-  }, [staffList, staffSearchQuery, staffRoleFilter, staffStatusFilter])
+  }, [staffList, staffSearchQuery, staffRoleFilter])
 
   const currentBranchKey = branch?.id ?? branchIndex
   if (currentBranchKey !== prevBranchKey) {
@@ -1044,44 +1007,6 @@ export default function BranchDetailPage() {
                 Part of <Link to={`/merchants/${merchant.id}`} className="font-bold text-slate-700 hover:text-[#FF6B35] dark:text-zinc-300">{merchant.name}</Link> • Operations, Geolocation & Order Dispatch Console
               </p>
             </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Quick Button to toggle to Menu Items */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('menu_items')}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold shadow-2xs transition ${
-                activeTab === 'menu_items'
-                  ? 'bg-slate-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
-                  : 'border border-slate-200 bg-white text-slate-700 hover:border-[#FF6B35] hover:text-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'
-              }`}
-            >
-              <span className="material-symbols-outlined text-sm text-[#FF6B35]">restaurant_menu</span>
-              <span>Menu Items ({menuItems.length})</span>
-            </button>
-
-            {/* Quick Button to toggle to Orders */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('orders')}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold shadow-2xs transition ${
-                activeTab === 'orders'
-                  ? 'bg-slate-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
-                  : 'border border-slate-200 bg-white text-slate-700 hover:border-[#FF6B35] hover:text-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'
-              }`}
-            >
-              <span className="material-symbols-outlined text-sm text-[#FF6B35]">receipt_long</span>
-              <span>Orders ({orders.length})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate(`/merchants/${merchant.id}/edit`)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
-            >
-              <span className="material-symbols-outlined text-base">edit</span>
-              <span>Edit Branch</span>
-            </button>
           </div>
         </section>
 
@@ -1753,17 +1678,9 @@ export default function BranchDetailPage() {
               <div className="border-b border-slate-100 bg-slate-50/70 p-5 dark:border-zinc-800 dark:bg-zinc-850/50">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-3.5">
-                    <div className="relative">
-                      <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-[#FF6B35] font-extrabold text-lg shadow-sm dark:bg-orange-950/60">
-                        {managerData.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
-                      </span>
-                      <span
-                        className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-zinc-900 ${
-                          managerData.status === 'On Duty' ? 'bg-emerald-500' : 'bg-slate-400'
-                        }`}
-                        title={managerData.status}
-                      />
-                    </div>
+                    <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-[#FF6B35] font-extrabold text-lg shadow-sm dark:bg-orange-950/60">
+                      {managerData.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                    </span>
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-base font-bold text-slate-900 dark:text-zinc-100">
@@ -1772,28 +1689,6 @@ export default function BranchDetailPage() {
                         <span className="rounded-md bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-[#FF6B35] dark:bg-orange-950/60">
                           Store General Manager
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const nextStatus = managerData.status === 'On Duty' ? 'Off Duty' : 'On Duty'
-                            setManagerData((prev) => ({ ...prev, status: nextStatus }))
-                            showToast(`Manager status switched to ${nextStatus}`)
-                          }}
-                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition ${
-                            managerData.status === 'On Duty'
-                              ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300'
-                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400'
-                          }`}
-                          title="Click to toggle manager duty status"
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                              managerData.status === 'On Duty' ? 'bg-emerald-500' : 'bg-slate-400'
-                            }`}
-                          />
-                          <span>{managerData.status}</span>
-                          <span className="material-symbols-outlined text-[10px]">sync</span>
-                        </button>
                       </div>
                       <p className="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
                         Primary designated operational lead for {branch.branch_name}
@@ -1820,7 +1715,7 @@ export default function BranchDetailPage() {
               {/* Manager Detail Grid */}
               <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-4 text-xs">
                 <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 dark:border-zinc-800 dark:bg-zinc-850/50">
-                  <span className="text-[11px] font-semibold text-slate-400 block">Direct Hotline</span>
+                  <span className="text-[11px] font-semibold text-slate-400 block">Phone Number</span>
                   <p className="mt-1 font-mono font-bold text-slate-900 dark:text-zinc-100">
                     {managerData.phone}
                   </p>
@@ -1919,23 +1814,12 @@ export default function BranchDetailPage() {
                     <option value="Inventory & Expediter">Inventory & Expediter</option>
                   </select>
 
-                  <select
-                    value={staffStatusFilter}
-                    onChange={(e) => setStaffStatusFilter(e.target.value)}
-                    className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs transition focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-                  >
-                    <option value="all">All Statuses</option>
-                    <option value="On Duty">On Duty</option>
-                    <option value="Off Duty">Off Duty</option>
-                  </select>
-
-                  {(staffSearchQuery || staffRoleFilter !== 'all' || staffStatusFilter !== 'all') && (
+                  {(staffSearchQuery || staffRoleFilter !== 'all') && (
                     <button
                       type="button"
                       onClick={() => {
                         setStaffSearchQuery('')
                         setStaffRoleFilter('all')
-                        setStaffStatusFilter('all')
                       }}
                       className="h-9 rounded-xl px-3 text-xs font-bold text-[#FF6B35] transition hover:bg-orange-50 dark:hover:bg-orange-950/40"
                     >
