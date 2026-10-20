@@ -11,6 +11,7 @@ import AddMerchantBranchPage from './pages/AddMerchantBranchPage'
 import CategoryManagementPage from './pages/CategoryManagementPage'
 import CuisineTypeManagementPage from './pages/CuisineTypeManagementPage'
 import MenuCategoryManagementPage from './pages/MenuCategoryManagementPage'
+import MenuCategoryDetailsPage from './pages/MenuCategoryDetailsPage'
 import DeliveryManagementPage from './pages/DeliveryManagementPage'
 import StaffManagementPage from './pages/StaffManagementPage'
 import OrderManagementPage from './pages/OrderManagementPage'
@@ -47,6 +48,7 @@ function App() {
         <Route path="/cuisines" element={<CuisineTypeManagementPage />} />
         <Route path="/cuisine-types" element={<Navigate to="/cuisines" replace />} />
         <Route path="/menu-categories" element={<MenuCategoryManagementPage />} />
+        <Route path="/menu-categories/:categoryId" element={<MenuCategoryDetailsPage />} />
         <Route path="/menu-category" element={<Navigate to="/menu-categories" replace />} />
         <Route path="/customers" element={<CustomerManagementPage />} />
         <Route path="/customers/new" element={<CustomerFormPage />} />

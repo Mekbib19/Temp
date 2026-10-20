@@ -864,7 +864,7 @@ const AddMerchantPage = () => {
                       <span className="material-symbols-outlined text-base text-amber-500">dinner_dining</span>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-200">
-                          Specialization Types (<code className="font-mono text-[11px] text-[#FF6B35]">cuisine_types</code>) <span className="text-rose-500">*</span>
+                          Cuisine Types  <span className="text-rose-500">*</span>
                         </span>
                         <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-800 dark:bg-orange-950/60 dark:text-orange-300">
                           {formData.cuisine_ids?.length || 0} selected

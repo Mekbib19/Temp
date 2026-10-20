@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import Pagination from '../components/Pagination'
 import { formatLatestUpdate } from '../utils/format'
@@ -20,8 +20,13 @@ const emptyForm = {
 }
 
 const MenuCategoryManagementPage = () => {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedCategoryFilter = searchParams.get('category') || 'all'
+
+  const handleOpenDetails = (item) => {
+    navigate(`/menu-categories/${item.id}`)
+  }
 
   // Data states
   const [categories] = useState(() => loadStoredCategories())
@@ -854,6 +859,16 @@ const MenuCategoryManagementPage = () => {
                         {/* Action Buttons */}
                         <td className="whitespace-nowrap px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                          <button
+                           type="button"
+                           onClick={() => handleOpenDetails(item)}
+                          className="flex h-9 w-9 min-h-[32px] min-w-[32px] items-center justify-center rounded-lg text-slate-500 transition hover:bg-orange-50 hover:text-[#FF6B35] dark:text-zinc-400 dark:hover:bg-orange-950/30 dark:hover:text-orange-400"
+                              title="View menu category details"
+                                >
+                             <span className="material-symbols-outlined text-lg">visibility</span>
+                                  </button>
+
+                          {/* existing edit button */}
                             <button
                               type="button"
                               onClick={() => handleOpenEditModal(item)}

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import DataTable from '../components/DataTable'
@@ -56,14 +56,18 @@ export default function MerchantDetailsPage() {
       if (c) return c
     }
     if (merchant.category_name) {
-      const c = categoriesList.find((cat) => cat.name.toLowerCase() === merchant.category_name.toLowerCase())
+      const c = categoriesList.find(
+        (cat) => cat.name.toLowerCase() === merchant.category_name.toLowerCase()
+      )
       if (c) return c
     }
     return null
   }, [merchant, categoriesList])
 
   const merchantCatMeta = useMemo(() => {
-    return getCategoryMeta(merchant?.category_name || categoryObj?.name || merchant?.type)
+    return getCategoryMeta(
+      merchant?.category_name || categoryObj?.name || merchant?.type
+    )
   }, [merchant, categoryObj])
 
   const assignedCuisines = useMemo(() => {
@@ -86,27 +90,20 @@ export default function MerchantDetailsPage() {
 
   // Assign Cuisines Modal State
   const [isAssignCuisinesModalOpen, setIsAssignCuisinesModalOpen] = useState(false)
-  const [assignCuisineSearch, setAssignCuisineSearch] = useState('')
-  const [assignCategoryFilter, setAssignCategoryFilter] = useState('all')
   const [tempSelectedCuisineIds, setTempSelectedCuisineIds] = useState([])
 
+  // The merchant's effective category id used to scope cuisines
+  const merchantCategoryId = useMemo(() => {
+    return merchant?.category_id || categoryObj?.id || null
+  }, [merchant, categoryObj])
+
+  // Cuisines scoped to the merchant's category (no search anymore)
   const filteredForAssignment = useMemo(() => {
     return cuisinesList.filter((c) => {
-      if (assignCategoryFilter !== 'all' && c.category_id !== assignCategoryFilter) {
-        return false
-      }
-      if (!assignCuisineSearch.trim()) return true
-      const q = assignCuisineSearch.toLowerCase().trim()
-      const parentCat = categoriesList.find((cat) => cat.id === c.category_id)
-      const parentName = parentCat ? parentCat.name.toLowerCase() : ''
-      return (
-        c.name.toLowerCase().includes(q) ||
-        (c.slug && c.slug.toLowerCase().includes(q)) ||
-        (c.description && c.description.toLowerCase().includes(q)) ||
-        parentName.includes(q)
-      )
+      if (merchantCategoryId && c.category_id !== merchantCategoryId) return false
+      return true
     })
-  }, [cuisinesList, categoriesList, assignCategoryFilter, assignCuisineSearch])
+  }, [cuisinesList, merchantCategoryId])
 
   // Cuisine Detail Editor Modal State
   const [isCuisineEditorModalOpen, setIsCuisineEditorModalOpen] = useState(false)
@@ -138,8 +135,6 @@ export default function MerchantDetailsPage() {
       ? [merchant.cuisine_id]
       : []
     setTempSelectedCuisineIds([...currentIds])
-    setAssignCuisineSearch('')
-    setAssignCategoryFilter('all')
     setIsAssignCuisinesModalOpen(true)
   }
 
@@ -163,75 +158,71 @@ export default function MerchantDetailsPage() {
 
   const handleSaveAssignedCuisines = () => {
     if (!merchant) return
-    const selectedObjs = cuisinesList.filter((c) => tempSelectedCuisineIds.includes(c.id))
+    // Guard: only keep cuisines that belong to the merchant's category
+    const selectedObjs = cuisinesList.filter(
+      (c) =>
+        tempSelectedCuisineIds.includes(c.id) &&
+        (!merchantCategoryId || c.category_id === merchantCategoryId)
+    )
     const combinedCuisineName = selectedObjs.map((c) => c.name).join(', ')
 
     updateMerchant(merchant.id, {
-      cuisine_ids: tempSelectedCuisineIds,
-      cuisine_id: tempSelectedCuisineIds[0] || '',
+      cuisine_ids: selectedObjs.map((c) => c.id),
+      cuisine_id: selectedObjs[0]?.id || '',
       cuisine_name: combinedCuisineName,
       cuisines: selectedObjs,
     })
 
     setMerchantsList(loadStoredMerchants())
     setIsAssignCuisinesModalOpen(false)
-    showToast(`Assigned cuisines updated for ${merchant.name} (${tempSelectedCuisineIds.length} specializations)`)
+    showToast(
+      `Assigned cuisines updated for ${merchant.name} (${selectedObjs.length} specializations)`
+    )
   }
 
-  const handleRemoveAssignedCuisine = (cuisineId, e) => {
-    if (e) e.stopPropagation()
-    if (!merchant) return
-    const currentIds = Array.isArray(merchant.cuisine_ids) ? merchant.cuisine_ids : []
-    const updatedIds = currentIds.filter((id) => id !== cuisineId)
-    const selectedObjs = cuisinesList.filter((c) => updatedIds.includes(c.id))
-    const combinedCuisineName = selectedObjs.map((c) => c.name).join(', ')
+  const handleRemoveAssignedCuisine = useCallback(
+    (cuisineId, e) => {
+      if (e) e.stopPropagation()
+      if (!merchant) return
+      const currentIds = Array.isArray(merchant.cuisine_ids) ? merchant.cuisine_ids : []
+      const updatedIds = currentIds.filter((id) => id !== cuisineId)
+      const selectedObjs = cuisinesList.filter((c) => updatedIds.includes(c.id))
+      const combinedCuisineName = selectedObjs.map((c) => c.name).join(', ')
 
-    updateMerchant(merchant.id, {
-      cuisine_ids: updatedIds,
-      cuisine_id: updatedIds[0] || '',
-      cuisine_name: combinedCuisineName,
-      cuisines: selectedObjs,
-    })
+      updateMerchant(merchant.id, {
+        cuisine_ids: updatedIds,
+        cuisine_id: updatedIds[0] || '',
+        cuisine_name: combinedCuisineName,
+        cuisines: selectedObjs,
+      })
 
-    setMerchantsList(loadStoredMerchants())
-    showToast(`Removed cuisine from ${merchant.name}`)
-  }
+      setMerchantsList(loadStoredMerchants())
+      showToast(`Removed cuisine from ${merchant.name}`)
+    },
+    [merchant, cuisinesList]
+  )
 
-  // Handlers for Cuisine Detail Editor Modal
-  const openCreateCuisineModal = () => {
-    setEditingCuisine(null)
-    setCuisineFormData({
-      id: '',
-      name: '',
-      category_id: categoryObj?.id || categoriesList[0]?.id || '',
-      slug: '',
-      description: '',
-      icon: 'restaurant',
-      image: '',
-      is_active: true,
-      sort_order: cuisinesList.length + 1,
-    })
-    setCuisineFormErrors({})
-    setIsCuisineEditorModalOpen(true)
-  }
-
-  const openEditCuisineModal = (cuisine, e) => {
-    if (e) e.stopPropagation()
-    setEditingCuisine(cuisine)
-    setCuisineFormData({
-      id: cuisine.id,
-      name: cuisine.name || '',
-      category_id: cuisine.category_id || categoryObj?.id || categoriesList[0]?.id || '',
-      slug: cuisine.slug || '',
-      description: cuisine.description || '',
-      icon: cuisine.icon || 'restaurant',
-      image: cuisine.image || '',
-      is_active: cuisine.is_active !== undefined ? cuisine.is_active : true,
-      sort_order: cuisine.sort_order || 1,
-    })
-    setCuisineFormErrors({})
-    setIsCuisineEditorModalOpen(true)
-  }
+  const openEditCuisineModal = useCallback(
+    (cuisine, e) => {
+      if (e) e.stopPropagation()
+      setEditingCuisine(cuisine)
+      setCuisineFormData({
+        id: cuisine.id,
+        name: cuisine.name || '',
+        category_id:
+          cuisine.category_id || categoryObj?.id || merchant?.category_id || categoriesList[0]?.id || '',
+        slug: cuisine.slug || '',
+        description: cuisine.description || '',
+        icon: cuisine.icon || 'restaurant',
+        image: cuisine.image || '',
+        is_active: cuisine.is_active !== undefined ? cuisine.is_active : true,
+        sort_order: cuisine.sort_order || 1,
+      })
+      setCuisineFormErrors({})
+      setIsCuisineEditorModalOpen(true)
+    },
+    [categoryObj?.id, merchant?.category_id, categoriesList]
+  )
 
   const processUploadedFile = (file) => {
     if (!file) return
@@ -279,8 +270,8 @@ export default function MerchantDetailsPage() {
       updatedList = cuisinesList.map((c) => (c.id === editingCuisine.id ? savedCuisine : c))
       showToast(`Cuisine "${savedCuisine.name}" updated successfully!`)
 
-      // If this cuisine is assigned to this merchant, update the merchant's combined cuisine name
-      const isAssigned = Array.isArray(merchant?.cuisine_ids) && merchant.cuisine_ids.includes(savedCuisine.id)
+      const isAssigned =
+        Array.isArray(merchant?.cuisine_ids) && merchant.cuisine_ids.includes(savedCuisine.id)
       if (isAssigned && merchant) {
         const selectedObjs = updatedList.filter((c) => merchant.cuisine_ids.includes(c.id))
         updateMerchant(merchant.id, {
@@ -292,7 +283,8 @@ export default function MerchantDetailsPage() {
     } else {
       savedCuisine = {
         id: generateUUID(),
-        category_id: cuisineFormData.category_id || categoriesList[0]?.id || '',
+        category_id:
+          cuisineFormData.category_id || merchantCategoryId || categoriesList[0]?.id || '',
         name: cuisineFormData.name.trim(),
         slug: computedSlug || `cuisine-${Date.now()}`,
         description: (cuisineFormData.description || '').trim(),
@@ -306,7 +298,6 @@ export default function MerchantDetailsPage() {
       updatedList = [...cuisinesList, savedCuisine]
       showToast(`New cuisine "${savedCuisine.name}" created!`)
 
-      // Automatically assign new cuisine to the current merchant
       if (merchant) {
         const currentIds = Array.isArray(merchant.cuisine_ids) ? [...merchant.cuisine_ids] : []
         if (!currentIds.includes(savedCuisine.id)) {
@@ -367,7 +358,8 @@ export default function MerchantDetailsPage() {
         manager_name: merchant.manager_name || 'Abebe Bikila',
         manager_phone: merchant.manager_phone || '+251 91 876 5432',
         is_open: merchant.is_open !== undefined ? Boolean(merchant.is_open) : true,
-        accepts_orders: merchant.accepts_orders !== undefined ? Boolean(merchant.accepts_orders) : true,
+        accepts_orders:
+          merchant.accepts_orders !== undefined ? Boolean(merchant.accepts_orders) : true,
         opening_hours: merchant.opening_hours || '08:00 AM',
         closing_hours: merchant.closing_hours || '10:00 PM',
       },
@@ -387,15 +379,30 @@ export default function MerchantDetailsPage() {
   // Statistical metrics for merchant overview
   const merchantStats = useMemo(() => {
     const totalOrders = orders.length
-    const newOrders = orders.filter((o) => o.statusVariant === 'new' || o.status === 'New' || !o.statusVariant).length
-    const prepOrders = orders.filter((o) => o.statusVariant === 'kitchen' || o.status === 'In Kitchen' || o.status === 'Order Packing').length
-    const readyOrders = orders.filter((o) => o.statusVariant === 'ready' || o.status === 'Ready for Pickup').length
-    const deliveryOrders = orders.filter((o) => o.statusVariant === 'delivery' || o.status === 'Out for Delivery').length
-    const deliveredOrders = orders.filter((o) => o.statusVariant === 'delivered' || o.status === 'Delivered').length
+    const newOrders = orders.filter(
+      (o) => o.statusVariant === 'new' || o.status === 'New' || !o.statusVariant
+    ).length
+    const prepOrders = orders.filter(
+      (o) =>
+        o.statusVariant === 'kitchen' ||
+        o.status === 'In Kitchen' ||
+        o.status === 'Order Packing'
+    ).length
+    const readyOrders = orders.filter(
+      (o) => o.statusVariant === 'ready' || o.status === 'Ready for Pickup'
+    ).length
+    const deliveryOrders = orders.filter(
+      (o) => o.statusVariant === 'delivery' || o.status === 'Out for Delivery'
+    ).length
+    const deliveredOrders = orders.filter(
+      (o) => o.statusVariant === 'delivered' || o.status === 'Delivered'
+    ).length
 
-    // Revenue calculations
     const computedRevenue = orders.reduce((acc, o) => {
-      const num = typeof o.totalNum === 'number' ? o.totalNum : parseFloat((o.total || '').replace(/[^0-9.]/g, '')) || 0
+      const num =
+        typeof o.totalNum === 'number'
+          ? o.totalNum
+          : parseFloat((o.total || '').replace(/[^0-9.]/g, '')) || 0
       return acc + num
     }, 0)
     const baseRevenue = computedRevenue > 0 ? computedRevenue : 48250
@@ -420,7 +427,6 @@ export default function MerchantDetailsPage() {
 
   const currentBranch = branches[0]
 
-  // Multi-branch bounding box and center that encloses ALL branches on one map
   const allBranchesMapData = useMemo(() => {
     if (!branches.length) {
       const lat = 9.0016
@@ -429,7 +435,9 @@ export default function MerchantDetailsPage() {
         centerLat: lat,
         centerLng: lng,
         bbox: `${lng - 0.04},${lat - 0.03},${lng + 0.04},${lat + 0.03}`,
-        src: `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.04},${lat - 0.03},${lng + 0.04},${lat + 0.03}&layer=mapnik`,
+        src: `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.04},${
+          lat - 0.03
+        },${lng + 0.04},${lat + 0.03}&layer=mapnik`,
         directionsUrl: `https://www.google.com/maps?q=${lat},${lng}`,
       }
     }
@@ -443,7 +451,9 @@ export default function MerchantDetailsPage() {
     const padLng = Math.max(0.018, (maxLng - minLng) * 0.45)
     const centerLat = Number(((minLat + maxLat) / 2).toFixed(6))
     const centerLng = Number(((minLng + maxLng) / 2).toFixed(6))
-    const bbox = `${(minLng - padLng).toFixed(6)},${(minLat - padLat).toFixed(6)},${(maxLng + padLng).toFixed(6)},${(maxLat + padLat).toFixed(6)}`
+    const bbox = `${(minLng - padLng).toFixed(6)},${(minLat - padLat).toFixed(6)},${(
+      maxLng + padLng
+    ).toFixed(6)},${(maxLat + padLat).toFixed(6)}`
     return {
       centerLat,
       centerLng,
@@ -459,20 +469,6 @@ export default function MerchantDetailsPage() {
     }
   }, [branches, merchant?.name])
 
-  const handleCopyAllCoordinates = () => {
-    if (!branches.length) return
-    const text = branches
-      .map(
-        (b, i) =>
-          `${i + 1}. ${b.branch_name}: ${Number(b.latitude || 9.0016).toFixed(6)}, ${Number(
-            b.longitude || 38.7842
-          ).toFixed(6)} (${b.address || 'Addis Ababa'})`
-      )
-      .join('\n')
-    navigator.clipboard?.writeText(text)
-    showToast(`All ${branches.length} branch coordinates copied to clipboard!`)
-  }
-
   const handleToggleStatus = () => {
     if (!merchant) return
     const currentStatus = (merchant.status || 'ACTIVE').toUpperCase()
@@ -486,121 +482,120 @@ export default function MerchantDetailsPage() {
     if (!merchant) return
     deleteMerchant(merchant.id)
     navigate('/restaurants', {
-      state: { toastMessage: `Merchant "${merchant.name}" was successfully removed.` },
+      state: {
+        toastMessage: `Merchant "${merchant.name}" was successfully removed.`,
+      },
     })
   }
 
-  const copyToClipboard = (text, label) => {
-    navigator.clipboard?.writeText(text)
-    showToast(`${label} copied to clipboard!`)
-  }
-
-const cuisineColumns = useMemo(
-  () => [
-    {
-      accessorKey: 'name',
-      header: 'Cuisine / Specialization',
-      meta: { headerClassName: 'px-6 py-3.5 text-left font-bold' },
-      cell: ({ row }) => {
-        const cuisine = row.original
-        return (
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-white shadow-2xs dark:border-zinc-800 dark:bg-zinc-850">
-              {cuisine.image ? (
-                <img
-                  src={cuisine.image}
-                  alt={cuisine.name}
-                  className="h-6 w-6 object-contain"
-                />
-              ) : (
-                <span className="material-symbols-outlined text-xl text-amber-500">
-                  {cuisine.icon || 'restaurant'}
-                </span>
-              )}
-            </span>
-            <div>
-              <p className="text-xs font-bold text-slate-900 dark:text-zinc-100">{cuisine.name}</p>
-              <span className="font-mono text-[10px] text-slate-400">/{cuisine.slug}</span>
+  const cuisineColumns = useMemo(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'Cuisine / Specialization',
+        meta: { headerClassName: 'px-6 py-3.5 text-left font-bold' },
+        cell: ({ row }) => {
+          const cuisine = row.original
+          return (
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-white shadow-2xs dark:border-zinc-800 dark:bg-zinc-850">
+                {cuisine.image ? (
+                  <img src={cuisine.image} alt={cuisine.name} className="h-6 w-6 object-contain" />
+                ) : (
+                  <span className="material-symbols-outlined text-xl text-amber-500">
+                    {cuisine.icon || 'restaurant'}
+                  </span>
+                )}
+              </span>
+              <div>
+                <p className="text-xs font-bold text-slate-900 dark:text-zinc-100">
+                  {cuisine.name}
+                </p>
+                <span className="font-mono text-[10px] text-slate-400">/{cuisine.slug}</span>
+              </div>
             </div>
-          </div>
-        )
+          )
+        },
       },
-    },
-    {
-      accessorKey: 'category_id',
-      header: 'Merchant Category',
-      meta: { headerClassName: 'px-4 py-3.5 text-left font-bold' },
-      cell: ({ getValue }) => {
-        const catId = getValue()
-        const parentCat = categoriesList.find((cat) => cat.id === catId)
-        return (
-          <span className="inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700 dark:bg-zinc-800 dark:text-zinc-300">
-            {parentCat ? parentCat.name : 'General'}
-          </span>
-        )
+      {
+        accessorKey: 'category_id',
+        header: 'Merchant Category',
+        meta: { headerClassName: 'px-4 py-3.5 text-left font-bold' },
+        cell: ({ getValue }) => {
+          const catId = getValue()
+          const parentCat = categoriesList.find((cat) => cat.id === catId)
+          return (
+            <span className="inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700 dark:bg-zinc-800 dark:text-zinc-300">
+              {parentCat ? parentCat.name : 'General'}
+            </span>
+          )
+        },
       },
-    },
-    {
-      accessorKey: 'description',
-      header: 'Description',
-      meta: { headerClassName: 'px-4 py-3.5 text-left font-bold' },
-      cell: ({ getValue }) => (
-        <p className="max-w-xs truncate text-xs text-slate-500 dark:text-zinc-400">
-          {getValue() || '—'}
-        </p>
-      ),
-    },
-    {
-      accessorKey: 'is_active',
-      header: 'Status',
-      meta: { headerClassName: 'px-4 py-3.5 text-left font-bold' },
-      cell: ({ getValue }) => {
-        const isActive = getValue() !== false
-        return (
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
-              isActive
-                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
-            }`}
-          >
-            <span className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-            {isActive ? 'Active' : 'Inactive'}
-          </span>
-        )
+      {
+        accessorKey: 'description',
+        header: 'Description',
+        meta: { headerClassName: 'px-4 py-3.5 text-left font-bold' },
+        cell: ({ getValue }) => (
+          <p className="max-w-xs truncate text-xs text-slate-500 dark:text-zinc-400">
+            {getValue() || '—'}
+          </p>
+        ),
       },
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      meta: { headerClassName: 'px-6 py-3.5 text-right font-bold' },
-      cell: ({ row }) => {
-        const cuisine = row.original
-        return (
-          <div className="flex items-center justify-end gap-1">
-            <button
-              type="button"
-              onClick={(e) => openEditCuisineModal(cuisine, e)}
-              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-[#FF6B35] dark:hover:bg-zinc-800"
-              title="Edit cuisine details"
+      {
+        accessorKey: 'is_active',
+        header: 'Status',
+        meta: { headerClassName: 'px-4 py-3.5 text-left font-bold' },
+        cell: ({ getValue }) => {
+          const isActive = getValue() !== false
+          return (
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                isActive
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                  : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
+              }`}
             >
-              <span className="material-symbols-outlined text-base">edit</span>
-            </button>
-            <button
-              type="button"
-              onClick={(e) => handleRemoveAssignedCuisine(cuisine.id, e)}
-              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-zinc-800"
-              title="Remove specialization"
-            >
-              <span className="material-symbols-outlined text-base">close</span>
-            </button>
-          </div>
-        )
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  isActive ? 'bg-emerald-500' : 'bg-slate-400'
+                }`}
+              />
+              {isActive ? 'Active' : 'Inactive'}
+            </span>
+          )
+        },
       },
-    },
-  ],
-  [categoriesList]
-)
+      {
+        id: 'actions',
+        header: 'Actions',
+        meta: { headerClassName: 'px-6 py-3.5 text-right font-bold' },
+        cell: ({ row }) => {
+          const cuisine = row.original
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <button
+                type="button"
+                onClick={(e) => openEditCuisineModal(cuisine, e)}
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-[#FF6B35] dark:hover:bg-zinc-800"
+                title="Edit cuisine details"
+              >
+                <span className="material-symbols-outlined text-base">edit</span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => handleRemoveAssignedCuisine(cuisine.id, e)}
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-zinc-800"
+                title="Remove specialization"
+              >
+                <span className="material-symbols-outlined text-base">close</span>
+              </button>
+            </div>
+          )
+        },
+      },
+    ],
+    [categoriesList, handleRemoveAssignedCuisine, openEditCuisineModal]
+  )
 
   if (!merchant) {
     return (
@@ -618,7 +613,8 @@ const cuisineColumns = useMemo(
             Merchant Not Found
           </h2>
           <p className="mt-2 text-sm text-slate-500 dark:text-zinc-400">
-            The requested merchant profile could not be located in the local storage. It may have been deleted.
+            The requested merchant profile could not be located in the local storage. It may have
+            been deleted.
           </p>
           <div className="mt-6 flex justify-center gap-3">
             <Link
@@ -648,7 +644,9 @@ const cuisineColumns = useMemo(
         {/* Toast Alert */}
         {toastMessage && (
           <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-xs font-bold text-white shadow-xl dark:bg-zinc-100 dark:text-zinc-900 animate-fade-in">
-            <span className="material-symbols-outlined text-base text-emerald-400">check_circle</span>
+            <span className="material-symbols-outlined text-base text-emerald-400">
+              check_circle
+            </span>
             <span>{toastMessage}</span>
           </div>
         )}
@@ -668,7 +666,11 @@ const cuisineColumns = useMemo(
                 Delete Merchant?
               </h3>
               <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
-                Are you sure you want to remove <span className="font-bold text-slate-700 dark:text-zinc-200">{merchant.name}</span>? This action cannot be undone.
+                Are you sure you want to remove{' '}
+                <span className="font-bold text-slate-700 dark:text-zinc-200">
+                  {merchant.name}
+                </span>
+                ? This action cannot be undone.
               </p>
               <div className="mt-6 flex justify-end gap-3">
                 <button
@@ -706,7 +708,6 @@ const cuisineColumns = useMemo(
                 <h1 className="font-['Plus_Jakarta_Sans'] text-2xl font-extrabold tracking-tight text-slate-900 dark:text-zinc-100 sm:text-3xl">
                   {merchant.name}
                 </h1>
-                {/* Status Toggle Badge */}
                 <button
                   type="button"
                   onClick={handleToggleStatus}
@@ -717,7 +718,11 @@ const cuisineColumns = useMemo(
                       : 'bg-slate-100 text-slate-600 ring-1 ring-slate-400/20 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400'
                   }`}
                 >
-                  <span className={`h-2 w-2 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      isActive ? 'bg-emerald-500' : 'bg-slate-400'
+                    }`}
+                  />
                   {rawStatus}
                 </button>
               </div>
@@ -730,7 +735,6 @@ const cuisineColumns = useMemo(
 
         {/* Hero Card */}
         <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
-          {/* Banner Image or Gradient Cover */}
           <div className="relative h-44 w-full overflow-hidden bg-gradient-to-r from-orange-400 via-amber-500 to-rose-400 sm:h-52">
             {merchant.cover_image_url || merchant.banner_url || merchant.cover ? (
               <img
@@ -744,11 +748,11 @@ const cuisineColumns = useMemo(
               </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-            
-            {/* Quick Badges in Header */}
             <div className="absolute right-4 top-4 flex items-center gap-2">
               <span className="inline-flex items-center gap-1 rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-slate-800 backdrop-blur-md dark:bg-zinc-900/90 dark:text-zinc-200">
-                <span className="material-symbols-outlined text-sm text-[#FF6B35]">storefront</span>
+                <span className="material-symbols-outlined text-sm text-[#FF6B35]">
+                  storefront
+                </span>
                 {merchant.type || 'Restaurant & Dining'}
               </span>
               {merchant.is_featured && (
@@ -759,10 +763,8 @@ const cuisineColumns = useMemo(
             </div>
           </div>
 
-          {/* Profile Header Details */}
           <div className="relative px-6 pb-6 pt-0 sm:px-8">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-end">
-              {/* Brand Logo Avatar */}
               <div className="-mt-14 relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-lg dark:border-zinc-900 sm:h-32 sm:w-32">
                 <img
                   src={merchant.logo_url || merchant.logo}
@@ -774,7 +776,6 @@ const cuisineColumns = useMemo(
                 </div>
               </div>
 
-              {/* Title & Classification Tags */}
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="flex flex-wrap items-center gap-2.5">
                   <h2 className="text-2xl font-extrabold text-slate-900 dark:text-zinc-50">
@@ -783,18 +784,18 @@ const cuisineColumns = useMemo(
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-600 dark:text-zinc-300">
-                  {/* Category Badge linking to cuisines & category tab */}
                   <button
                     type="button"
-                    onClick={() => setActiveTab('cuisines')}
+                    onClick={openCategoryModal}
                     className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-bold transition hover:opacity-90 ${merchantCatMeta.badgeClass}`}
-                    title="View Category & Cuisines"
+                    title="Change Primary Category"
                   >
-                    <span className="material-symbols-outlined text-sm">{merchantCatMeta.icon}</span>
+                    <span className="material-symbols-outlined text-sm">
+                      {merchantCatMeta.icon}
+                    </span>
                     <span>Category: {merchant.category_name || merchantCatMeta.label}</span>
                   </button>
 
-                  {/* Locations / Branches Badge linking to branches tab */}
                   <button
                     type="button"
                     onClick={() => setActiveTab('branches')}
@@ -802,7 +803,9 @@ const cuisineColumns = useMemo(
                     title="View operating branches"
                   >
                     <span className="material-symbols-outlined text-sm">store</span>
-                    <span>{branches.length} {branches.length === 1 ? 'branch' : 'branches'}</span>
+                    <span>
+                      {branches.length} {branches.length === 1 ? 'branch' : 'branches'}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -839,7 +842,8 @@ const cuisineColumns = useMemo(
               </span>
             </div>
             <p className="mt-2 text-2xl font-extrabold text-slate-900 dark:text-zinc-100">
-              {merchant.eta_min || 20}-{merchant.eta_max || 40} <span className="text-sm font-semibold">min</span>
+              {merchant.eta_min || 20}-{merchant.eta_max || 40}{' '}
+              <span className="text-sm font-semibold">min</span>
             </p>
             <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
               Average dispatch time
@@ -911,11 +915,15 @@ const cuisineColumns = useMemo(
                 ))
               ) : merchant.cuisine_name ? (
                 <span className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
-                  <span className="material-symbols-outlined text-[13px] text-amber-500">star</span>
+                  <span className="material-symbols-outlined text-[13px] text-amber-500">
+                    star
+                  </span>
                   {merchant.cuisine_name}
                 </span>
               ) : (
-                <span className="text-xs italic text-slate-400">No specializations assigned</span>
+                <span className="text-xs italic text-slate-400">
+                  No specializations assigned
+                </span>
               )}
             </div>
             <p className="mt-1.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
@@ -929,8 +937,16 @@ const cuisineColumns = useMemo(
           <nav className="flex space-x-6 overflow-x-auto">
             {[
               { id: 'overview', label: 'Overview & Statistics', icon: 'analytics' },
-              { id: 'branches', label: `Location Indicator & Branches (${branches.length})`, icon: 'pin_drop' },
-              { id: 'cuisines', label: `Category & Cuisines (${assignedCuisines.length})`, icon: 'restaurant' },
+              {
+                id: 'branches',
+                label: `Location Indicator & Branches (${branches.length})`,
+                icon: 'pin_drop',
+              },
+              {
+                id: 'cuisines',
+                label: `Category & Cuisines (${assignedCuisines.length})`,
+                icon: 'restaurant',
+              },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -952,9 +968,7 @@ const cuisineColumns = useMemo(
         {/* Tab Content */}
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 animate-fade-in">
-            {/* Left: Statistical Data & Performance Analytics */}
             <div className="space-y-6 lg:col-span-8">
-              {/* Top 4 Real-time Statistical KPI Cards */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
                   <div className="flex items-center justify-between">
@@ -980,11 +994,15 @@ const cuisineColumns = useMemo(
                       Orders Dispatched
                     </span>
                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40">
-                      <span className="material-symbols-outlined text-base">local_shipping</span>
+                      <span className="material-symbols-outlined text-base">
+                        local_shipping
+                      </span>
                     </span>
                   </div>
                   <p className="mt-2 text-xl font-extrabold text-slate-900 dark:text-zinc-100">
-                    {merchantStats.totalOrders > 0 ? `${merchantStats.totalOrders} Orders` : '64 Orders'}
+                    {merchantStats.totalOrders > 0
+                      ? `${merchantStats.totalOrders} Orders`
+                      : '64 Orders'}
                   </p>
                   <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
                     {merchantStats.fulfillmentRate} fulfillment rate
@@ -1026,11 +1044,12 @@ const cuisineColumns = useMemo(
                 </div>
               </div>
 
-              {/* All Operating Branches List with Red Arrow Actions */}
               <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-zinc-800">
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-base text-red-600 dark:text-red-400">store</span>
+                    <span className="material-symbols-outlined text-base text-red-600 dark:text-red-400">
+                      store
+                    </span>
                     <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
                       All Branches & Locations ({branches.length})
                     </h3>
@@ -1076,9 +1095,11 @@ const cuisineColumns = useMemo(
                       >
                         <div className="flex items-start sm:items-center gap-3">
                           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 transition group-hover:bg-red-500 group-hover:text-white dark:bg-red-950/40 dark:text-red-400 dark:group-hover:bg-red-600 dark:group-hover:text-white">
-                            <span className="material-symbols-outlined text-xl">storefront</span>
+                            <span className="material-symbols-outlined text-xl">
+                              storefront
+                            </span>
                           </span>
-                          <div>-
+                          <div>
                             <div className="flex flex-wrap items-center gap-2">
                               <h4 className="text-xs font-bold text-slate-900 group-hover:text-red-600 transition dark:text-zinc-100 dark:group-hover:text-red-400">
                                 {b.branch_name}
@@ -1138,7 +1159,6 @@ const cuisineColumns = useMemo(
                           </div>
                         </div>
 
-                        {/* Red Arrow Action Button */}
                         <div className="flex items-center justify-end sm:self-center">
                           <button
                             type="button"
@@ -1175,11 +1195,12 @@ const cuisineColumns = useMemo(
                 </div>
               </div>
 
-              {/* Multi-Branch Comparative Statistics */}
               <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-zinc-800">
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-base text-blue-600 dark:text-blue-400">store</span>
+                    <span className="material-symbols-outlined text-base text-blue-600 dark:text-blue-400">
+                      store
+                    </span>
                     <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
                       Branch Network Performance Comparison ({branches.length} Locations)
                     </h3>
@@ -1207,12 +1228,22 @@ const cuisineColumns = useMemo(
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-zinc-800 font-medium text-slate-700 dark:text-zinc-300">
                       {branches.map((b, idx) => {
-                        const branchOrdersCount = orders.filter((o) => (o.branch_name || '').toLowerCase() === b.branch_name.toLowerCase()).length || Math.max(8, 24 - idx * 5)
+                        const branchOrdersCount =
+                          orders.filter(
+                            (o) =>
+                              (o.branch_name || '').toLowerCase() ===
+                              b.branch_name.toLowerCase()
+                          ).length || Math.max(8, 24 - idx * 5)
                         return (
-                          <tr key={b.id || idx} className="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40">
+                          <tr
+                            key={b.id || idx}
+                            className="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40"
+                          >
                             <td className="py-2.5 font-bold text-slate-900 dark:text-zinc-100">
                               <div className="flex items-center gap-1.5">
-                                <span className="material-symbols-outlined text-sm text-[#FF6B35]">pin_drop</span>
+                                <span className="material-symbols-outlined text-sm text-[#FF6B35]">
+                                  pin_drop
+                                </span>
                                 <span>{b.branch_name}</span>
                                 {b.is_main_branch && (
                                   <span className="rounded-md bg-orange-100 px-1.5 py-0.2 text-[9px] font-bold text-[#FF6B35] dark:bg-orange-950/60">
@@ -1235,7 +1266,11 @@ const cuisineColumns = useMemo(
                                     : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
                                 }`}
                               >
-                                <span className={`h-1.5 w-1.5 rounded-full ${b.is_open !== false ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                <span
+                                  className={`h-1.5 w-1.5 rounded-full ${
+                                    b.is_open !== false ? 'bg-emerald-500' : 'bg-slate-400'
+                                  }`}
+                                />
                                 {b.is_open !== false ? 'Open' : 'Closed'}
                               </span>
                             </td>
@@ -1248,11 +1283,15 @@ const cuisineColumns = useMemo(
                             <td className="py-2.5 text-right">
                               <button
                                 type="button"
-                                onClick={() => navigate(`/merchants/${merchant.id}/branches/${idx}`)}
+                                onClick={() =>
+                                  navigate(`/merchants/${merchant.id}/branches/${idx}`)
+                                }
                                 className="inline-flex items-center gap-1 rounded-lg bg-orange-50 px-2 py-1 text-[11px] font-bold text-[#FF6B35] hover:bg-orange-100 dark:bg-orange-950/40"
                               >
                                 <span>Stats</span>
-                                <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
+                                <span className="material-symbols-outlined text-[12px]">
+                                  arrow_forward
+                                </span>
                               </button>
                             </td>
                           </tr>
@@ -1263,10 +1302,11 @@ const cuisineColumns = useMemo(
                 </div>
               </div>
 
-              {/* Peak Operating Hours Heatmap Breakdown */}
               <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
                 <div className="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-zinc-800">
-                  <span className="material-symbols-outlined text-base text-amber-500">schedule</span>
+                  <span className="material-symbols-outlined text-base text-amber-500">
+                    schedule
+                  </span>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
                     Daily Peak Volume Heatmap & Order Rush Hours
                   </h3>
@@ -1277,15 +1317,21 @@ const cuisineColumns = useMemo(
                     <span className="font-bold text-slate-800 dark:text-zinc-200 mt-1 block">
                       08:00 AM - 10:30 AM
                     </span>
-                    <span className="mt-1 inline-block text-[10px] text-slate-500">18% of daily volume</span>
+                    <span className="mt-1 inline-block text-[10px] text-slate-500">
+                      18% of daily volume
+                    </span>
                   </div>
 
                   <div className="rounded-xl border border-orange-100 bg-orange-50/50 p-3 dark:border-orange-900/40 dark:bg-orange-950/20">
-                    <span className="text-[#FF6B35] font-bold block text-[11px]">Lunch Surge (Peak)</span>
+                    <span className="text-[#FF6B35] font-bold block text-[11px]">
+                      Lunch Surge (Peak)
+                    </span>
                     <span className="font-bold text-slate-900 dark:text-zinc-100 mt-1 block">
                       12:00 PM - 02:30 PM
                     </span>
-                    <span className="mt-1 inline-block text-[10px] font-bold text-[#FF6B35]">44% of daily volume</span>
+                    <span className="mt-1 inline-block text-[10px] font-bold text-[#FF6B35]">
+                      44% of daily volume
+                    </span>
                   </div>
 
                   <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-850">
@@ -1293,24 +1339,31 @@ const cuisineColumns = useMemo(
                     <span className="font-bold text-slate-800 dark:text-zinc-200 mt-1 block">
                       03:30 PM - 05:30 PM
                     </span>
-                    <span className="mt-1 inline-block text-[10px] text-slate-500">12% of daily volume</span>
+                    <span className="mt-1 inline-block text-[10px] text-slate-500">
+                      12% of daily volume
+                    </span>
                   </div>
 
                   <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3 dark:border-blue-900/40 dark:bg-blue-950/20">
-                    <span className="text-blue-700 dark:text-blue-300 font-bold block text-[11px]">Dinner Rush</span>
+                    <span className="text-blue-700 dark:text-blue-300 font-bold block text-[11px]">
+                      Dinner Rush
+                    </span>
                     <span className="font-bold text-slate-900 dark:text-zinc-100 mt-1 block">
                       07:00 PM - 09:30 PM
                     </span>
-                    <span className="mt-1 inline-block text-[10px] font-bold text-blue-600 dark:text-blue-400">26% of daily volume</span>
+                    <span className="mt-1 inline-block text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                      26% of daily volume
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Merchant Bio & Concept Card */}
               {merchant.description && (
                 <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
                   <div className="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-zinc-800">
-                    <span className="material-symbols-outlined text-base text-[#FF6B35]">description</span>
+                    <span className="material-symbols-outlined text-base text-[#FF6B35]">
+                      description
+                    </span>
                     <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
                       Merchant Bio & Culinary Concept
                     </h3>
@@ -1322,31 +1375,37 @@ const cuisineColumns = useMemo(
               )}
             </div>
 
-            {/* Right Column: Quick Cards & Teasers */}
             <div className="space-y-6 lg:col-span-4">
-              {/* Quick Merchant Profile Summary */}
               <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
                 <div className="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-zinc-800">
-                  <span className="material-symbols-outlined text-base text-indigo-500">storefront</span>
+                  <span className="material-symbols-outlined text-base text-indigo-500">
+                    storefront
+                  </span>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
                     Partner Overview
                   </h3>
                 </div>
                 <div className="mt-4 space-y-3 text-xs">
                   <div>
-                    <span className="text-[11px] font-semibold text-slate-400">Brand Email</span>
+                    <span className="text-[11px] font-semibold text-slate-400">
+                      Brand Email
+                    </span>
                     <p className="mt-0.5 font-mono text-slate-800 dark:text-zinc-200">
                       {merchant.email || 'partner@delivery.et'}
                     </p>
                   </div>
                   <div className="border-t border-slate-100 pt-2.5 dark:border-zinc-800">
-                    <span className="text-[11px] font-semibold text-slate-400">Customer Support Phone</span>
+                    <span className="text-[11px] font-semibold text-slate-400">
+                      Customer Support Phone
+                    </span>
                     <p className="mt-0.5 font-semibold text-slate-800 dark:text-zinc-200">
                       {merchant.phone || '+251 91 123 4567'}
                     </p>
                   </div>
                   <div className="border-t border-slate-100 pt-2.5 dark:border-zinc-800">
-                    <span className="text-[11px] font-semibold text-slate-400">Total Operating Branches</span>
+                    <span className="text-[11px] font-semibold text-slate-400">
+                      Total Operating Branches
+                    </span>
                     <p className="mt-0.5 font-bold text-slate-800 dark:text-zinc-200">
                       {branches.length} {branches.length === 1 ? 'location' : 'locations'}
                     </p>
@@ -1362,11 +1421,12 @@ const cuisineColumns = useMemo(
                 </button>
               </div>
 
-              {/* Primary Location Card */}
               <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-zinc-800">
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-base text-[#FF6B35]">store</span>
+                    <span className="material-symbols-outlined text-base text-[#FF6B35]">
+                      store
+                    </span>
                     <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
                       Main Location
                     </h3>
@@ -1379,13 +1439,16 @@ const cuisineColumns = useMemo(
                   <div>
                     <span className="text-slate-400 text-[11px]">Address:</span>
                     <p className="font-semibold text-slate-800 dark:text-zinc-200">
-                      {currentBranch.address || merchant.address || 'Central Commercial District, Addis Ababa'}
+                      {currentBranch.address ||
+                        merchant.address ||
+                        'Central Commercial District, Addis Ababa'}
                     </p>
                   </div>
                   <div>
                     <span className="text-slate-400 text-[11px]">Hours:</span>
                     <p className="font-mono text-slate-800 dark:text-zinc-200">
-                      {currentBranch.opening_hours || '08:00 AM'} - {currentBranch.closing_hours || '10:00 PM'}
+                      {currentBranch.opening_hours || '08:00 AM'} -{' '}
+                      {currentBranch.closing_hours || '10:00 PM'}
                     </p>
                   </div>
                 </div>
@@ -1397,7 +1460,6 @@ const cuisineColumns = useMemo(
         {/* Tab 2: Branches Directory on Left, Map on Right */}
         {activeTab === 'branches' && (
           <div className="space-y-5">
-            {/* Header Toolbar */}
             <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-4.5 shadow-xs sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-900">
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] ring-1 ring-orange-200/60 dark:bg-orange-950/40 dark:ring-orange-900/40">
@@ -1413,7 +1475,8 @@ const cuisineColumns = useMemo(
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-zinc-400">
-                    Full branch directory on the left, and small unified map on the right showing all branch coordinates.
+                    Full branch directory on the left, and small unified map on the right
+                    showing all branch coordinates.
                   </p>
                 </div>
               </div>
@@ -1430,9 +1493,7 @@ const cuisineColumns = useMemo(
               </div>
             </div>
 
-            {/* Split Grid: Left Branches Directory (vertical), Right Small Map */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
-              {/* Left Column: All Branches Directory Cards (Vertical) */}
               <div className="space-y-4 lg:col-span-7 xl:col-span-8">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-2.5 dark:border-zinc-800">
                   <div>
@@ -1448,7 +1509,6 @@ const cuisineColumns = useMemo(
                   </span>
                 </div>
 
-                {/* Vertical list of simplified branch cards */}
                 <div className="grid grid-cols-1 gap-3">
                   {branches.map((b, idx) => {
                     const branchKey = b.id || idx
@@ -1466,7 +1526,9 @@ const cuisineColumns = useMemo(
                                 : 'bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40'
                             }`}
                           >
-                            <span className="material-symbols-outlined text-lg">storefront</span>
+                            <span className="material-symbols-outlined text-lg">
+                              storefront
+                            </span>
                           </span>
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-1">
@@ -1484,11 +1546,15 @@ const cuisineColumns = useMemo(
 
                         <button
                           type="button"
-                          onClick={() => navigate(`/merchants/${merchant.id}/branches/${b.id || idx}`)}
+                          onClick={() =>
+                            navigate(`/merchants/${merchant.id}/branches/${b.id || idx}`)
+                          }
                           className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-orange-50 px-2.5 py-1.5 text-xs font-bold text-[#FF6B35] ring-1 ring-orange-200/80 hover:bg-[#FF6B35] hover:text-white transition dark:bg-orange-950/40 dark:ring-orange-900/60 dark:text-orange-400"
                         >
                           <span>Manage</span>
-                          <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                          <span className="material-symbols-outlined text-xs">
+                            arrow_forward
+                          </span>
                         </button>
                       </div>
                     )
@@ -1496,19 +1562,18 @@ const cuisineColumns = useMemo(
                 </div>
               </div>
 
-              {/* Right Column: Small Compact Map (Location Indicator) — sticky */}
               <div className="space-y-4 lg:col-span-5 xl:col-span-4 lg:sticky lg:top-4">
                 <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
-                  {/* Map Header with View Switcher */}
                   <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-3.5 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/50">
                     <div className="flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-sm text-[#FF6B35]">map</span>
+                      <span className="material-symbols-outlined text-sm text-[#FF6B35]">
+                        map
+                      </span>
                       <span className="text-xs font-bold text-slate-900 dark:text-zinc-100">
                         Location Indicator
                       </span>
                     </div>
 
-                    {/* View Switcher Toggle */}
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
@@ -1537,39 +1602,72 @@ const cuisineColumns = useMemo(
                     </div>
                   </div>
 
-                  {/* Small Map Canvas */}
                   {branchMapViewMode === 'network' ? (
                     <div className="relative h-64 w-full overflow-hidden bg-[#0A0E17] select-none">
-                      {/* Grid background */}
                       <div className="absolute inset-0 pointer-events-none opacity-25">
-                        <svg className="h-full w-full" preserveAspectRatio="none" viewBox="0 0 360 250">
+                        <svg
+                          className="h-full w-full"
+                          preserveAspectRatio="none"
+                          viewBox="0 0 360 250"
+                        >
                           <defs>
-                            <pattern id="smallGrid" width="20" height="20" patternUnits="userSpaceOnUse">
-                              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1E293B" strokeWidth="0.5" />
+                            <pattern
+                              id="smallGrid"
+                              width="20"
+                              height="20"
+                              patternUnits="userSpaceOnUse"
+                            >
+                              <path
+                                d="M 20 0 L 0 0 0 20"
+                                fill="none"
+                                stroke="#1E293B"
+                                strokeWidth="0.5"
+                              />
                             </pattern>
                           </defs>
                           <rect width="100%" height="100%" fill="url(#smallGrid)" />
-                          <path d="M 0 170 Q 180 130 360 190" fill="none" stroke="#0369a1" strokeWidth="10" opacity="0.25" />
-                          <path d="M 40 0 L 320 250" fill="none" stroke="#334155" strokeWidth="5" opacity="0.3" />
+                          <path
+                            d="M 0 170 Q 180 130 360 190"
+                            fill="none"
+                            stroke="#0369a1"
+                            strokeWidth="10"
+                            opacity="0.25"
+                          />
+                          <path
+                            d="M 40 0 L 320 250"
+                            fill="none"
+                            stroke="#334155"
+                            strokeWidth="5"
+                            opacity="0.3"
+                          />
                         </svg>
                       </div>
 
-                      {/* Small SVG network plotting all branches */}
-                      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 360 250" preserveAspectRatio="xMidYMid meet">
+                      <svg
+                        className="absolute inset-0 h-full w-full"
+                        viewBox="0 0 360 250"
+                        preserveAspectRatio="xMidYMid meet"
+                      >
                         {branches.map((b, idx) => {
                           if (idx === 0) return null
                           const angles = [28, 95, -35, 65, -80, 140]
                           const angle = (angles[(idx - 1) % angles.length] * Math.PI) / 180
                           const dist = 115 + ((idx * 20) % 50)
-                          const targetX = Math.min(320, Math.max(180, Math.round(95 + Math.cos(angle) * dist)))
-                          const targetY = Math.min(215, Math.max(35, Math.round(125 + Math.sin(angle) * dist)))
+                          const targetX = Math.min(
+                            320,
+                            Math.max(180, Math.round(95 + Math.cos(angle) * dist))
+                          )
+                          const targetY = Math.min(
+                            215,
+                            Math.max(35, Math.round(125 + Math.sin(angle) * dist))
+                          )
                           const midX = Math.round((95 + targetX) / 2)
                           const midY = Math.round((125 + targetY) / 2 - 15)
-                          const deg = (Math.atan2(targetY - 125, targetX - 95) * 180) / Math.PI + 90
+                          const deg =
+                            (Math.atan2(targetY - 125, targetX - 95) * 180) / Math.PI + 90
 
                           return (
                             <g key={`small-branch-net-${b.id || idx}`}>
-                              {/* Route Line */}
                               <path
                                 d={`M 95 125 Q ${midX} ${midY} ${targetX} ${targetY}`}
                                 fill="none"
@@ -1577,13 +1675,20 @@ const cuisineColumns = useMemo(
                                 strokeWidth="2"
                                 strokeDasharray="4 3"
                               />
-                              {/* Green direction arrow */}
                               <g
-                                transform={`translate(${Math.round(95 * 0.5 + targetX * 0.5)}, ${Math.round(125 * 0.5 + targetY * 0.5)}) rotate(${deg - 90})`}
+                                transform={`translate(${Math.round(
+                                  95 * 0.5 + targetX * 0.5
+                                )}, ${Math.round(125 * 0.5 + targetY * 0.5)}) rotate(${
+                                  deg - 90
+                                })`}
                               >
-                                <polygon points="-4,-5 5,0 -4,5 -1,0" fill="#22C55E" stroke="#064E3B" strokeWidth="0.8" />
+                                <polygon
+                                  points="-4,-5 5,0 -4,5 -1,0"
+                                  fill="#22C55E"
+                                  stroke="#064E3B"
+                                  strokeWidth="0.8"
+                                />
                               </g>
-                              {/* Satellite Pin */}
                               <g
                                 transform={`translate(${targetX}, ${targetY})`}
                                 className="cursor-pointer"
@@ -1593,7 +1698,10 @@ const cuisineColumns = useMemo(
                                 }}
                               >
                                 <circle r="9" fill="#0F172A" stroke="#10B981" strokeWidth="2" />
-                                <circle r="3.5" fill={b.is_open !== false ? '#22C55E' : '#94A3B8'} />
+                                <circle
+                                  r="3.5"
+                                  fill={b.is_open !== false ? '#22C55E' : '#94A3B8'}
+                                />
                                 <text
                                   x="0"
                                   y="18"
@@ -1610,7 +1718,6 @@ const cuisineColumns = useMemo(
                           )
                         })}
 
-                        {/* HQ Pin at (95, 125) */}
                         <g
                           transform="translate(95, 125)"
                           className="cursor-pointer"
@@ -1636,14 +1743,12 @@ const cuisineColumns = useMemo(
                         </g>
                       </svg>
 
-                      {/* Small Top Overlay */}
                       <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 rounded-md bg-slate-900/90 px-2 py-1 text-[10px] text-slate-300 backdrop-blur-md border border-slate-800">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         <span>All {branches.length} branches mapped</span>
                       </div>
                     </div>
                   ) : (
-                    /* Small OpenStreetMap Iframe */
                     <div className="relative h-64 w-full bg-slate-100 dark:bg-zinc-800">
                       <iframe
                         title={`${merchant.name} Small Map`}
@@ -1654,9 +1759,7 @@ const cuisineColumns = useMemo(
                     </div>
                   )}
 
-                  {/* Map Footer: Quick Links & Branch Pills */}
                   <div className="border-t border-slate-100 p-3 bg-slate-50/50 dark:border-zinc-800 dark:bg-zinc-800/30">
-                 
                     <div className="flex flex-wrap gap-1.5">
                       {branches.map((b, idx) => (
                         <button
@@ -1668,7 +1771,11 @@ const cuisineColumns = useMemo(
                           }}
                           className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700 hover:border-[#FF6B35] hover:text-[#FF6B35] transition dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                         >
-                          <span className={`h-1.5 w-1.5 rounded-full ${idx === 0 ? 'bg-blue-500' : 'bg-emerald-500'}`} />
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              idx === 0 ? 'bg-blue-500' : 'bg-emerald-500'
+                            }`}
+                          />
                           <span className="truncate max-w-[100px]">{b.branch_name}</span>
                         </button>
                       ))}
@@ -1683,52 +1790,54 @@ const cuisineColumns = useMemo(
         {/* Tab 3: Category & Cuisines */}
         {activeTab === 'cuisines' && (
           <div className="space-y-6">
-            {/* Assigned Cuisines Grid */}
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
-  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5 dark:border-zinc-800">
-    <div>
-      <div className="flex items-center gap-2">
-        <span className="material-symbols-outlined text-amber-500 text-xl">restaurant</span>
-        <h3 className="text-base font-bold text-slate-900 dark:text-zinc-100">
-          Assigned Cuisine Types ({assignedCuisines.length})
-        </h3>
-      </div>
-      <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
-        Specializations mapped to this merchant. Used for search filters, dietary tagging, and customer menus.
-      </p>
-    </div>
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5 dark:border-zinc-800">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-amber-500 text-xl">
+                      restaurant
+                    </span>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-zinc-100">
+                      Assigned Cuisine Types ({assignedCuisines.length})
+                    </h3>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
+                    Specializations mapped to this merchant. Used for search filters, dietary
+                    tagging, and customer menus.
+                  </p>
+                </div>
 
-    <div className="flex items-center gap-2 shrink-0">
-      <button
-        type="button"
-        onClick={openAssignCuisinesModal}
-        className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
-        title="Open in-modal cuisine assignment"
-      >
-        <span className="material-symbols-outlined text-base">checklist</span>
-        Edit / Assign Cuisines
-      </button>
-    </div>
-  </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={openAssignCuisinesModal}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
+                    title="Open in-modal cuisine assignment"
+                  >
+                    <span className="material-symbols-outlined text-base">checklist</span>
+                    Edit / Assign Cuisines
+                  </button>
+                </div>
+              </div>
 
-  <div className="mt-5">
-    <DataTable
-      columns={cuisineColumns}
-      data={assignedCuisines}
-      enablePagination={assignedCuisines.length > 8}
-      pageSize={8}
-      itemName="cuisines"
-      containerClassName="overflow-x-auto rounded-xl border border-slate-100 dark:border-zinc-800"
-      tableClassName="w-full border-collapse text-left text-xs"
-      headerRowClassName="bg-slate-50/70 dark:bg-zinc-800/40 text-[11px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 dark:border-zinc-800"
-      rowClassName="group transition-colors hover:bg-slate-50/60 dark:hover:bg-zinc-800/40"
-    />
-  </div>
-</div>
+              <div className="mt-5">
+                <DataTable
+                  columns={cuisineColumns}
+                  data={assignedCuisines}
+                  enablePagination={assignedCuisines.length > 8}
+                  pageSize={8}
+                  itemName="cuisines"
+                  containerClassName="overflow-x-auto rounded-xl border border-slate-100 dark:border-zinc-800"
+                  tableClassName="w-full border-collapse text-left text-xs"
+                  headerRowClassName="bg-slate-50/70 dark:bg-zinc-800/40 text-[11px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 dark:border-zinc-800"
+                  rowClassName="group transition-colors hover:bg-slate-50/60 dark:hover:bg-zinc-800/40"
+                />
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Modal 1: Assign Cuisines Modal */}
+        {/* Modal 1: Assign Cuisines Modal (search removed, scoped to merchant category) */}
         {isAssignCuisinesModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div
@@ -1763,63 +1872,27 @@ const cuisineColumns = useMemo(
                 </button>
               </div>
 
-              {/* Toolbar */}
-              <div className="space-y-3 border-b border-slate-100 bg-slate-50/70 p-4 dark:border-zinc-800/80 dark:bg-zinc-800/30">
-                <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
-                  <div className="relative flex-1">
-                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-lg text-slate-400">
-                      search
-                    </span>
-                    <input
-                      type="text"
-                      value={assignCuisineSearch}
-                      onChange={(e) => setAssignCuisineSearch(e.target.value)}
-                      placeholder="Search cuisine name, slug, or keywords..."
-                      className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-8 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-                    />
-                    {assignCuisineSearch && (
-                      <button
-                        type="button"
-                        onClick={() => setAssignCuisineSearch('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                      >
-                        <span className="material-symbols-outlined text-sm">close</span>
-                      </button>
+              {/* Toolbar: category scope label + bulk actions (no search) */}
+              <div className="space-y-2 border-b border-slate-100 bg-slate-50/70 px-4 py-3 dark:border-zinc-800/80 dark:bg-zinc-800/30">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    {categoriesList.find((c) => c.id === merchantCategoryId) ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#FF6B35] px-2.5 py-1 text-[11px] font-bold text-white shadow-xs">
+                        <span className="material-symbols-outlined text-sm">
+                          {categoriesList.find((c) => c.id === merchantCategoryId)?.icon ||
+                            'category'}
+                        </span>
+                        {categoriesList.find((c) => c.id === merchantCategoryId)?.name}
+                        <span className="opacity-80">({filteredForAssignment.length})</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-700 dark:bg-zinc-700 dark:text-zinc-200">
+                        All categories ({filteredForAssignment.length})
+                      </span>
                     )}
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setAssignCategoryFilter('all')}
-                      className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
-                        assignCategoryFilter === 'all'
-                          ? 'bg-[#FF6B35] text-white shadow-xs'
-                          : 'bg-white text-slate-600 hover:bg-slate-100 dark:bg-zinc-800 dark:text-zinc-300'
-                      }`}
-                    >
-                      All ({cuisinesList.length})
-                    </button>
-                    {categoriesList.map((cat) => {
-                      const count = cuisinesList.filter((c) => c.category_id === cat.id).length
-                      if (count === 0) return null
-                      return (
-                        <button
-                          key={cat.id}
-                          type="button"
-                          onClick={() => setAssignCategoryFilter(cat.id)}
-                          className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
-                            assignCategoryFilter === cat.id
-                              ? 'bg-[#FF6B35] text-white shadow-xs'
-                              : 'bg-white text-slate-600 hover:bg-slate-100 dark:bg-zinc-800 dark:text-zinc-300'
-                          }`}
-                        >
-                          {cat.name} ({count})
-                        </button>
-                      )
-                    })}
+                    <span className="text-[11px] text-slate-500 dark:text-zinc-400">
+                      Only cuisines from this category can be assigned.
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-2 text-xs">
@@ -1828,7 +1901,7 @@ const cuisineColumns = useMemo(
                       onClick={() => handleSelectAllFilteredCuisines(filteredForAssignment)}
                       className="font-semibold text-slate-600 hover:text-[#FF6B35] dark:text-zinc-300"
                     >
-                      Select all filtered
+                      Select all
                     </button>
                     <span className="text-slate-300">|</span>
                     <button
@@ -1847,13 +1920,15 @@ const cuisineColumns = useMemo(
               <div className="flex-1 overflow-y-auto p-6">
                 {filteredForAssignment.length === 0 ? (
                   <div className="py-12 text-center text-xs text-slate-500 dark:text-zinc-400">
-                    No cuisines found matching &ldquo;{assignCuisineSearch}&rdquo;
+                    No cuisines available for this merchant's category yet.
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {filteredForAssignment.map((cuisine) => {
                       const isSelected = tempSelectedCuisineIds.includes(cuisine.id)
-                      const parentCat = categoriesList.find((cat) => cat.id === cuisine.category_id)
+                      const parentCat = categoriesList.find(
+                        (cat) => cat.id === cuisine.category_id
+                      )
                       return (
                         <div
                           key={cuisine.id}
@@ -1864,7 +1939,6 @@ const cuisineColumns = useMemo(
                               : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/40'
                           }`}
                         >
-                          {/* Checkbox indicator */}
                           <div className="pt-0.5">
                             <div
                               className={`flex h-5 w-5 items-center justify-center rounded-md border transition ${
@@ -1881,10 +1955,13 @@ const cuisineColumns = useMemo(
                             </div>
                           </div>
 
-                          {/* Icon */}
                           <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-amber-500 dark:bg-zinc-800">
                             {cuisine.image ? (
-                              <img src={cuisine.image} alt={cuisine.name} className="h-5 w-5 object-contain" />
+                              <img
+                                src={cuisine.image}
+                                alt={cuisine.name}
+                                className="h-5 w-5 object-contain"
+                              />
                             ) : (
                               <span className="material-symbols-outlined text-lg">
                                 {cuisine.icon || 'restaurant'}
@@ -1892,7 +1969,6 @@ const cuisineColumns = useMemo(
                             )}
                           </span>
 
-                          {/* Text info */}
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-1">
                               <h4 className="text-xs font-bold text-slate-900 dark:text-zinc-100">
@@ -1909,7 +1985,6 @@ const cuisineColumns = useMemo(
                             </p>
                           </div>
 
-                          {/* Inline Edit Button */}
                           <button
                             type="button"
                             onClick={(e) => {
@@ -1931,7 +2006,10 @@ const cuisineColumns = useMemo(
               {/* Footer */}
               <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50/50 px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900/50">
                 <div className="text-xs font-semibold text-slate-600 dark:text-zinc-300">
-                  <span className="text-[#FF6B35] font-bold">{tempSelectedCuisineIds.length}</span> specializations selected
+                  <span className="text-[#FF6B35] font-bold">
+                    {tempSelectedCuisineIds.length}
+                  </span>{' '}
+                  specializations selected
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -1963,8 +2041,10 @@ const cuisineColumns = useMemo(
               onClick={() => setIsCuisineEditorModalOpen(false)}
             />
             <div className="relative z-10 flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
-              <form onSubmit={handleSaveCuisineDetail} className="flex flex-1 flex-col overflow-hidden">
-                {/* Header */}
+              <form
+                onSubmit={handleSaveCuisineDetail}
+                className="flex flex-1 flex-col overflow-hidden"
+              >
                 <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-zinc-800">
                   <div className="flex items-center gap-3">
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-[#FF6B35] dark:bg-orange-950/60">
@@ -1992,9 +2072,7 @@ const cuisineColumns = useMemo(
                   </button>
                 </div>
 
-                {/* Form Fields */}
                 <div className="flex-1 space-y-4 overflow-y-auto p-6">
-                  {/* Name */}
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
                       Cuisine Name <span className="text-rose-500">*</span>
@@ -2028,7 +2106,6 @@ const cuisineColumns = useMemo(
                     )}
                   </div>
 
-                  {/* Parent Category & Slug */}
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
@@ -2037,15 +2114,22 @@ const cuisineColumns = useMemo(
                       <select
                         value={cuisineFormData.category_id}
                         onChange={(e) =>
-                          setCuisineFormData((prev) => ({ ...prev, category_id: e.target.value }))
+                          setCuisineFormData((prev) => ({
+                            ...prev,
+                            category_id: e.target.value,
+                          }))
                         }
                         className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                       >
-                        {categoriesList.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.name} ({cat.code || 'FOOD'})
-                          </option>
-                        ))}
+                        {categoriesList
+                          .filter(
+                            (cat) => !merchantCategoryId || cat.id === merchantCategoryId
+                          )
+                          .map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name} ({cat.code || 'FOOD'})
+                            </option>
+                          ))}
                       </select>
                     </div>
                     <div>
@@ -2056,7 +2140,10 @@ const cuisineColumns = useMemo(
                         type="text"
                         value={cuisineFormData.slug}
                         onChange={(e) =>
-                          setCuisineFormData((prev) => ({ ...prev, slug: slugify(e.target.value) }))
+                          setCuisineFormData((prev) => ({
+                            ...prev,
+                            slug: slugify(e.target.value),
+                          }))
                         }
                         placeholder="ethiopian-habesha"
                         className="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-2 font-mono text-xs text-slate-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
@@ -2064,7 +2151,6 @@ const cuisineColumns = useMemo(
                     </div>
                   </div>
 
-                  {/* Description */}
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
                       Description
@@ -2073,14 +2159,16 @@ const cuisineColumns = useMemo(
                       rows={2}
                       value={cuisineFormData.description}
                       onChange={(e) =>
-                        setCuisineFormData((prev) => ({ ...prev, description: e.target.value }))
+                        setCuisineFormData((prev) => ({
+                          ...prev,
+                          description: e.target.value,
+                        }))
                       }
                       placeholder="Describe this cuisine style or specialty..."
                       className="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-900 focus:border-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                     />
                   </div>
 
-                  {/* Icon Selector & Custom Image */}
                   <div>
                     <label className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-zinc-300">
                       Preset Material Icon
@@ -2104,7 +2192,11 @@ const cuisineColumns = useMemo(
                           key={iconName}
                           type="button"
                           onClick={() =>
-                            setCuisineFormData((prev) => ({ ...prev, icon: iconName, image: '' }))
+                            setCuisineFormData((prev) => ({
+                              ...prev,
+                              icon: iconName,
+                              image: '',
+                            }))
                           }
                           className={`flex h-9 w-9 items-center justify-center rounded-xl border transition ${
                             cuisineFormData.icon === iconName && !cuisineFormData.image
@@ -2112,12 +2204,13 @@ const cuisineColumns = useMemo(
                               : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 dark:border-zinc-700 dark:bg-zinc-800'
                           }`}
                         >
-                          <span className="material-symbols-outlined text-lg">{iconName}</span>
+                          <span className="material-symbols-outlined text-lg">
+                            {iconName}
+                          </span>
                         </button>
                       ))}
                     </div>
 
-                    {/* Upload custom icon image */}
                     <div
                       onDragOver={(e) => {
                         e.preventDefault()
@@ -2187,22 +2280,28 @@ const cuisineColumns = useMemo(
                               browse image
                             </button>
                           </p>
-                          <p className="text-[10px] text-slate-400">SVG, PNG, JPG, or WebP (max 3MB)</p>
+                          <p className="text-[10px] text-slate-400">
+                            SVG, PNG, JPG, or WebP (max 3MB)
+                          </p>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Status & Sort Order */}
                   <div className="flex items-center justify-between pt-2">
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() =>
-                          setCuisineFormData((prev) => ({ ...prev, is_active: !prev.is_active }))
+                          setCuisineFormData((prev) => ({
+                            ...prev,
+                            is_active: !prev.is_active,
+                          }))
                         }
                         className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors ${
-                          cuisineFormData.is_active ? 'bg-[#FF6B35]' : 'bg-slate-300 dark:bg-zinc-700'
+                          cuisineFormData.is_active
+                            ? 'bg-[#FF6B35]'
+                            : 'bg-slate-300 dark:bg-zinc-700'
                         }`}
                       >
                         <span
@@ -2225,7 +2324,10 @@ const cuisineColumns = useMemo(
                         min="1"
                         value={cuisineFormData.sort_order}
                         onChange={(e) =>
-                          setCuisineFormData((prev) => ({ ...prev, sort_order: e.target.value }))
+                          setCuisineFormData((prev) => ({
+                            ...prev,
+                            sort_order: e.target.value,
+                          }))
                         }
                         className="w-16 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-bold text-slate-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                       />
@@ -2233,7 +2335,6 @@ const cuisineColumns = useMemo(
                   </div>
                 </div>
 
-                {/* Footer */}
                 <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50/50 px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900/50">
                   <button
                     type="button"
@@ -2328,7 +2429,9 @@ const cuisineColumns = useMemo(
                             : 'border-slate-300 dark:border-zinc-700'
                         }`}
                       >
-                        {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                        {isSelected && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                        )}
                       </div>
                     </div>
                   )

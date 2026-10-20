@@ -7,7 +7,6 @@ import {
   saveStoredCategories,
   generateUUID,
   slugify,
-  SUPPORTED_CATEGORIES,
   PRESET_ICON_ASSETS,
 } from '../data/demoCategories'
 
@@ -274,15 +273,6 @@ const CategoryManagementPage = () => {
   const handleFileDragLeave = (e) => {
     e.preventDefault()
     setIsDraggingFile(false)
-  }
-
-  // Form field change handlers
-  const handleNameChange = (e) => {
-    const val = e.target.value
-    setFormData((prev) => ({ ...prev, name: val }))
-    if (formErrors.name) {
-      setFormErrors((prev) => ({ ...prev, name: null }))
-    }
   }
 
   // Form validation

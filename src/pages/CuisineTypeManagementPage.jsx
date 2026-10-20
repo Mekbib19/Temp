@@ -444,7 +444,7 @@ const CuisineTypeManagementPage = () => {
     <MainLayout
       activeMenuKey="cuisineManagement"
       breadcrumbParent="Dashboard"
-      breadcrumbCurrent="Specializations (cuisine_types)"
+      breadcrumbCurrent="Cuisine types"
     >
       <div className="space-y-6 pb-12">
         {/* Toast Notification */}
@@ -467,7 +467,7 @@ const CuisineTypeManagementPage = () => {
             
             </div>
             <p className="mt-2 text-sm font-medium text-slate-500 dark:text-zinc-400">
-              Specialization and cuisine types for merchants within each category 
+              Cuisine types for merchants within each category 
             </p>
           </div>
 
