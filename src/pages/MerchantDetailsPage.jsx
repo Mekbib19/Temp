@@ -807,162 +807,24 @@ export default function MerchantDetailsPage() {
                       {branches.length} {branches.length === 1 ? 'branch' : 'branches'}
                     </span>
                   </button>
+
+                  {merchant.is_rx_licensed && (
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-700 ring-1 ring-sky-600/20 dark:bg-sky-950/40 dark:text-sky-300">
+                      <span className="material-symbols-outlined text-sm">medication</span>
+                      <span>Licensed Rx Pharmacy</span>
+                    </span>
+                  )}
+
+                  {merchant.is_18_plus && (
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 ring-1 ring-amber-600/20 dark:bg-amber-950/40 dark:text-amber-300">
+                      <span className="material-symbols-outlined text-sm">no_adult_content</span>
+                      <span>18+ Age Restricted</span>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
           </div>
-        </div>
-
-        {/* 4 Metric Stats Quick Cards */}
-        <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                Operating Branches
-              </span>
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40">
-                <span className="material-symbols-outlined text-base">store</span>
-              </span>
-            </div>
-            <p className="mt-2 text-2xl font-extrabold text-slate-900 dark:text-zinc-100">
-              {branches.length}
-            </p>
-            <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
-              {branches.filter((b) => b.is_open !== false).length} currently open
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                Fulfillment ETA
-              </span>
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40">
-                <span className="material-symbols-outlined text-base">moped</span>
-              </span>
-            </div>
-            <p className="mt-2 text-2xl font-extrabold text-slate-900 dark:text-zinc-100">
-              {merchant.eta_min || 20}-{merchant.eta_max || 40}{' '}
-              <span className="text-sm font-semibold">min</span>
-            </p>
-            <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
-              Average dispatch time
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                Commission Rate
-              </span>
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40">
-                <span className="material-symbols-outlined text-base">percent</span>
-              </span>
-            </div>
-            <p className="mt-2 text-2xl font-extrabold text-slate-900 dark:text-zinc-100">
-              {merchant.commission_rate ?? 15}%
-            </p>
-            <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
-              Contracted partner fee
-            </p>
-          </div>
-          <div
-            onClick={() => setActiveTab('cuisines')}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') setActiveTab('cuisines')
-            }}
-            className="cursor-pointer rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs transition hover:border-[#FF6B35] hover:shadow-xs dark:border-zinc-800 dark:bg-zinc-900"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                Cuisine
-              </span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    openAssignCuisinesModal()
-                  }}
-                  className="rounded-md bg-orange-50 px-2 py-0.5 text-[10px] font-bold text-[#FF6B35] hover:bg-orange-100 dark:bg-orange-950/40 dark:hover:bg-orange-900/60"
-                  title="Open in-modal cuisine editor"
-                >
-                  Edit
-                </button>
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40">
-                  <span className="material-symbols-outlined text-sm">restaurant</span>
-                </span>
-              </div>
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 pt-1">
-              {assignedCuisines.length > 0 ? (
-                assignedCuisines.map((c) => (
-                  <span
-                    key={c.id}
-                    className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                  >
-                    {c.image ? (
-                      <img src={c.image} alt={c.name} className="h-3.5 w-3.5 object-contain" />
-                    ) : (
-                      <span className="material-symbols-outlined text-[13px] text-amber-500">
-                        {c.icon || 'star'}
-                      </span>
-                    )}
-                    {c.name}
-                  </span>
-                ))
-              ) : merchant.cuisine_name ? (
-                <span className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
-                  <span className="material-symbols-outlined text-[13px] text-amber-500">
-                    star
-                  </span>
-                  {merchant.cuisine_name}
-                </span>
-              ) : (
-                <span className="text-xs italic text-slate-400">
-                  No specializations assigned
-                </span>
-              )}
-            </div>
-            <p className="mt-1.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
-              Click to view culinary tags
-            </p>
-          </div>
-        </section>
-
-        {/* Tab Navigation */}
-        <div className="border-b border-slate-200 dark:border-zinc-800">
-          <nav className="flex space-x-6 overflow-x-auto">
-            {[
-              { id: 'overview', label: 'Overview & Statistics', icon: 'analytics' },
-              {
-                id: 'branches',
-                label: `Location Indicator & Branches (${branches.length})`,
-                icon: 'pin_drop',
-              },
-              {
-                id: 'cuisines',
-                label: `Category & Cuisines (${assignedCuisines.length})`,
-                icon: 'restaurant',
-              },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex shrink-0 items-center gap-2 border-b-2 py-3.5 text-xs font-bold transition ${
-                  activeTab === tab.id
-                    ? 'border-[#FF6B35] text-[#FF6B35]'
-                    : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200'
-                }`}
-              >
-                <span className="material-symbols-outlined text-base">{tab.icon}</span>
-                {tab.label}
-              </button>
-            ))}
-          </nav>
         </div>
 
         {/* Tab Content */}

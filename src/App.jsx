@@ -49,6 +49,9 @@ function App() {
         <Route path="/cuisine-types" element={<Navigate to="/cuisines" replace />} />
         <Route path="/menu-categories" element={<MenuCategoryManagementPage />} />
         <Route path="/menu-categories/:categoryId" element={<MenuCategoryDetailsPage />} />
+        <Route path="/menu-items/new" element={<MenuCategoryDetailsPage />} />
+        <Route path="/menu-items/:itemId" element={<MenuCategoryDetailsPage />} />
+        <Route path="/menu-items" element={<MenuCategoryDetailsPage />} />
         <Route path="/menu-category" element={<Navigate to="/menu-categories" replace />} />
         <Route path="/customers" element={<CustomerManagementPage />} />
         <Route path="/customers/new" element={<CustomerFormPage />} />

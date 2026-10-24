@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   saveMenuItem,
   deleteMenuItem,
@@ -13,6 +14,7 @@ export default function BranchMenuItemsTabContent({
   showToast,
   initialCategory = 'all',
 }) {
+  const navigate = useNavigate()
   const [selectedCategory, setSelectedCategory] = useState(initialCategory || 'all')
   const [searchQuery, setSearchQuery] = useState('')
   const [stockFilter, setStockFilter] = useState('all') // 'all' | 'in_stock' | 'low_stock' | 'out_of_stock'
@@ -36,12 +38,7 @@ export default function BranchMenuItemsTabContent({
     )
   }, [merchant])
 
-  const isGroceryMerchant = useMemo(() => {
-    const mCat = (merchant?.category_name || merchant?.category || '').toLowerCase()
-    const mCode = (merchant?.category_code || '').toUpperCase()
-    const mType = (merchant?.type || merchant?.business_type || '').toLowerCase()
-    return mCat === 'grocery' || mCode === 'GROCERY' || mType.includes('groc') || mType.includes('supermarket')
-  }, [merchant])
+
 
 
   // Modal states
@@ -84,14 +81,7 @@ export default function BranchMenuItemsTabContent({
     })
   }, [menuItems, selectedCategory, searchQuery, stockFilter])
 
-  // Quick stats
-  const stats = useMemo(() => {
-    const total = menuItems.length
-    const available = menuItems.filter((i) => i.is_available).length
-    const lowStock = menuItems.filter((i) => i.stock_quantity !== undefined && i.stock_quantity <= 15 && i.stock_quantity > 0).length
-    const rxCount = menuItems.filter((i) => i.requires_prescription).length
-    return { total, available, lowStock, rxCount }
-  }, [menuItems])
+
 
   // Handle Availability Toggle
   const handleToggleAvailability = (item) => {
@@ -132,110 +122,6 @@ export default function BranchMenuItemsTabContent({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner & Quick KPI Statistics */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-              Total Catalog
-            </span>
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40">
-              <span className="material-symbols-outlined text-base">inventory_2</span>
-            </span>
-          </div>
-          <p className="mt-2 text-2xl font-extrabold text-slate-900 dark:text-zinc-100">
-            {stats.total} <span className="text-xs font-normal text-slate-400">Products</span>
-          </p>
-          <p className="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
-            Across {merchantCategories.length} {merchant?.type ? `${merchant.type} ` : ''}categories
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-              Live & Available
-            </span>
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40">
-              <span className="material-symbols-outlined text-base">check_circle</span>
-            </span>
-          </div>
-          <p className="mt-2 text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
-            {stats.available} <span className="text-xs font-normal text-slate-400">active</span>
-          </p>
-          <p className="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
-            Ready for customer dispatch
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-              Low Stock Alerts
-            </span>
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950/40">
-              <span className="material-symbols-outlined text-base">warning</span>
-            </span>
-          </div>
-          <p className="mt-2 text-2xl font-extrabold text-amber-600 dark:text-amber-400">
-            {stats.lowStock} <span className="text-xs font-normal text-slate-400">critical</span>
-          </p>
-          <p className="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
-            Under 15 units remaining
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-              {isPharmacyMerchant
-                ? 'Controlled Items'
-                : isGroceryMerchant
-                ? 'Perishables / Stock'
-                : 'Out of Stock'}
-            </span>
-            <span
-              className={`inline-flex h-7 w-7 items-center justify-center rounded-lg ${
-                isPharmacyMerchant
-                  ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40'
-                  : isGroceryMerchant
-                  ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40'
-                  : 'bg-rose-50 text-rose-600 dark:bg-rose-950/40'
-              }`}
-            >
-              <span className="material-symbols-outlined text-base">
-                {isPharmacyMerchant ? 'verified' : isGroceryMerchant ? 'eco' : 'inventory'}
-              </span>
-            </span>
-          </div>
-          <p
-            className={`mt-2 text-2xl font-extrabold ${
-              isPharmacyMerchant
-                ? 'text-blue-600 dark:text-blue-400'
-                : isGroceryMerchant
-                ? 'text-emerald-600 dark:text-emerald-400'
-                : 'text-slate-900 dark:text-zinc-100'
-            }`}
-          >
-            {isPharmacyMerchant
-              ? stats.rxCount
-              : isGroceryMerchant
-              ? `${stats.available}/${stats.total}`
-              : stats.total - stats.available}{' '}
-            <span className="text-xs font-normal text-slate-400">
-              {isPharmacyMerchant ? 'Rx/Restricted' : isGroceryMerchant ? 'live in-stock' : 'paused'}
-            </span>
-          </p>
-          <p className="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
-            {isPharmacyMerchant
-              ? 'Verification mandated'
-              : isGroceryMerchant
-              ? 'Fresh farm & ambient stock'
-              : 'Temporarily unavailable'}
-          </p>
-        </div>
-      </div>
-
       {/* Standardized Filter Bar matching unified management pages UI system */}
       <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200/80 bg-slate-100/90 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
         <div className="flex h-11 items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
@@ -346,12 +232,13 @@ export default function BranchMenuItemsTabContent({
           </button>
         )}
 
-        {/* Add Menu Item Button */}
+        {/* Add Menu Item Button - Opens full merged page */}
         <button
           type="button"
           onClick={() => {
-            setEditingItem(null)
-            setIsAddModalOpen(true)
+            const bId = branch?.id || ''
+            const mId = merchant?.id || ''
+            navigate(`/menu-items/new?merchantId=${mId}&branchId=${bId}`)
           }}
           className="inline-flex h-11 items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 text-xs font-bold text-white shadow-sm transition hover:bg-[#e0531f] active:scale-95 md:ml-auto"
         >
@@ -387,8 +274,9 @@ export default function BranchMenuItemsTabContent({
             <button
               type="button"
               onClick={() => {
-                setEditingItem(null)
-                setIsAddModalOpen(true)
+                const bId = branch?.id || ''
+                const mId = merchant?.id || ''
+                navigate(`/menu-items/new?merchantId=${mId}&branchId=${bId}`)
               }}
               className="rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white hover:bg-[#e0531f]"
             >
@@ -548,8 +436,14 @@ export default function BranchMenuItemsTabContent({
                 <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-850/50">
                   <button
                     type="button"
-                    onClick={() => setInspectItem(item)}
+                    onClick={() => {
+                      const catId = item.menu_category_id || (item.category_type?.toLowerCase().includes('burger') ? 'mcat-food-001' : 'mcat-food-001')
+                      const bId = branch?.id || ''
+                      const mId = merchant?.id || ''
+                      navigate(`/menu-items/${item.id || catId}?merchantId=${mId}&branchId=${bId}`)
+                    }}
                     className="inline-flex items-center gap-1 text-xs font-bold text-[#FF6B35] hover:underline"
+                    title="View and configure extra options"
                   >
                     <span>View Configuration</span>
                     <span className="material-symbols-outlined text-xs">arrow_forward</span>
@@ -559,8 +453,10 @@ export default function BranchMenuItemsTabContent({
                     <button
                       type="button"
                       onClick={() => {
-                        setEditingItem(item)
-                        setIsAddModalOpen(true)
+                        const catId = item.menu_category_id || (item.category_type?.toLowerCase().includes('burger') ? 'mcat-food-001' : 'mcat-food-001')
+                        const bId = branch?.id || ''
+                        const mId = merchant?.id || ''
+                        navigate(`/menu-items/${item.id || catId}?merchantId=${mId}&branchId=${bId}`)
                       }}
                       className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-200 hover:text-slate-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
                       title="Edit Item"
@@ -676,20 +572,27 @@ export default function BranchMenuItemsTabContent({
                       <div className="flex items-center justify-end gap-1">
                         <button
                           type="button"
-                          onClick={() => setInspectItem(item)}
-                          className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-zinc-800"
-                          title="View Details"
+                          onClick={() => {
+                            const catId = item.menu_category_id || (item.category_type?.toLowerCase().includes('burger') ? 'mcat-food-001' : 'mcat-food-001')
+                            const bId = branch?.id || ''
+                            const mId = merchant?.id || ''
+                            navigate(`/menu-items/${item.id || catId}?merchantId=${mId}&branchId=${bId}`)
+                          }}
+                          className="rounded-lg p-1.5 text-slate-500 hover:bg-orange-50 hover:text-[#FF6B35] dark:hover:bg-zinc-800"
+                          title="View & customize menu item extra options"
                         >
                           <span className="material-symbols-outlined text-base">visibility</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => {
-                            setEditingItem(item)
-                            setIsAddModalOpen(true)
+                            const catId = item.menu_category_id || (item.category_type?.toLowerCase().includes('burger') ? 'mcat-food-001' : 'mcat-food-001')
+                            const bId = branch?.id || ''
+                            const mId = merchant?.id || ''
+                            navigate(`/menu-items/${item.id || catId}?merchantId=${mId}&branchId=${bId}`)
                           }}
                           className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-zinc-800"
-                          title="Edit"
+                          title="Edit Item & Extra Customizations"
                         >
                           <span className="material-symbols-outlined text-base">edit</span>
                         </button>
@@ -916,23 +819,41 @@ export default function BranchMenuItemsTabContent({
               <button
                 type="button"
                 onClick={() => {
-                  setEditingItem(inspectItem)
+                  const catId = inspectItem.menu_category_id || (inspectItem.category_type?.toLowerCase().includes('burger') ? 'mcat-food-001' : 'mcat-food-001')
+                  const bId = branch?.id || ''
+                  const mId = merchant?.id || ''
                   setInspectItem(null)
-                  setIsAddModalOpen(true)
+                  navigate(`/menu-items/${inspectItem.id || catId}?merchantId=${mId}&branchId=${bId}`)
                 }}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-orange-50 px-4 py-2 text-xs font-bold text-[#FF6B35] hover:bg-orange-100 dark:bg-orange-950/40"
               >
                 <span className="material-symbols-outlined text-sm">edit</span>
-                <span>Edit Product</span>
+                <span>Edit Product Details</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setInspectItem(null)}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-              >
-                Close
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const catId = inspectItem.menu_category_id || (inspectItem.category_type?.toLowerCase().includes('burger') ? 'mcat-food-001' : 'mcat-food-001')
+                    const bId = branch?.id || ''
+                    const mId = merchant?.id || ''
+                    setInspectItem(null)
+                    navigate(`/menu-items/${inspectItem.id || catId}?merchantId=${mId}&branchId=${bId}`)
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
+                >
+                  <span className="material-symbols-outlined text-sm">tune</span>
+                  <span>Open Customizations & Options</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInspectItem(null)}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -38,6 +38,11 @@ export const initialMenuCategories = [
     description: 'Juicy prime Angus patties, smash burgers, slider platters, and plant-based burgers with house-made buns.',
     is_active: true,
     sort_order: 1,
+    requires_stock_quantity: false,
+    requires_unit: false,
+    requires_sku: false,
+    requires_prescription: false,
+    is_age_restricted_category: false,
     merchant_ids: ['m-001'],
     created_at: getDynamicOffset(60),
     updated_at: getDynamicOffset(0, 3),
@@ -49,6 +54,12 @@ export const initialMenuCategories = [
     name: 'Drinks',
     description: 'Cold-pressed citrus juices, craft sodas, iced coffees, bubble teas, smoothies, and sparkling refreshments.',
     is_active: true,
+    requires_stock_quantity: true,
+    requires_unit: true,
+    requires_sku: false,
+    requires_prescription: false,
+    is_age_restricted: true,
+    is_age_restricted_category: true,
     sort_order: 2,
     merchant_ids: ['m-001', 'm-005', 'm-006'],
     created_at: getDynamicOffset(58),
@@ -197,6 +208,12 @@ export const initialMenuCategories = [
     name: 'Medicines',
     description: 'Over-the-counter pain relief, fever reducers, cold & cough remedies, anti-allergy tablets, and digestive health.',
     is_active: true,
+    requires_stock_quantity: true,
+    requires_unit: true,
+    requires_sku: true,
+    requires_prescription: true,
+    is_age_restricted: false,
+    is_age_restricted_category: false,
     sort_order: 1,
     merchant_ids: ['m-003'],
     created_at: getDynamicOffset(28),
@@ -424,6 +441,27 @@ export const loadStoredMenuCategories = () => {
       const mergedList = Array.from(existingMap.values()).map((item) => {
         const clean = { ...item }
         delete clean.slug
+        clean.requires_stock_quantity = Boolean(item.requires_stock_quantity)
+        clean.requires_unit = Boolean(item.requires_unit)
+        clean.requires_sku = Boolean(item.requires_sku)
+        clean.requires_prescription = Boolean(
+          item.requires_prescription !== undefined
+            ? item.requires_prescription
+            : clean.category_code === 'PHARMACY' &&
+              (clean.name?.toLowerCase().includes('medicin') || clean.id === 'mcat-phar-001')
+        )
+        clean.is_age_restricted_category = Boolean(
+          item.is_age_restricted_category !== undefined
+            ? item.is_age_restricted_category
+            : item.is_age_restricted !== undefined
+            ? item.is_age_restricted
+            : clean.name?.toLowerCase().includes('drink') ||
+              clean.name?.toLowerCase().includes('spirit') ||
+              clean.name?.toLowerCase().includes('wine') ||
+              clean.name?.toLowerCase().includes('beer') ||
+              clean.id === 'mcat-food-002'
+        )
+        clean.is_age_restricted = clean.is_age_restricted_category
         return clean
       })
       localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedList))

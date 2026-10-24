@@ -795,15 +795,6 @@ export default function BranchDetailPage() {
         ),
       },
       {
-        accessorKey: 'shift',
-        header: 'Assigned Shift',
-        cell: (info) => (
-          <span className="font-medium text-xs text-slate-700 dark:text-zinc-300">
-            {info.getValue() || '08:00 AM - 05:00 PM'}
-          </span>
-        ),
-      },
-      {
         id: 'actions',
         header: 'Actions',
         enableSorting: false,
@@ -1150,7 +1141,7 @@ export default function BranchDetailPage() {
               <span className="material-symbols-outlined text-xs">arrow_forward</span>
             </p>
             <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
-              {menuItems.filter(i => i.is_available).length} in stock • Click to view catalog
+              {menuItems.filter((i) => i.is_available).length} in stock • Click to view catalog
             </p>
           </div>
 
@@ -1713,7 +1704,7 @@ export default function BranchDetailPage() {
               </div>
 
               {/* Manager Detail Grid */}
-              <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-4 text-xs">
+              <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-3 text-xs">
                 <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 dark:border-zinc-800 dark:bg-zinc-850/50">
                   <span className="text-[11px] font-semibold text-slate-400 block">Phone Number</span>
                   <p className="mt-1 font-mono font-bold text-slate-900 dark:text-zinc-100">
@@ -1724,12 +1715,6 @@ export default function BranchDetailPage() {
                   <span className="text-[11px] font-semibold text-slate-400 block">Official Email</span>
                   <p className="mt-1 font-mono font-bold text-slate-900 dark:text-zinc-100 truncate">
                     {managerData.email}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 dark:border-zinc-800 dark:bg-zinc-850/50">
-                  <span className="text-[11px] font-semibold text-slate-400 block">Assigned Shift</span>
-                  <p className="mt-1 font-bold text-slate-900 dark:text-zinc-100">
-                    {managerData.shift}
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 dark:border-zinc-800 dark:bg-zinc-850/50">
@@ -1749,7 +1734,7 @@ export default function BranchDetailPage() {
                     Branch Staff Roster & Personnel ({staffList.length} Members)
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-zinc-400">
-                    Control team duty statuses, assign operational roles, and manage shift schedules
+                    Control team duty statuses and assign operational roles
                   </p>
                 </div>
                 <button
@@ -1973,17 +1958,6 @@ export default function BranchDetailPage() {
                         className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 font-mono text-xs font-medium text-slate-900 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                       />
                     </div>
-                    <div>
-                      <label className="mb-1 block font-semibold text-slate-700 dark:text-zinc-300">
-                        Shift & Hours Assignment
-                      </label>
-                      <input
-                        type="text"
-                        value={managerEditForm.shift}
-                        onChange={(e) => setManagerEditForm({ ...managerEditForm, shift: e.target.value })}
-                        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-900 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-                      />
-                    </div>
                   </div>
 
                   <div className="mt-6 flex justify-end gap-2.5">
@@ -2098,22 +2072,6 @@ export default function BranchDetailPage() {
                         placeholder="staff.name@merchant.et"
                         className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 font-mono text-xs font-medium text-slate-900 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                       />
-                    </div>
-
-                    <div>
-                      <label className="mb-1 block font-semibold text-slate-700 dark:text-zinc-300">
-                        Assigned Shift Hours
-                      </label>
-                      <select
-                        value={staffForm.shift}
-                        onChange={(e) => setStaffForm({ ...staffForm, shift: e.target.value })}
-                        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-900 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-                      >
-                        <option value="Morning Shift (07:00 AM - 03:30 PM)">Morning Shift (07:00 AM - 03:30 PM)</option>
-                        <option value="Full Day Shift (08:00 AM - 05:00 PM)">Full Day Shift (08:00 AM - 05:00 PM)</option>
-                        <option value="Afternoon & Evening (02:00 PM - 10:30 PM)">Afternoon & Evening (02:00 PM - 10:30 PM)</option>
-                        <option value="Closing Shift (04:00 PM - 11:30 PM)">Closing Shift (04:00 PM - 11:30 PM)</option>
-                      </select>
                     </div>
                   </div>
 

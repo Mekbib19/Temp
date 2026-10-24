@@ -9,6 +9,10 @@ import {
   slugify,
   PRESET_ICON_ASSETS,
 } from '../data/demoCategories'
+import {
+  loadStoredMenuCategories,
+  saveStoredMenuCategories,
+} from '../data/demoMenuCategories'
 
 const emptyCategoryForm = {
   id: '',
@@ -20,6 +24,11 @@ const emptyCategoryForm = {
   badgeColor: 'orange',
   is_active: true,
   sort_order: 1,
+  requires_stock_quantity: false,
+  requires_unit: false,
+  requires_sku: false,
+  requires_prescription: false,
+  is_age_restricted_category: false,
 }
 
 const CategoryManagementPage = () => {
@@ -201,11 +210,17 @@ const CategoryManagementPage = () => {
     setFormData({
       ...emptyCategoryForm,
       code: 'FOOD',
+      name: '',
       sort_order: nextOrder,
       icon: 'restaurant',
       image: defaultPreset ? defaultPreset.dataUrl : '',
       badgeColor: 'orange',
       is_active: true,
+      requires_stock_quantity: false,
+      requires_unit: false,
+      requires_sku: false,
+      requires_prescription: false,
+      is_age_restricted_category: false,
     })
     setFormErrors({})
     setIsModalOpen(true)
@@ -217,13 +232,18 @@ const CategoryManagementPage = () => {
     setFormData({
       id: cat.id,
       code: cat.code || 'FOOD',
-      name: cat.name,
+      name: cat.name || '',
       description: cat.description || '',
       icon: cat.icon || '',
       image: cat.image || '',
       badgeColor: cat.badgeColor || 'orange',
       is_active: cat.is_active,
       sort_order: cat.sort_order || 1,
+      requires_stock_quantity: Boolean(cat.requires_stock_quantity),
+      requires_unit: Boolean(cat.requires_unit),
+      requires_sku: Boolean(cat.requires_sku),
+      requires_prescription: Boolean(cat.requires_prescription),
+      is_age_restricted_category: Boolean(cat.is_age_restricted_category ?? cat.is_age_restricted),
     })
     setFormErrors({})
     setIsModalOpen(true)
@@ -300,6 +320,14 @@ const CategoryManagementPage = () => {
     const now = new Date().toISOString()
     const computedSlug = slugify(formData.name.trim())
 
+    const flags = {
+      requires_stock_quantity: Boolean(formData.requires_stock_quantity),
+      requires_unit: Boolean(formData.requires_unit),
+      requires_sku: Boolean(formData.requires_sku),
+      requires_prescription: Boolean(formData.requires_prescription),
+      is_age_restricted_category: Boolean(formData.is_age_restricted_category),
+    }
+
     if (editingCategory) {
       updateCategoriesState((prev) =>
         prev.map((c) =>
@@ -315,11 +343,34 @@ const CategoryManagementPage = () => {
                 badgeColor: formData.badgeColor || 'orange',
                 is_active: formData.is_active,
                 sort_order: parseInt(formData.sort_order, 10) || 1,
+                ...flags,
                 updated_at: now,
               }
             : c
         )
       )
+
+      // Sync updated category into menu categories storage as well
+      try {
+        const storedMenuCats = loadStoredMenuCategories()
+        const updatedMenuCats = storedMenuCats.map((mc) =>
+          mc.id === editingCategory.id || mc.name?.toLowerCase() === editingCategory.name?.toLowerCase()
+            ? {
+                ...mc,
+                name: formData.name.trim(),
+                description: formData.description.trim(),
+                category_code: (formData.code || 'FOOD').toUpperCase().trim(),
+                is_active: formData.is_active,
+                ...flags,
+                updated_at: now,
+              }
+            : mc
+        )
+        saveStoredMenuCategories(updatedMenuCats)
+      } catch (err) {
+        console.error('Failed to sync to menu categories:', err)
+      }
+
       showToast(`Category "${formData.name.trim()}" updated successfully!`)
     } else {
       const newCategory = {
@@ -333,10 +384,33 @@ const CategoryManagementPage = () => {
         badgeColor: formData.badgeColor || 'orange',
         is_active: formData.is_active,
         sort_order: parseInt(formData.sort_order, 10) || 1,
+        ...flags,
         created_at: now,
         updated_at: now,
       }
       updateCategoriesState((prev) => [...prev, newCategory])
+
+      // Sync new category into menu categories storage as well
+      try {
+        const storedMenuCats = loadStoredMenuCategories()
+        const newMenuCat = {
+          id: newCategory.id,
+          category_id: newCategory.id,
+          category_code: newCategory.code,
+          name: newCategory.name,
+          description: newCategory.description,
+          is_active: newCategory.is_active,
+          sort_order: newCategory.sort_order,
+          ...flags,
+          merchant_ids: [],
+          created_at: now,
+          updated_at: now,
+        }
+        saveStoredMenuCategories([newMenuCat, ...storedMenuCats])
+      } catch (err) {
+        console.error('Failed to sync new category to menu categories:', err)
+      }
+
       showToast(`Category "${newCategory.name}" created successfully!`)
     }
 
@@ -694,9 +768,40 @@ const CategoryManagementPage = () => {
                                 </span>
                               )}
                             </span>
-                            <span className="font-['Plus_Jakarta_Sans'] font-bold text-slate-900 dark:text-zinc-100">
-                              {cat.name}
-                            </span>
+                            <div>
+                              <span className="font-['Plus_Jakarta_Sans'] font-bold text-slate-900 dark:text-zinc-100">
+                                {cat.name}
+                              </span>
+                              {(cat.requires_stock_quantity || cat.requires_unit || cat.requires_sku || cat.requires_prescription || cat.is_age_restricted_category || cat.is_age_restricted) && (
+                                <div className="mt-1 flex flex-wrap items-center gap-1">
+                                  {cat.requires_stock_quantity && (
+                                    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-600 dark:bg-zinc-800 dark:text-zinc-300" title="Requires Stock Quantity">
+                                      Stock
+                                    </span>
+                                  )}
+                                  {cat.requires_unit && (
+                                    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-600 dark:bg-zinc-800 dark:text-zinc-300" title="Requires Unit of Measure">
+                                      Unit
+                                    </span>
+                                  )}
+                                  {cat.requires_sku && (
+                                    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-600 dark:bg-zinc-800 dark:text-zinc-300" title="Requires SKU">
+                                      SKU
+                                    </span>
+                                  )}
+                                  {cat.requires_prescription && (
+                                    <span className="rounded bg-sky-50 px-1.5 py-0.5 text-[9px] font-bold text-sky-700 ring-1 ring-sky-600/20 dark:bg-sky-950/40 dark:text-sky-400" title="Requires Prescription (Rx)">
+                                      Rx
+                                    </span>
+                                  )}
+                                  {(cat.is_age_restricted_category || cat.is_age_restricted) && (
+                                    <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 ring-1 ring-amber-600/20 dark:bg-amber-950/40 dark:text-amber-400" title="Age Restricted (18+)">
+                                      18+
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </td>
 
@@ -924,43 +1029,67 @@ const CategoryManagementPage = () => {
               </div>
 
               <form onSubmit={handleSaveCategory} className="mt-5 space-y-4">
-                {/* Category Code (FOOD, GROCERY, PHARMACY, etc.) */}
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-semibold text-slate-400">System Unique Key</span>
+                {/* Category Name & Merchant Category Code */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                      Category Name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => {
+                        setFormData((prev) => ({ ...prev, name: e.target.value }))
+                        if (formErrors.name) setFormErrors((prev) => ({ ...prev, name: null }))
+                      }}
+                      placeholder="e.g. Medicine, Electronics, Bakery"
+                      className={`mt-1.5 h-10 w-full rounded-xl border bg-white px-3.5 text-xs text-slate-800 transition focus:border-[#FF6B35] focus:outline-none dark:bg-zinc-800 dark:text-zinc-200 ${
+                        formErrors.name ? 'border-rose-500' : 'border-slate-200 dark:border-zinc-700'
+                      }`}
+                    />
+                    {formErrors.name && (
+                      <p className="mt-1 text-[11px] text-rose-500">{formErrors.name}</p>
+                    )}
                   </div>
 
-                 {/* Category Code (FOOD, GROCERY, PHARMACY, etc.) */}
-          <div>
-           <div className="flex items-center justify-between">
-                 <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                   Category <span className="text-rose-500">*</span>
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                        Category Code <span className="text-rose-500">*</span>
                       </label>
-                    <span className="text-[10px] font-semibold text-slate-400">System Unique Key</span>
+                      <span className="text-[10px] font-semibold text-slate-400">System Unique Key</span>
+                    </div>
+                    <div className="relative mt-1.5">
+                      <select
+                        value={formData.code || 'FOOD'}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, code: e.target.value }))}
+                        className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-3.5 pr-10 text-xs font-bold text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                      >
+                        <option value="FOOD">FOOD</option>
+                        <option value="GROCERY">GROCERY</option>
+                        <option value="PHARMACY">PHARMACY</option>
+                        <option value="RETAIL">RETAIL</option>
+                        <option value="FLOWERS_GIFTS">FLOWERS_GIFTS</option>
+                        <option value="SERVICES">SERVICES</option>
+                        <option value="PACKAGE">PACKAGE</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 dark:text-zinc-500">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
                   </div>
-  
-                  <div className="relative mt-1.5">
-                   <select
-                  value={formData.code || ''}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, code: e.target.value }))}
-                  className="w-full appearance-none rounded-xl border border-slate-200 bg-white pl-3.5 pr-10 py-2.5 font-mono text-xs font-bold text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                        >
-                      <option value="" disabled>Select a category...</option>
-                      <option value="FOOD">FOOD</option>
-                      <option value="GROCERY">GROCERY</option>
-                       <option value="PHARMACY">PHARMACY</option>
-                       <option value="RETAIL">RETAIL</option>
-                     </select>
-    
-                    {/* Visual Anchor: Dropdown Chevron Icon */}
-                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 dark:text-zinc-500">
-                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                   </svg>
-                   </div>
-                 </div>
                 </div>
 
+                {/* Category Configuration Flags - Compact grouped layout */}
+                <div className="space-y-3.5 pt-1">
+
+                  {/* Subtle horizontal divider */}
+                  <div className="border-t border-slate-200/80 dark:border-zinc-800" />
+
+                  {/* Subtle horizontal divider */}
+                  <div className="border-t border-slate-200/80 dark:border-zinc-800" />
                 </div>
 
 

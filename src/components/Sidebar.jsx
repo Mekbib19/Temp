@@ -57,8 +57,8 @@ const Sidebar = ({
       <div className={`${isCompact ? 'mb-4 px-2 text-center' : 'mb-6 px-5'}`}>
         {isCompact ? (
           <div className="flex flex-col items-center gap-1.5" title="Shima Delivery - Super Admin">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50/80 p-2 shadow-xs transition hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/40">
-              <ShimaLogo className="h-7 w-auto" />
+            <div className="flex h-11 w-11 items-center justify-center">
+              <ShimaLogo className="h-10 w-10 drop-shadow-xs transition-transform hover:scale-105" />
             </div>
             <div className="flex justify-center" title="Platform Super Admin Level">
               <span className="h-1.5 w-1.5 rounded-full bg-[#CC0033]" />
@@ -66,8 +66,8 @@ const Sidebar = ({
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50/90 p-2 shadow-xs ring-1 ring-red-200/70 transition hover:bg-red-100 dark:bg-red-950/50 dark:ring-red-900/50">
-              <ShimaLogo className="h-7 w-auto" />
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center">
+              <ShimaLogo className="h-10 w-10 drop-shadow-xs transition-transform hover:scale-105" />
             </div>
             <div className="min-w-0 flex-1">
               <h1 className="truncate font-['Plus_Jakarta_Sans'] text-base font-extrabold tracking-tight text-slate-900 dark:text-white">

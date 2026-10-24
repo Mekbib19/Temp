@@ -942,6 +942,7 @@ export const defaultMerchants = [
     address: '320 Vintage Row, Arts District, Kazanchis',
     commission_rate: 12,
     license_number: 'RET-LIQ-2022-901',
+    is_18_plus: true,
     specialties: ['Bordeaux Red Vintages', 'Single Malt Scotch Whiskey', 'Chilled Craft IPAs', 'Sparkling Champagne Brut'],
     delivery_sla: '20-30 min',
     min_order: 'ETB 500',

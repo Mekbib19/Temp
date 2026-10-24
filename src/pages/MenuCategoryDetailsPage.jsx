@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useState, useMemo, useRef } from 'react'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import {
   loadStoredMenuCategories,
   generateUUID,
 } from '../data/demoMenuCategories'
-import { MENU_ITEMS_STORAGE_KEY } from '../data/demoMenuItems'
+import { loadStoredCategories } from '../data/demoCategories'
+import { MENU_ITEMS_STORAGE_KEY, saveMenuItem } from '../data/demoMenuItems'
 
 // Dedicated category customizations storage key to prevent collision
 const CATEGORY_PROTOTYPE_KEY = 'deliver_app_category_prototype_customizations_v5'
@@ -395,28 +396,146 @@ function getFoodsForCategory(cat) {
 }
 
 export default function MenuCategoryDetailsPage() {
-  const { categoryId } = useParams()
+  const { categoryId, itemId } = useParams()
+  const [searchParams] = useSearchParams()
+  const branchId = searchParams.get('branchId') || ''
+  const merchantId = searchParams.get('merchantId') || ''
   const navigate = useNavigate()
 
-  // 1. Load All Categories
+  const isNew = itemId === 'new' || (!itemId && !categoryId)
+  const lookupId = isNew ? (categoryId || 'burgers') : (itemId || categoryId)
+
+  // 1. Load All Categories (combining menu categories and configured categories)
   const allCategories = useMemo(() => {
-    return loadStoredMenuCategories()
+    const menuCats = loadStoredMenuCategories()
+    const primaryCats = loadStoredCategories()
+
+    const nameMap = new Map()
+    menuCats.forEach((c) => {
+      if (c && c.name) nameMap.set(c.name.toLowerCase(), c)
+    })
+
+    primaryCats.forEach((pc) => {
+      if (pc && pc.name && !nameMap.has(pc.name.toLowerCase())) {
+        nameMap.set(pc.name.toLowerCase(), {
+          id: pc.id,
+          category_id: pc.id,
+          category_code: pc.code || 'FOOD',
+          name: pc.name,
+          description: pc.description || '',
+          is_active: pc.is_active ?? true,
+          sort_order: pc.sort_order || 99,
+          requires_stock_quantity: Boolean(pc.requires_stock_quantity),
+          requires_unit: Boolean(pc.requires_unit),
+          requires_sku: Boolean(pc.requires_sku),
+          requires_prescription: Boolean(pc.requires_prescription),
+          is_age_restricted_category: Boolean(pc.is_age_restricted_category ?? pc.is_age_restricted),
+          is_age_restricted: Boolean(pc.is_age_restricted_category ?? pc.is_age_restricted),
+        })
+      }
+    })
+
+    return Array.from(nameMap.values())
   }, [])
 
-  // 2. Resolve Active Category (gracefully fallback so NEVER shows "not found")
+  // 2. Resolve Existing Item if editing
+  const existingStoredItem = useMemo(() => {
+    if (!itemId || itemId === 'new') return null
+    try {
+      const raw = localStorage.getItem(MENU_ITEMS_STORAGE_KEY)
+      const all = raw ? JSON.parse(raw) : []
+      if (Array.isArray(all)) {
+        return all.find((i) => String(i.id) === String(itemId)) || null
+      }
+    } catch {
+      // ignore
+    }
+    return null
+  }, [itemId])
+
+  // 3. Resolve Active Category (gracefully fallback so NEVER shows "not found")
   const category = useMemo(() => {
     if (!allCategories.length) return null
+    if (existingStoredItem?.menu_category_id) {
+      const found = allCategories.find((c) => c.id === existingStoredItem.menu_category_id)
+      if (found) return found
+    }
+    if (existingStoredItem?.category_type) {
+      const found = allCategories.find((c) => c.name?.toLowerCase() === existingStoredItem.category_type?.toLowerCase())
+      if (found) return found
+    }
     return (
       allCategories.find(
         (c) =>
-          c.id === categoryId ||
-          c.category_code?.toLowerCase() === categoryId?.toLowerCase() ||
-          c.name?.toLowerCase() === categoryId?.toLowerCase()
+          c.id === lookupId ||
+          c.category_code?.toLowerCase() === lookupId?.toLowerCase() ||
+          c.name?.toLowerCase() === lookupId?.toLowerCase()
       ) || allCategories[0]
     )
-  }, [allCategories, categoryId])
+  }, [allCategories, lookupId, existingStoredItem])
 
-  // 3. Load & Initialize Food Items (3 Prototype Card Radios)
+  // Form State for Menu Item Details
+  const [itemName, setItemName] = useState(() => existingStoredItem?.name || '')
+  const [itemBasePrice, setItemBasePrice] = useState(() => existingStoredItem?.price ?? 280)
+  const [itemCategoryName, setItemCategoryName] = useState(() => existingStoredItem?.category_type || category?.name || 'Burgers')
+  const [itemDescription, setItemDescription] = useState(() => existingStoredItem?.description || '')
+  const [itemStock, setItemStock] = useState(() => existingStoredItem?.stock_quantity ?? 50)
+  const [itemSku, setItemSku] = useState(() => existingStoredItem?.sku || '')
+  const [itemUnit, setItemUnit] = useState(() => existingStoredItem?.unit || 'pcs')
+  const [itemIsAvailable, setItemIsAvailable] = useState(() => existingStoredItem?.is_available !== false)
+  const [itemImageUrl, setItemImageUrl] = useState(() => existingStoredItem?.image_url || '')
+  const [itemRequiresPrescription, setItemRequiresPrescription] = useState(() => Boolean(existingStoredItem?.requires_prescription))
+  const [itemIsAgeRestricted, setItemIsAgeRestricted] = useState(() => Boolean(existingStoredItem?.is_age_restricted))
+  const fileInputRef = useRef(null)
+
+  // Active category derived dynamically from selected category dropdown
+  const activeSelectedCategory = useMemo(() => {
+    if (itemCategoryName) {
+      const match = allCategories.find(
+        (c) => c.name?.toLowerCase() === itemCategoryName.toLowerCase()
+      )
+      if (match) return match
+    }
+    return category || allCategories[0] || null
+  }, [itemCategoryName, allCategories, category])
+
+  // Dynamic UI flags strictly derived from selected category's JSON configuration:
+  // 1. requires_stock_quantity -> Show or hide Stock Quantity input
+  const showStockQuantityInput = Boolean(activeSelectedCategory?.requires_stock_quantity)
+
+  // 2. requires_unit -> Show or hide Unit of Measure input
+  const showUnitInput = Boolean(activeSelectedCategory?.requires_unit)
+
+  // 3. requires_sku -> Show or hide SKU input
+  const showSkuInput = Boolean(activeSelectedCategory?.requires_sku)
+
+  // 4. requires_prescription -> Show or hide Prescription-related field
+  const showPrescriptionField = Boolean(activeSelectedCategory?.requires_prescription)
+
+  // 5. is_age_restricted_category -> Show or hide relevant Age Restriction field
+  const showAgeRestrictedField = Boolean(
+    activeSelectedCategory?.is_age_restricted_category ?? activeSelectedCategory?.is_age_restricted
+  )
+
+  const [prevItemId, setPrevItemId] = useState(itemId)
+  if (itemId !== prevItemId) {
+    setPrevItemId(itemId)
+    if (existingStoredItem) {
+      setItemName(existingStoredItem.name || '')
+      setItemBasePrice(existingStoredItem.price ?? 280)
+      setItemCategoryName(existingStoredItem.category_type || category?.name || 'Burgers')
+      setItemDescription(existingStoredItem.description || '')
+      setItemStock(existingStoredItem.stock_quantity ?? 50)
+      setItemSku(existingStoredItem.sku || '')
+      setItemUnit(existingStoredItem.unit || 'pcs')
+      setItemIsAvailable(existingStoredItem.is_available !== false)
+      setItemImageUrl(existingStoredItem.image_url || '')
+      setItemRequiresPrescription(Boolean(existingStoredItem.requires_prescription))
+      setItemIsAgeRestricted(Boolean(existingStoredItem.is_age_restricted))
+    }
+  }
+
+  // 4. Load & Initialize Food Items (Portion Size Variants / Card Radios)
   const [foodItems, setFoodItems] = useState(() => getFoodsForCategory(category))
   const [selectedFoodId, setSelectedFoodId] = useState(() => foodItems[1]?.id || foodItems[0]?.id || '')
 
@@ -432,6 +551,37 @@ export default function MenuCategoryDetailsPage() {
   const currentFood = useMemo(() => {
     return foodItems.find((f) => f.id === selectedFoodId) || foodItems[0] || null
   }, [foodItems, selectedFoodId])
+
+  // Image Upload Handler
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      showToast('Please select a valid image file.')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setItemImageUrl(event.target.result)
+        showToast('Image uploaded successfully.')
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // Navigation Back Handler
+  const handleBack = () => {
+    if (merchantId && branchId) {
+      navigate(`/merchants/${merchantId}/branches/${branchId}`)
+    } else if (merchantId) {
+      navigate(`/merchants/${merchantId}`)
+    } else if (window.history.length > 1) {
+      navigate(-1)
+    } else {
+      navigate('/restaurants')
+    }
+  }
 
   // Search filter inside extra options
   const [searchQuery, setSearchQuery] = useState('')
@@ -469,6 +619,18 @@ export default function MenuCategoryDetailsPage() {
     selection_type: 'single', // 'single' | 'multiple'
     is_required: false,
     max_select: 1,
+  })
+
+  // Portion Size Modal state
+  const [isSizeModalOpen, setIsSizeModalOpen] = useState(false)
+  const [sizeModalMode, setSizeModalMode] = useState('add') // 'add' | 'edit'
+  const [editingSize, setEditingSize] = useState(null)
+  const [sizeFormData, setSizeFormData] = useState({
+    name: '',
+    badge: '',
+    price: 280,
+    description: '',
+    is_default: false,
   })
 
   // Quick inline price editing state (optionId -> number)
@@ -819,15 +981,185 @@ export default function MenuCategoryDetailsPage() {
     saveFoodsState(updatedFoods, `Deleted group "${groupName}"`)
   }
 
-  // Unified single picture for this category
-  const categoryPicture = currentFood?.image_url || CATEGORY_HERO_IMAGES.fallback
+  // --- Handlers for Portion Sizes (menu_item_sizes) ---
+  const handleOpenAddSizeModal = () => {
+    setEditingSize(null)
+    setSizeModalMode('add')
+    setSizeFormData({
+      name: '',
+      badge: '',
+      price: parseFloat(itemBasePrice) || 280,
+      description: '',
+      is_default: foodItems.length === 0,
+    })
+    setIsSizeModalOpen(true)
+  }
+
+  const handleOpenEditSizeModal = (food) => {
+    setEditingSize(food)
+    setSizeModalMode('edit')
+    setSizeFormData({
+      name: food.name || '',
+      badge: food.badge || '',
+      price: food.price ?? 280,
+      description: food.description || '',
+      is_default: Boolean(food.is_default),
+    })
+    setIsSizeModalOpen(true)
+  }
+
+  const handleSaveSize = (e) => {
+    e.preventDefault()
+    const sName = sizeFormData.name.trim()
+    if (!sName) {
+      showToast('Please enter a size name.')
+      return
+    }
+    const sPrice = Math.max(0, parseFloat(sizeFormData.price) || 0)
+
+    if (sizeModalMode === 'edit' && editingSize) {
+      const updated = foodItems.map((f) => {
+        if (f.id !== editingSize.id) {
+          return sizeFormData.is_default ? { ...f, is_default: false } : f
+        }
+        return {
+          ...f,
+          name: sName,
+          badge: sizeFormData.badge.trim() || sName,
+          price: sPrice,
+          description: sizeFormData.description.trim(),
+          is_default: sizeFormData.is_default,
+        }
+      })
+      saveFoodsState(updated, `Updated portion size "${sName}"`)
+    } else {
+      const newId = generateUUID()
+      const newSize = {
+        id: newId,
+        tier_key: `tier_${foodItems.length + 1}`,
+        name: sName,
+        badge: sizeFormData.badge.trim() || sName,
+        price: sPrice,
+        description: sizeFormData.description.trim(),
+        image_url: categoryPicture,
+        is_default: sizeFormData.is_default || foodItems.length === 0,
+        is_active: true,
+        extra_groups: JSON.parse(JSON.stringify(currentFood?.extra_groups || [])),
+      }
+      let updated = sizeFormData.is_default
+        ? foodItems.map((f) => ({ ...f, is_default: false }))
+        : [...foodItems]
+      updated.push(newSize)
+      saveFoodsState(updated, `Added portion size "${sName}"`)
+      setSelectedFoodId(newId)
+    }
+    setIsSizeModalOpen(false)
+  }
+
+  const handleDeleteSize = (sizeId, sizeName) => {
+    if (foodItems.length <= 1) {
+      showToast('At least one portion size is required.')
+      return
+    }
+    if (!window.confirm(`Delete portion size "${sizeName}"?`)) return
+    const remaining = foodItems.filter((f) => f.id !== sizeId)
+    if (selectedFoodId === sizeId) {
+      setSelectedFoodId(remaining[0].id)
+    }
+    saveFoodsState(remaining, `Deleted portion size "${sizeName}"`)
+  }
+
+  const handleToggleSizeDefault = (sizeId) => {
+    const updated = foodItems.map((f) => ({
+      ...f,
+      is_default: f.id === sizeId,
+    }))
+    saveFoodsState(updated, 'Default portion size updated.')
+  }
+
+  const handleToggleSizeActive = (sizeId) => {
+    const updated = foodItems.map((f) =>
+      f.id === sizeId ? { ...f, is_active: f.is_active === false ? true : false } : f
+    )
+    saveFoodsState(updated, 'Portion status updated.')
+  }
+
+  const handleInlineSizePriceSave = (sizeId, newPrice) => {
+    const val = Math.max(0, parseFloat(newPrice) || 0)
+    const updated = foodItems.map((f) => (f.id === sizeId ? { ...f, price: val } : f))
+    saveFoodsState(updated, `Updated portion price to ETB ${val.toFixed(2)}`)
+    setEditingPriceOptId(null)
+  }
+
+  // Unified single picture for this category or item
+  const categoryPicture = itemImageUrl || currentFood?.image_url || CATEGORY_HERO_IMAGES.fallback
+
+  const handleSaveAll = () => {
+    const finalName = itemName.trim() || currentFood?.name || ''
+    if (!finalName) {
+      showToast('Please enter a menu item name.')
+      return
+    }
+
+    const priceNum = parseFloat(itemBasePrice) || currentFood?.price || 0
+    if (priceNum <= 0) {
+      showToast('Please enter a valid base price.')
+      return
+    }
+
+    const targetId = isNew ? generateUUID() : (itemId || existingStoredItem?.id || generateUUID())
+
+    const savedItemData = {
+      id: targetId,
+      name: finalName,
+      category_type: itemCategoryName || activeSelectedCategory?.name || category?.name || 'Burgers',
+      menu_category_id: activeSelectedCategory?.id || category?.id,
+      price: priceNum,
+      description: itemDescription.trim() || currentFood?.description || '',
+      sku: showSkuInput ? (itemSku.trim() || `SKU-${targetId.slice(-4).toUpperCase()}`) : '',
+      unit: showUnitInput ? (itemUnit || 'pcs') : '',
+      stock_quantity: showStockQuantityInput ? (parseInt(itemStock, 10) || 0) : null,
+      is_available: itemIsAvailable,
+      image_url: itemImageUrl || categoryPicture,
+      requires_prescription: showPrescriptionField ? Boolean(itemRequiresPrescription) : false,
+      is_age_restricted: showAgeRestrictedField ? Boolean(itemIsAgeRestricted) : false,
+      merchant_id: merchantId || 'm-1',
+      merchant_branch_id: branchId || 'b-1',
+      sizes: foodItems.map((f, idx) => ({
+        id: `sz-${targetId}-${idx + 1}`,
+        name: f.badge || f.name,
+        price_delta: Math.max(0, (f.price || priceNum) - priceNum),
+        is_default: idx === 0,
+        is_active: true,
+        sort_order: idx + 1,
+      })),
+      extra_groups: currentFood?.extra_groups || [],
+    }
+
+    // Save to demoMenuItems storage
+    saveMenuItem(savedItemData)
+
+    // Save category prototype customization
+    if (category?.id) {
+      try {
+        localStorage.setItem(`${CATEGORY_PROTOTYPE_KEY}_${category.id}`, JSON.stringify(foodItems))
+      } catch (err) {
+        console.error(err)
+      }
+    }
+
+    showToast(`"${savedItemData.name}" and extra customizations saved successfully!`)
+    setTimeout(() => {
+      handleBack()
+    }, 600)
+  }
 
   return (
     <MainLayout
-      activeMenuKey="menuCategory"
-      breadcrumbParent="Dashboard"
-      breadcrumbMiddle="Menu Categories"
-      breadcrumbCurrent={category?.name || 'Category Customization'}
+      activeMenuKey="merchantManagement"
+      breadcrumbParent="Merchants"
+      breadcrumbMiddle="Menu Items"
+      breadcrumbCurrent={category?.name ? `${category.name} Customizations` : 'Menu Item Customizations'}
     >
       {/* Toast Notification */}
       {toastMessage && (
@@ -838,203 +1170,597 @@ export default function MenuCategoryDetailsPage() {
       )}
 
       <div className="space-y-6 pb-20">
-        {/* Header matching Cuisine Types style and orientation */}
-        <section className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+        {/* Header Action Bar */}
+        <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-['Plus_Jakarta_Sans'] text-4xl font-extrabold tracking-tight text-slate-900 dark:text-zinc-100">
-                {category?.name || 'Menu Category'}
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-2xs transition hover:bg-slate-50 hover:text-slate-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                title="Return to Menu Items"
+              >
+                <span className="material-symbols-outlined text-lg">arrow_back</span>
+              </button>
+              <h1 className="font-['Plus_Jakarta_Sans'] text-2xl font-extrabold tracking-tight text-slate-900 dark:text-zinc-100 sm:text-3xl">
+                {isNew ? 'Add Menu Item & Extra Customizations' : `${itemName || currentFood?.name || 'Menu Item'} — Details & Customizations`}
               </h1>
             </div>
-            <p className="mt-2 text-sm font-medium text-slate-500 dark:text-zinc-400">
-              {category?.description || `Cuisine types and menu customizations for merchants within each category`}
+            
+            <p className="mt-1 text-xs font-medium text-slate-500 dark:text-zinc-400">
+              {category?.description || `Food item configurations, portion sizes, and extra option customizations`}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
-              onClick={() => navigate('/menu-categories')}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-              title="Return to Menu Categories"
+              onClick={handleBack}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
             >
-              <span className="material-symbols-outlined text-base">arrow_back</span>
-              Back to Menu Categories
+              Cancel
             </button>
             <button
               type="button"
-              onClick={handleOpenAddGroupModal}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#e0531f]"
+              onClick={handleSaveAll}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f] active:scale-95"
             >
-              <span className="material-symbols-outlined text-base">add</span>
-              Add Option Group
+              <span className="material-symbols-outlined text-base">check</span>
+              <span>Save Menu Item</span>
             </button>
           </div>
         </section>
 
-        {/* 1. Food Item Selector - 3 Prototype Card Radios with ONE cohesive picture */}
+        {/* 1. Core Menu Item Details (Merged from Add Menu Item modal) */}
         <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4 dark:border-zinc-800">
             <div className="flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-orange-100 text-[#FF6B35] dark:bg-orange-950/60 text-xs font-black">
                 1
               </span>
               <h3 className="font-['Plus_Jakarta_Sans'] text-sm font-bold text-slate-900 dark:text-zinc-100">
-                Select a Food Item in "{category?.name}" to Adjust Customizations
+                Menu Item Core Details & Information
               </h3>
             </div>
-            <span className="text-[11px] font-medium text-slate-400">
-              Select a card radio below to update and adjust its extra option prices
-            </span>
-          </div>
 
-          {/* Top Prototype Preview Banner with ONE picture */}
-          <div className="mb-4 flex flex-col sm:flex-row items-center gap-4 rounded-xl border border-slate-100 bg-slate-50/70 p-3.5 dark:border-zinc-800 dark:bg-zinc-850/60">
-            <div className="relative h-14 w-20 shrink-0 overflow-hidden rounded-xl border border-slate-200 shadow-2xs dark:border-zinc-700">
-              <img
-                src={categoryPicture}
-                alt={category?.name || 'Category Prototype'}
-                className="h-full w-full object-cover"
-              />
-              <span className="absolute bottom-1 right-1 rounded-sm bg-black/60 px-1 py-0.2 text-[9px] font-bold text-white">
-                Prototype
-              </span>
-            </div>
-            <div className="flex-1 text-center sm:text-left">
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                <span className="font-['Plus_Jakarta_Sans'] text-xs font-extrabold text-slate-900 dark:text-zinc-100">
-                  {category?.name} Master Prototype
-                </span>
-                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                  Synchronized Groups & Visibility
-                </span>
-              </div>
-              <p className="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
-                All 3 size variants share identical option groups. Select a tier card to view or adjust its specific Price Adjustment.
-              </p>
+            {/* Catalog Status Toggle */}
+            <div className="flex items-center gap-2.5">
+              <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Status:</span>
+              <button
+                type="button"
+                onClick={() => setItemIsAvailable(!itemIsAvailable)}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition ${
+                  itemIsAvailable
+                    ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-950/40 dark:text-emerald-400'
+                    : 'bg-zinc-100 text-zinc-600 ring-1 ring-zinc-300 dark:bg-zinc-800 dark:text-zinc-400'
+                }`}
+              >
+                <span className={`h-2 w-2 rounded-full ${itemIsAvailable ? 'bg-emerald-500' : 'bg-zinc-400'}`} />
+                {itemIsAvailable ? 'Active for Orders' : 'Paused (Hidden)'}
+              </button>
             </div>
           </div>
 
-          {/* 3 Cohesive Card Radios */}
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            {foodItems.map((food) => {
-              const isSelected = food.id === currentFood?.id
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+            {/* Form Fields: 8 cols */}
+            <div className="space-y-4 lg:col-span-8">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                    Item Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={itemName}
+                    onChange={(e) => setItemName(e.target.value)}
+                    placeholder="e.g. Prime Truffle Smash Burger"
+                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-900 shadow-2xs focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  />
+                </div>
 
-              return (
-                <button
-                  key={food.id}
-                  type="button"
-                  onClick={() => setSelectedFoodId(food.id)}
-                  className={`group relative flex flex-col rounded-2xl border p-4 text-left transition-all ${
-                    isSelected
-                      ? 'border-[#FF6B35] bg-orange-50/30 shadow-md ring-2 ring-[#FF6B35]/25 dark:border-[#FF6B35] dark:bg-orange-950/20'
-                      : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-xs dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700'
-                  }`}
-                >
-                  {/* Radio indicator and Portion badge */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition ${
-                          isSelected
-                            ? 'border-[#FF6B35] bg-[#FF6B35]'
-                            : 'border-slate-300 bg-white dark:border-zinc-600 dark:bg-zinc-800'
-                        }`}
-                      >
-                        {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
-                      </div>
-                      <span className="font-['Plus_Jakarta_Sans'] text-xs font-bold text-slate-900 dark:text-zinc-100 group-hover:text-[#FF6B35] transition-colors">
-                        {food.name}
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                      Category <span className="text-rose-500">*</span>
+                    </label>
+                    {activeSelectedCategory && (
+                      <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">
+                        {`[${[
+                          showStockQuantityInput && 'stock',
+                          showUnitInput && 'unit',
+                          showSkuInput && 'sku',
+                          showPrescriptionField && 'rx',
+                          showAgeRestrictedField && '18+',
+                        ].filter(Boolean).join(', ') || 'default'}]`}
                       </span>
-                    </div>
+                    )}
+                  </div>
+                  <select
+                    value={itemCategoryName}
+                    onChange={(e) => {
+                      setItemCategoryName(e.target.value)
+                    }}
+                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-900 shadow-2xs focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  >
+                    {allCategories.map((c) => (
+                      <option key={c.id || c.name} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
-                    <span
-                      className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
-                        isSelected
-                          ? 'bg-[#FF6B35] text-white shadow-2xs'
-                          : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-300'
-                      }`}
+              {/* Dynamic Core Fields Row: Base Price (always) + SKU + Stock + Unit (controlled by JSON flags) */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                    Base Price (ETB) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="5"
+                    value={itemBasePrice}
+                    onChange={(e) => setItemBasePrice(e.target.value)}
+                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 font-mono text-xs font-bold text-slate-900 shadow-2xs focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  />
+                </div>
+
+                {showSkuInput && (
+                  <div>
+                    <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                      SKU
+                    </label>
+                    <input
+                      type="text"
+                      value={itemSku}
+                      onChange={(e) => setItemSku(e.target.value)}
+                      placeholder="e.g. SKU-84920"
+                      className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 font-mono text-xs font-medium text-slate-900 shadow-2xs focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                    />
+                  </div>
+                )}
+
+                {showStockQuantityInput && (
+                  <div>
+                    <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                      Stock Quantity
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={itemStock}
+                      onChange={(e) => setItemStock(e.target.value)}
+                      className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 font-mono text-xs font-medium text-slate-900 shadow-2xs focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                    />
+                  </div>
+                )}
+
+                {showUnitInput && (
+                  <div>
+                    <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                      Unit of Measure
+                    </label>
+                    <select
+                      value={itemUnit}
+                      onChange={(e) => setItemUnit(e.target.value)}
+                      className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-900 shadow-2xs focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                     >
-                      {food.badge || 'Standard'}
-                    </span>
+                      <option value="pcs">Pieces (pcs)</option>
+                      <option value="portion">Portion</option>
+                      <option value="plate">Plate</option>
+                      <option value="glass">Glass</option>
+                      <option value="bottle">Bottle</option>
+                      <option value="cup">Cup</option>
+                      <option value="kg">Kilogram (kg)</option>
+                      <option value="box">Box</option>
+                      <option value="strip">Strip</option>
+                    </select>
                   </div>
-
-                  {/* Description */}
-                  <p className="mt-2 line-clamp-2 text-[11px] text-slate-500 dark:text-zinc-400">
-                    {food.description}
-                  </p>
-
-                  {/* Base Price & Price Adjustment Status */}
-                  <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5 dark:border-zinc-800">
-                    <div>
-                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">
-                        Base Price
-                      </span>
-                      <span className="font-mono text-xs font-extrabold text-slate-900 dark:text-zinc-100">
-                        ETB {Number(food.price || 0).toFixed(2)}
-                      </span>
-                    </div>
-
-                    <div className="text-right">
-                      <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">
-                        Price Delta
-                      </span>
-                      <span
-                        className={`text-[11px] font-bold ${
-                          isSelected ? 'text-[#FF6B35]' : 'text-slate-600 dark:text-zinc-400'
-                        }`}
-                      >
-                        {isSelected ? 'Active for Editing' : 'Click to View'}
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Active selection banner with current food details */}
-          {currentFood && (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-orange-200/70 bg-orange-50/60 px-4 py-2.5 text-xs text-orange-950 dark:border-orange-900/40 dark:bg-orange-950/20 dark:text-orange-200">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-base text-[#FF6B35]">tune</span>
-                <span>
-                  Adjusting Price Adjustments for: <strong>{currentFood.name}</strong> (Base: ETB {Number(currentFood.price || 0).toFixed(2)})
-                </span>
+                )}
               </div>
-              <span className="text-[11px] font-medium text-orange-700 dark:text-orange-300">
-                Toggling active or default switches updates all variants
-              </span>
+
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                  Item Description
+                </label>
+                <textarea
+                  rows="2"
+                  value={itemDescription}
+                  onChange={(e) => setItemDescription(e.target.value)}
+                  placeholder="Ingredients, preparation method, allergens, or chef notes..."
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs font-medium text-slate-900 shadow-2xs focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                />
+              </div>
+
+              {(showPrescriptionField || showAgeRestrictedField) && (
+                <div className="flex flex-wrap items-center gap-4 pt-1">
+                  {showPrescriptionField && (
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-sky-700 dark:text-sky-400">
+                      <input
+                        type="checkbox"
+                        checked={itemRequiresPrescription}
+                        onChange={(e) => setItemRequiresPrescription(e.target.checked)}
+                        className="h-4 w-4 rounded text-sky-600 focus:ring-sky-500"
+                      />
+                      <span className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-sm">medication</span>
+                        Requires Prescription (Rx Pharmacy)
+                      </span>
+                    </label>
+                  )}
+                  {showAgeRestrictedField && (
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-amber-700 dark:text-amber-400">
+                      <input
+                        type="checkbox"
+                        checked={itemIsAgeRestricted}
+                        onChange={(e) => setItemIsAgeRestricted(e.target.checked)}
+                        className="h-4 w-4 rounded text-amber-600 focus:ring-amber-500"
+                      />
+                      <span className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-sm">no_adult_content</span>
+                        Age-Restricted 18+ (Alcohol & Spirits)
+                      </span>
+                    </label>
+                  )}
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Photo preview: 4 cols */}
+            <div className="lg:col-span-4">
+              <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                Item Photo
+              </label>
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-zinc-700 dark:bg-zinc-850">
+                <div className="relative h-36 w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-zinc-800">
+                  <img
+                    src={categoryPicture}
+                    alt={itemName || 'Product photo'}
+                    className="h-full w-full object-cover"
+                  />
+                  <span className="absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-white backdrop-blur-xs">
+                    {itemImageUrl ? 'Custom Image' : 'Hero Preset'}
+                  </span>
+                </div>
+                <div className="mt-2.5 flex flex-col gap-1.5">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  >
+                    <span className="material-symbols-outlined text-sm">upload</span>
+                    <span>Upload Photo</span>
+                  </button>
+                  {itemImageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setItemImageUrl('')
+                        if (fileInputRef.current) fileInputRef.current.value = ''
+                      }}
+                      className="text-center text-[11px] font-medium text-rose-500 hover:underline"
+                    >
+                      Reset to Category Hero
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* 2. Extra Option Groups & Individual Extra Options Editor */}
-        <div className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* 2. Portion Sizes & Variants - Styled EXACTLY like Cheese & Gourmet Toppings */}
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+          {/* Group Header */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-3.5 dark:border-zinc-800 dark:bg-zinc-850">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-orange-100 text-[#FF6B35] dark:bg-orange-950/60 text-xs font-black">
+                  2
+                </span>
+                <span className="font-['Plus_Jakarta_Sans'] text-sm font-extrabold text-slate-900 dark:text-zinc-100">
+                  Portion Sizes & Variants
+                </span>
+                <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
+                  Single Selection (Pick 1)
+                </span>
+                <span className="rounded-md bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-950/40 dark:text-rose-400">
+                  Required Selection
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                Customer portion serving sizes and base prices. Select a row to view and tune its extra option prices below.
+              </p>
+            </div>
+
+            {/* Group Header Actions */}
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleOpenAddSizeModal}
+                className="inline-flex items-center gap-1 rounded-xl bg-[#FF6B35] px-3 py-1.5 text-xs font-bold text-white shadow-2xs transition hover:bg-[#e0531f]"
+                title="Add portion size variant"
+              >
+                <span className="material-symbols-outlined text-sm">add</span>
+                <span>Add Size</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Individual Portion Sizes Data Grid */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b border-slate-100 bg-white text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:border-zinc-800 dark:bg-zinc-900">
+                <tr>
+                  <th className="px-5 py-3">Option / Size Name</th>
+                  <th className="px-5 py-3 text-right">Base Price</th>
+                  <th className="px-5 py-3 text-center">Default Portion</th>
+                  <th className="px-5 py-3 text-center">Status</th>
+                  <th className="px-5 py-3 text-center">Active For Tuning</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                {foodItems.map((food, idx) => {
+                  const isSelected = food.id === currentFood?.id
+                  const isDefault = food.is_default !== undefined ? food.is_default : idx === 0
+
+                  return (
+                    <tr
+                      key={food.id}
+                      onClick={() => setSelectedFoodId(food.id)}
+                      className={`cursor-pointer transition ${
+                        isSelected
+                          ? 'bg-orange-50/50 dark:bg-orange-950/20'
+                          : 'hover:bg-slate-50/70 dark:hover:bg-zinc-800/40'
+                      }`}
+                    >
+                      {/* Option Name */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition ${
+                              isSelected
+                                ? 'bg-[#FF6B35] text-white shadow-xs'
+                                : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-300'
+                            }`}
+                          >
+                            <span className="material-symbols-outlined text-sm">straighten</span>
+                          </span>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-900 dark:text-zinc-100">
+                                {food.name}
+                              </span>
+                              <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-zinc-800 dark:text-zinc-300">
+                                {food.badge || 'Portion'}
+                              </span>
+                            </div>
+                            {food.description && (
+                              <p className="mt-0.5 line-clamp-1 text-[11px] text-slate-500 dark:text-zinc-400">
+                                {food.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Base Price with inline editing */}
+                      <td className="px-5 py-3.5 text-right font-mono font-bold">
+                        {editingPriceOptId === `size-${food.id}` ? (
+                          <div
+                            className="flex items-center justify-end gap-1.5"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="relative">
+                              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2 text-[10px] text-slate-400">
+                                ETB
+                              </span>
+                              <input
+                                type="number"
+                                step="1"
+                                min="0"
+                                value={tempPriceInput}
+                                onChange={(e) => setTempPriceInput(e.target.value)}
+                                className="w-24 rounded-lg border border-[#FF6B35] bg-white py-1 pl-8 pr-1 text-right text-xs font-mono font-bold text-slate-900 focus:outline-none dark:bg-zinc-800 dark:text-zinc-100"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleInlineSizePriceSave(food.id, tempPriceInput)
+                                  } else if (e.key === 'Escape') {
+                                    setEditingPriceOptId(null)
+                                  }
+                                }}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleInlineSizePriceSave(food.id, tempPriceInput)}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
+                              title="Save Price"
+                            >
+                              <span className="material-symbols-outlined text-xs">check</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingPriceOptId(null)}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-100 dark:border-zinc-700"
+                              title="Cancel"
+                            >
+                              <span className="material-symbols-outlined text-xs">close</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setEditingPriceOptId(`size-${food.id}`)
+                              setTempPriceInput(String(food.price || 0))
+                            }}
+                            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-mono text-xs font-bold text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+                            title="Click to inline edit size price"
+                          >
+                            <span>ETB {Number(food.price || 0).toFixed(2)}</span>
+                            <span className="material-symbols-outlined text-[11px] opacity-40">edit</span>
+                          </button>
+                        )}
+                      </td>
+
+                      {/* Default Option Toggle */}
+                      <td className="px-5 py-3.5 text-center">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleToggleSizeDefault(food.id)
+                          }}
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold transition ${
+                            isDefault
+                              ? 'bg-orange-100 text-[#FF6B35] ring-1 ring-[#FF6B35]/30 dark:bg-orange-950/60 dark:text-orange-400'
+                              : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600 dark:bg-zinc-800 dark:text-zinc-500'
+                          }`}
+                          title={isDefault ? 'Default serving size' : 'Set as default'}
+                        >
+                          <span className="material-symbols-outlined text-xs">
+                            {isDefault ? 'radio_button_checked' : 'radio_button_unchecked'}
+                          </span>
+                          <span>{isDefault ? 'Default' : 'Set Default'}</span>
+                        </button>
+                      </td>
+
+                      {/* Status Toggle */}
+                      <td className="px-5 py-3.5 text-center">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleToggleSizeActive(food.id)
+                          }}
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition ${
+                            food.is_active !== false
+                              ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-950/40 dark:text-emerald-400'
+                              : 'bg-zinc-100 text-zinc-500 ring-1 ring-zinc-300 dark:bg-zinc-800 dark:text-zinc-500'
+                          }`}
+                        >
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              food.is_active !== false ? 'bg-emerald-500' : 'bg-zinc-400'
+                            }`}
+                          />
+                          <span>{food.is_active !== false ? 'Active' : 'Inactive'}</span>
+                        </button>
+                      </td>
+
+                      {/* Active For Tuning Indicator */}
+                      <td className="px-5 py-3.5 text-center">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-[11px] font-bold transition ${
+                            isSelected
+                              ? 'bg-[#FF6B35] text-white shadow-2xs'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-xs">
+                            {isSelected ? 'check_circle' : 'tune'}
+                          </span>
+                          <span>{isSelected ? 'Editing Extras' : 'Click to Tune'}</span>
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-5 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleOpenEditSizeModal(food)
+                            }}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-200/60 hover:text-slate-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                            title="Edit portion size"
+                          >
+                            <span className="material-symbols-outlined text-base">edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteSize(food.id, food.name)
+                            }}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 dark:hover:text-rose-400"
+                            title="Delete portion size"
+                          >
+                            <span className="material-symbols-outlined text-base">delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* 3. Extra Option Groups & Individual Extra Options Editor */}
+        <div className="rounded-2xl border border-slate-200/90 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          
+          {/* Section Header */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 px-5 py-4 dark:border-zinc-800">
             <div className="flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-orange-100 text-[#FF6B35] dark:bg-orange-950/60 text-xs font-black">
-                2
+                3
               </span>
               <div>
                 <h3 className="font-['Plus_Jakarta_Sans'] text-sm font-bold text-slate-900 dark:text-zinc-100">
-                  Extra Option Groups & Individual Extra Options
+                  Extra Option Groups & Add-ons
                 </h3>
                 <p className="text-[11px] text-slate-500 dark:text-zinc-400">
-                  Option visibility, defaults, and option names are synchronized. Price adjustments reflect {currentFood?.name}.
+                  Option visibility, defaults, and names are synchronized. Price adjustments apply to the selected tier.
                 </p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
-              {/* Search filter within options */}
+              {/* 1. Tier Selector Dropdown */}
+              <div className="relative flex items-center">
+                <span className="pointer-events-none absolute left-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Tier:
+                </span>
+                <select
+                  value={selectedFoodId}
+                  onChange={(e) => setSelectedFoodId(e.target.value)}
+                  className="h-8 appearance-none rounded-xl border border-slate-200 bg-white pl-12 pr-8 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                >
+                  {foodItems.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.badge || f.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="material-symbols-outlined pointer-events-none absolute right-2 text-sm text-slate-400">
+                  expand_more
+                </span>
+              </div>
+
+              {/* 2. Search filter */}
               <div className="relative">
                 <input
                   type="text"
                   placeholder="Filter options..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-44 rounded-xl border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-xs text-slate-700 shadow-2xs focus:border-[#FF6B35] focus:outline-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200"
+                  className="h-8 w-40 rounded-xl border border-slate-200 bg-white pl-8 pr-3 text-xs text-slate-700 shadow-2xs focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                 />
                 <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5 text-slate-400">
                   <span className="material-symbols-outlined text-sm">search</span>
@@ -1050,17 +1776,20 @@ export default function MenuCategoryDetailsPage() {
                 )}
               </div>
 
-              {/* Add New Group Button */}
+              {/* 3. Add Group Button */}
               <button
                 type="button"
                 onClick={handleOpenAddGroupModal}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-slate-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+                className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-slate-900 px-3 text-xs font-bold text-white shadow-xs transition hover:bg-slate-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
               >
                 <span className="material-symbols-outlined text-sm">add</span>
-                <span>Add Option Group</span>
+                <span>Add Group</span>
               </button>
             </div>
           </div>
+
+          {/* Group Cards List Container */}
+          <div className="space-y-4 p-5 bg-slate-50/30 dark:bg-zinc-900/10">
 
           {/* Group Cards List */}
           {(!currentFood?.extra_groups || currentFood.extra_groups.length === 0) ? (
@@ -1351,8 +2080,37 @@ export default function MenuCategoryDetailsPage() {
                   </div>
                 </div>
               )
-            })
-          )}
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Sticky Bottom Save Action Bar */}
+        <div className="sticky bottom-6 z-40 flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-xl backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/95">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-base text-[#FF6B35]">inventory</span>
+            <span className="text-xs font-medium text-slate-600 dark:text-zinc-300">
+              Saving updates product catalog attributes and extra option customizations simultaneously.
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveAll}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#FF6B35] px-6 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-[#e0531f] active:scale-95"
+            >
+              <span className="material-symbols-outlined text-base">save</span>
+              <span>Save Menu Item & Customizations</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1679,6 +2437,134 @@ export default function MenuCategoryDetailsPage() {
                 >
                   <span className="material-symbols-outlined text-sm">save</span>
                   <span>{groupModalMode === 'edit' ? 'Save Group' : 'Create Group'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: Add / Edit Portion Size Variant */}
+      {isSizeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsSizeModalOpen(false)}
+          />
+          <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-zinc-800">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 text-[#FF6B35] dark:bg-orange-950/60">
+                  <span className="material-symbols-outlined text-lg">straighten</span>
+                </span>
+                <div>
+                  <h3 className="font-['Plus_Jakarta_Sans'] text-base font-bold text-slate-900 dark:text-zinc-100">
+                    {sizeModalMode === 'edit' ? 'Edit Portion Size' : 'Add Portion Size'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                    Configure portion size variant and baseline pricing
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSizeModalOpen(false)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-zinc-800"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveSize} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                  Portion Size Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Regular, Large, Family Pack"
+                  value={sizeFormData.name}
+                  onChange={(e) => setSizeFormData((prev) => ({ ...prev, name: e.target.value }))}
+                  required
+                  className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-800 shadow-2xs focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                    Badge / Short Label
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Standard, 350g, 12-inch"
+                    value={sizeFormData.badge}
+                    onChange={(e) => setSizeFormData((prev) => ({ ...prev, badge: e.target.value }))}
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-800 shadow-2xs focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                    Base Price (ETB) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    placeholder="280.00"
+                    value={sizeFormData.price}
+                    onChange={(e) => setSizeFormData((prev) => ({ ...prev, price: e.target.value }))}
+                    required
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-mono font-bold text-slate-800 shadow-2xs focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                  Description (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Serves 1-2 people, approx 350 grams"
+                  value={sizeFormData.description}
+                  onChange={(e) => setSizeFormData((prev) => ({ ...prev, description: e.target.value }))}
+                  className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-800 shadow-2xs focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/60 p-3 dark:border-zinc-800 dark:bg-zinc-850">
+                <div>
+                  <span className="block text-xs font-bold text-slate-800 dark:text-zinc-200">
+                    Default Selection
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    Pre-selected serving size on the customer menu
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={sizeFormData.is_default}
+                  onChange={(e) => setSizeFormData((prev) => ({ ...prev, is_default: e.target.checked }))}
+                  className="h-4 w-4 rounded text-[#FF6B35] focus:ring-[#FF6B35]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setIsSizeModalOpen(false)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
+                >
+                  <span className="material-symbols-outlined text-sm">save</span>
+                  <span>{sizeModalMode === 'edit' ? 'Save Changes' : 'Add Size'}</span>
                 </button>
               </div>
             </form>

@@ -474,9 +474,6 @@ const RestaurantManagementPage = () => {
                               >
                                 {brand.name}
                               </button>
-                              <p className="text-[11px] text-slate-500 dark:text-zinc-400">
-                                {brand.type || 'Merchant Partner'}
-                              </p>
                             </div>
                           </div>
                         </td>

@@ -193,6 +193,8 @@ const AddMerchantPage = () => {
           cover_image_url: existing.cover_image_url || existing.banner_url || existing.cover || '',
           price_range: existing.price_range || '$$ (Moderate)',
           is_featured: Boolean(existing.is_featured),
+          is_18_plus: Boolean(existing.is_18_plus),
+          is_rx_licensed: Boolean(existing.is_rx_licensed),
           eta_min: existing.eta_min || 20,
           eta_max: existing.eta_max || 40,
           commission_rate: existing.commission_rate || 15,
@@ -224,6 +226,8 @@ const AddMerchantPage = () => {
       cover_image_url: '',
       price_range: '$$ (Moderate)',
       is_featured: false,
+      is_18_plus: false,
+      is_rx_licensed: false,
       eta_min: 20,
       eta_max: 40,
       commission_rate: 15,
@@ -307,18 +311,45 @@ const AddMerchantPage = () => {
     return getCategoriesForMerchantType(formData.type, availableCategories)
   }, [availableCategories, formData.type])
 
+  const isSelectedPharmacy = useMemo(() => {
+    const selectedCatObj = availableCategories.find((c) => c.id === selectedCategoryId)
+    const catCode = (selectedCatObj?.code || '').toLowerCase()
+    const catSlug = (selectedCatObj?.slug || '').toLowerCase()
+    const catName = (selectedCatObj?.name || formData.category_name || '').toLowerCase()
+    const mType = (formData.type || '').toLowerCase()
+    return (
+      catCode === 'pharmacy' ||
+      catSlug === 'pharmacy' ||
+      catName.includes('pharm') ||
+      catName.includes('health') ||
+      mType.includes('pharmacy') ||
+      mType.includes('health')
+    )
+  }, [availableCategories, selectedCategoryId, formData.category_name, formData.type])
+
   const handleMerchantTypeChange = (newType) => {
-    setFormData((prev) => ({ ...prev, type: newType }))
+    const isAlcoholic =
+      newType.toLowerCase().includes('spirit') ||
+      newType.toLowerCase().includes('alcohol') ||
+      newType.toLowerCase().includes('wine') ||
+      newType.toLowerCase().includes('liquor')
+    setFormData((prev) => ({
+      ...prev,
+      type: newType,
+      is_18_plus: isAlcoholic ? true : prev.is_18_plus,
+    }))
     const matchingCats = getCategoriesForMerchantType(newType, availableCategories)
     if (matchingCats.length > 0) {
       if (!matchingCats.some((c) => c.id === selectedCategoryId)) {
         const nextCatId = matchingCats[0].id
         setSelectedCategoryId(nextCatId)
         const catObj = categoryMap.get(nextCatId)
+        const isPharm = (catObj?.code || '').toLowerCase() === 'pharmacy' || (catObj?.name || '').toLowerCase().includes('pharm')
         setFormData((prev) => ({
           ...prev,
           category_id: nextCatId,
           category_name: catObj ? catObj.name : '',
+          is_rx_licensed: isPharm ? prev.is_rx_licensed : false,
         }))
       }
     } else {
@@ -327,6 +358,7 @@ const AddMerchantPage = () => {
         ...prev,
         category_id: '',
         category_name: 'All Categories',
+        is_rx_licensed: false,
       }))
     }
   }
@@ -334,10 +366,12 @@ const AddMerchantPage = () => {
   const handleCategoryChange = (newCatId) => {
     setSelectedCategoryId(newCatId)
     const catObj = categoryMap.get(newCatId)
+    const isPharm = (catObj?.code || '').toLowerCase() === 'pharmacy' || (catObj?.name || '').toLowerCase().includes('pharm')
     setFormData((prev) => ({
       ...prev,
       category_id: newCatId === 'all' ? '' : newCatId,
       category_name: catObj ? catObj.name : 'All Categories',
+      is_rx_licensed: isPharm ? prev.is_rx_licensed : false,
     }))
   }
 
@@ -629,6 +663,8 @@ const AddMerchantPage = () => {
       total_rating: parseInt(formData.total_rating, 10) || 5,
       total_reviews: parseInt(formData.total_reviews, 10) || 14,
       is_featured: Boolean(formData.is_featured),
+      is_18_plus: Boolean(formData.is_18_plus),
+      is_rx_licensed: isSelectedPharmacy ? Boolean(formData.is_rx_licensed) : false,
 
       owner_name: (formData.owner_name || '').trim(),
       owner_email: (formData.owner_email || '').trim(),

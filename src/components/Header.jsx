@@ -75,9 +75,7 @@ const Header = ({
           <span className="material-symbols-outlined text-xl">menu</span>
         </button>
         <div className="flex shrink-0 items-center gap-1.5 lg:hidden">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 p-1 dark:bg-red-950/40">
-            <ShimaLogo className="h-5 w-auto" />
-          </div>
+          <ShimaLogo className="h-8 w-8 drop-shadow-xs" />
         </div>
         <button
           type="button"

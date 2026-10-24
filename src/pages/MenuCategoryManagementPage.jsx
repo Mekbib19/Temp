@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import Pagination from '../components/Pagination'
 import { formatLatestUpdate } from '../utils/format'
@@ -16,17 +16,20 @@ const emptyForm = {
   name: '',
   description: '',
   is_active: true,
+  requires_stock_quantity: false,
+  requires_unit: false,
+  requires_sku: false,
+  requires_prescription: false,
+  is_age_restricted_category: false,
+  is_age_restricted: false,
   sort_order: 1,
 }
 
 const MenuCategoryManagementPage = () => {
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedCategoryFilter = searchParams.get('category') || 'all'
 
-  const handleOpenDetails = (item) => {
-    navigate(`/menu-categories/${item.id}`)
-  }
+
 
   // Data states
   const [categories] = useState(() => loadStoredCategories())
@@ -202,6 +205,12 @@ const MenuCategoryManagementPage = () => {
       ...emptyForm,
       category_id: defaultCatId,
       sort_order: currentMaxSort + 1,
+      requires_stock_quantity: false,
+      requires_unit: false,
+      requires_sku: false,
+      requires_prescription: false,
+      is_age_restricted_category: false,
+      is_age_restricted: false,
     })
     setFormErrors({})
     setIsModalOpen(true)
@@ -210,12 +219,19 @@ const MenuCategoryManagementPage = () => {
   // Open modal for Edit
   const handleOpenEditModal = (item) => {
     setEditingItem(item)
+    const isAgeRestricted = Boolean(item.is_age_restricted_category ?? item.is_age_restricted)
     setFormData({
       id: item.id,
       category_id: item.category_id || '',
       name: item.name || '',
       description: item.description || '',
       is_active: item.is_active ?? true,
+      requires_stock_quantity: Boolean(item.requires_stock_quantity),
+      requires_unit: Boolean(item.requires_unit),
+      requires_sku: Boolean(item.requires_sku),
+      requires_prescription: Boolean(item.requires_prescription),
+      is_age_restricted_category: isAgeRestricted,
+      is_age_restricted: isAgeRestricted,
       sort_order: item.sort_order || 1,
     })
     setFormErrors({})
@@ -258,6 +274,15 @@ const MenuCategoryManagementPage = () => {
     const selectedCategory = categoryMap.get(formData.category_id)
     const categoryCode = selectedCategory?.code || 'FOOD'
 
+    const flags = {
+      requires_stock_quantity: Boolean(formData.requires_stock_quantity),
+      requires_unit: Boolean(formData.requires_unit),
+      requires_sku: Boolean(formData.requires_sku),
+      requires_prescription: Boolean(formData.requires_prescription),
+      is_age_restricted_category: Boolean(formData.is_age_restricted_category),
+      is_age_restricted: Boolean(formData.is_age_restricted_category),
+    }
+
     if (editingItem) {
       // Update
       const updated = menuCategories.map((i) => {
@@ -269,6 +294,7 @@ const MenuCategoryManagementPage = () => {
             name: formData.name.trim(),
             description: formData.description.trim(),
             is_active: Boolean(formData.is_active),
+            ...flags,
             sort_order: Number(formData.sort_order) || 1,
             updated_at: new Date().toISOString(),
           }
@@ -287,6 +313,7 @@ const MenuCategoryManagementPage = () => {
         name: formData.name.trim(),
         description: formData.description.trim(),
         is_active: Boolean(formData.is_active),
+        ...flags,
         sort_order: Number(formData.sort_order) || 1,
         merchant_ids: [],
         created_at: new Date().toISOString(),
@@ -859,16 +886,6 @@ const MenuCategoryManagementPage = () => {
                         {/* Action Buttons */}
                         <td className="whitespace-nowrap px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                          <button
-                           type="button"
-                           onClick={() => handleOpenDetails(item)}
-                          className="flex h-9 w-9 min-h-[32px] min-w-[32px] items-center justify-center rounded-lg text-slate-500 transition hover:bg-orange-50 hover:text-[#FF6B35] dark:text-zinc-400 dark:hover:bg-orange-950/30 dark:hover:text-orange-400"
-                              title="View menu category details"
-                                >
-                             <span className="material-symbols-outlined text-lg">visibility</span>
-                                  </button>
-
-                          {/* existing edit button */}
                             <button
                               type="button"
                               onClick={() => handleOpenEditModal(item)}
@@ -1058,6 +1075,131 @@ const MenuCategoryManagementPage = () => {
                       </span>
                     </label>
                   </div>
+                </div>
+
+                {/* Category Configuration Flags - Compact grouped layout */}
+                <div className="space-y-3.5 pt-1">
+                  {/* Group 1: Age & Prescription */}
+                  <div>
+                    <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                      Age &amp; Prescription
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2.5">
+                      <label className="inline-flex cursor-pointer items-center gap-2.5 select-none py-0.5">
+                        <span className="text-xs font-medium text-slate-700 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-zinc-100">
+                          Age Restricted
+                        </span>
+                        <div className="relative inline-flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(formData.is_age_restricted_category)}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                is_age_restricted_category: e.target.checked,
+                              }))
+                            }
+                            className="sr-only peer"
+                          />
+                          <div className="h-4 w-7 rounded-full bg-slate-200 transition-colors peer-checked:bg-[#FF6B35] peer-focus-visible:ring-2 peer-focus-visible:ring-[#FF6B35]/40 dark:bg-zinc-700 after:absolute after:top-[2px] after:left-[2px] after:h-3 after:w-3 after:rounded-full after:bg-white after:shadow-2xs after:transition-all after:content-[''] peer-checked:after:translate-x-3" />
+                        </div>
+                      </label>
+
+                      <label className="inline-flex cursor-pointer items-center gap-2.5 select-none py-0.5">
+                        <span className="text-xs font-medium text-slate-700 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-zinc-100">
+                          Prescription
+                        </span>
+                        <div className="relative inline-flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(formData.requires_prescription)}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                requires_prescription: e.target.checked,
+                              }))
+                            }
+                            className="sr-only peer"
+                          />
+                          <div className="h-4 w-7 rounded-full bg-slate-200 transition-colors peer-checked:bg-[#FF6B35] peer-focus-visible:ring-2 peer-focus-visible:ring-[#FF6B35]/40 dark:bg-zinc-700 after:absolute after:top-[2px] after:left-[2px] after:h-3 after:w-3 after:rounded-full after:bg-white after:shadow-2xs after:transition-all after:content-[''] peer-checked:after:translate-x-3" />
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Subtle horizontal divider */}
+                  <div className="border-t border-slate-200/80 dark:border-zinc-800" />
+
+                  {/* Group 2: Inventory & Identification */}
+                  <div>
+                    <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                      Inventory &amp; Identification
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2.5">
+                      <label className="inline-flex cursor-pointer items-center gap-2.5 select-none py-0.5">
+                        <span className="text-xs font-medium text-slate-700 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-zinc-100">
+                          Stock Quantity
+                        </span>
+                        <div className="relative inline-flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(formData.requires_stock_quantity)}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                requires_stock_quantity: e.target.checked,
+                              }))
+                            }
+                            className="sr-only peer"
+                          />
+                          <div className="h-4 w-7 rounded-full bg-slate-200 transition-colors peer-checked:bg-[#FF6B35] peer-focus-visible:ring-2 peer-focus-visible:ring-[#FF6B35]/40 dark:bg-zinc-700 after:absolute after:top-[2px] after:left-[2px] after:h-3 after:w-3 after:rounded-full after:bg-white after:shadow-2xs after:transition-all after:content-[''] peer-checked:after:translate-x-3" />
+                        </div>
+                      </label>
+
+                      <label className="inline-flex cursor-pointer items-center gap-2.5 select-none py-0.5">
+                        <span className="text-xs font-medium text-slate-700 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-zinc-100">
+                          Unit of Measure
+                        </span>
+                        <div className="relative inline-flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(formData.requires_unit)}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                requires_unit: e.target.checked,
+                              }))
+                            }
+                            className="sr-only peer"
+                          />
+                          <div className="h-4 w-7 rounded-full bg-slate-200 transition-colors peer-checked:bg-[#FF6B35] peer-focus-visible:ring-2 peer-focus-visible:ring-[#FF6B35]/40 dark:bg-zinc-700 after:absolute after:top-[2px] after:left-[2px] after:h-3 after:w-3 after:rounded-full after:bg-white after:shadow-2xs after:transition-all after:content-[''] peer-checked:after:translate-x-3" />
+                        </div>
+                      </label>
+
+                      <label className="inline-flex cursor-pointer items-center gap-2.5 select-none py-0.5">
+                        <span className="text-xs font-medium text-slate-700 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-zinc-100">
+                          SKU
+                        </span>
+                        <div className="relative inline-flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(formData.requires_sku)}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                requires_sku: e.target.checked,
+                              }))
+                            }
+                            className="sr-only peer"
+                          />
+                          <div className="h-4 w-7 rounded-full bg-slate-200 transition-colors peer-checked:bg-[#FF6B35] peer-focus-visible:ring-2 peer-focus-visible:ring-[#FF6B35]/40 dark:bg-zinc-700 after:absolute after:top-[2px] after:left-[2px] after:h-3 after:w-3 after:rounded-full after:bg-white after:shadow-2xs after:transition-all after:content-[''] peer-checked:after:translate-x-3" />
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Subtle horizontal divider */}
+                  <div className="border-t border-slate-200/80 dark:border-zinc-800" />
                 </div>
 
                 {/* Modal Action Buttons */}
