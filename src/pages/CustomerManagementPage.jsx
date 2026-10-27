@@ -190,6 +190,7 @@ const CustomerManagementPage = () => {
             >
               <option value="all">All Statuses</option>
               <option value="active">Active Only</option>
+              <option value="blocked">Blocked Only</option>
               <option value="inactive">Inactive Only</option>
             </select>
           </div>
@@ -255,9 +256,12 @@ const CustomerManagementPage = () => {
                             </div>
                           )}
                           <div className="flex flex-col">
-                            <span className="font-['Plus_Jakarta_Sans'] font-bold text-slate-900 transition-colors group-hover:text-[#FF6B35] dark:text-zinc-100">
+                            <Link
+                              to={`/customers/${encodeURIComponent(customer.slug)}`}
+                              className="font-['Plus_Jakarta_Sans'] font-bold text-slate-900 transition-colors hover:text-[#FF6B35] group-hover:text-[#FF6B35] dark:text-zinc-100 dark:hover:text-[#FF6B35]"
+                            >
                               {customer.name}
-                            </span>
+                            </Link>
                             <span className="text-[11px] text-slate-400 dark:text-zinc-500">{customer.profile}</span>
                           </div>
                         </div>
@@ -270,12 +274,18 @@ const CustomerManagementPage = () => {
                           className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${
                             customer.status === 'Active'
                               ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                              : customer.status === 'Blocked'
+                              ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-500/20 dark:bg-rose-950/40 dark:text-rose-400'
                               : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
                           }`}
                         >
                           <span
                             className={`h-1.5 w-1.5 rounded-full ${
-                              customer.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-400'
+                              customer.status === 'Active'
+                                ? 'bg-emerald-500'
+                                : customer.status === 'Blocked'
+                                ? 'bg-rose-500 animate-pulse'
+                                : 'bg-slate-400'
                             }`}
                           />
                           {customer.status}
@@ -285,17 +295,17 @@ const CustomerManagementPage = () => {
                         <div className="flex items-center justify-end gap-1">
                           <Link
                             to={`/customers/${encodeURIComponent(customer.slug)}`}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow-xs transition ${
+                              customer.status === 'Blocked'
+                                ? 'border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-900/40 dark:bg-rose-950/40 dark:text-rose-300'
+                                : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'
+                            }`}
                             aria-label={`View ${customer.name}`}
                           >
-                            <span className="material-symbols-outlined text-[18px]">visibility</span>
-                          </Link>
-                          <Link
-                            to={`/customers/${encodeURIComponent(customer.slug)}/edit`}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                            aria-label={`Edit ${customer.name}`}
-                          >
-                            <span className="material-symbols-outlined text-[18px]">edit</span>
+                            <span className="material-symbols-outlined text-[16px]">
+                              {customer.status === 'Blocked' ? 'block' : 'visibility'}
+                            </span>
+                            <span>{customer.status === 'Blocked' ? 'View Profile' : 'View Profile'}</span>
                           </Link>
                         </div>
                       </td>

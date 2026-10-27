@@ -14,6 +14,7 @@ const menuSections = [
     items: [
       { key: 'orderManagement', icon: 'receipt_long', path: '/order' },
       { key: 'customerManagement', icon: 'group', path: '/customers' },
+      { key: 'riderManagement', icon: 'two_wheeler', path: '/riders' },
       { key: 'merchantManagement', icon: 'storefront', path: '/restaurants' },
       { key: 'categoryManagement', icon: 'category', path: '/categories' },
       { key: 'cuisineManagement', icon: 'dinner_dining', path: '/cuisines' },
