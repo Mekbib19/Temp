@@ -15,7 +15,6 @@ const CustomerFormPage = () => {
   const [fullName, setFullName] = useState(() => customer?.name || '')
   const [email, setEmail] = useState(() => customer?.email || '')
   const [phone, setPhone] = useState(() => customer?.phone || '')
-  const [tier, setTier] = useState(() => customer?.tier || 'Regular')
   const [address, setAddress] = useState(() => customer?.address || '')
 
   const avatarUrl = customer?.avatar ?? null
@@ -134,14 +133,6 @@ const CustomerFormPage = () => {
                   />
                 </button>
               </div>
-              <div className="flex items-center space-x-3 rounded-xl bg-orange-50/80 p-3.5 dark:bg-orange-950/30 border border-orange-100/60 dark:border-orange-900/30">
-                <span className="material-symbols-outlined text-[#FF6B35]">verified</span>
-                <span className="text-left text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                  {isEdit
-                    ? 'Active customers can place orders and earn points; inactive profiles are read-only in the app.'
-                    : 'Active customers can make reservations and earn points.'}
-                </span>
-              </div>
             </div>
           </div>
 
@@ -206,30 +197,7 @@ const CustomerFormPage = () => {
                       className="w-full rounded-xl border-none bg-zinc-50 py-3 pl-12 pr-4 font-medium text-zinc-900 placeholder:text-zinc-300 transition-all focus:ring-2 focus:ring-orange-200 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500"
                     />
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="customer-tier" className="ml-1 text-sm font-bold text-zinc-700 dark:text-zinc-300">
-                    Membership tier
-                  </label>
-                  <div className="relative">
-                    <span className="material-symbols-outlined pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
-                      military_tech
-                    </span>
-                    <select
-                      id="customer-tier"
-                      value={tier}
-                      onChange={(e) => setTier(e.target.value)}
-                      className="w-full appearance-none rounded-xl border-none bg-zinc-50 py-3 pl-12 pr-10 font-medium text-zinc-900 transition-all focus:ring-2 focus:ring-orange-200 dark:bg-zinc-800 dark:text-zinc-100"
-                    >
-                      <option value="Regular">Regular</option>
-                      <option value="Premium">Premium</option>
-                      <option value="VIP">VIP</option>
-                    </select>
-                    <span className="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400">
-                      expand_more
-                    </span>
-                  </div>
-                </div>
+             </div>
                 <div className="col-span-2 space-y-2 pt-4">
                   <label htmlFor="customer-address" className="ml-1 text-sm font-bold text-zinc-700 dark:text-zinc-300">
                     Default delivery address
@@ -247,35 +215,9 @@ const CustomerFormPage = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40 dark:text-orange-400">
-                  <span className="material-symbols-outlined text-lg">loyalty</span>
-                </div>
-                <h5 className="font-bold text-xs text-zinc-900 dark:text-zinc-100">Loyalty integration</h5>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                  {isEdit
-                    ? 'Existing points and rewards stay linked to this profile when you save changes.'
-                    : 'New customers automatically start with 500 Culinary Credits as a welcome gift.'}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
-                  <span className="material-symbols-outlined text-lg">nest_cam_indoor</span>
-                </div>
-                <h5 className="font-bold text-xs text-zinc-900 dark:text-zinc-100">Preferences</h5>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                  {isEdit
-                    ? 'Update dining preferences and allergies anytime from this profile.'
-                    : 'Dining preferences and allergies can be added after initial profile creation.'}
-                </p>
-              </div>
             </div>
           </div>
         </div>
-
-        <footer className="mt-12 pb-4 text-center text-xs font-medium text-zinc-400">
-          © 2024 CulinaryCurator Management Suite. All rights reserved.
-        </footer>
       </div>
     </MainLayout>
   )

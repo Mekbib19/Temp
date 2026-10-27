@@ -1,9 +1,9 @@
 import { useState, useMemo, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   saveMenuItem,
   deleteMenuItem,
   getCategoriesForBranch,
-  getCategoryIcon,
 } from '../data/demoMenuItems'
 
 export default function BranchMenuItemsTabContent({
@@ -14,16 +14,11 @@ export default function BranchMenuItemsTabContent({
   showToast,
   initialCategory = 'all',
 }) {
-  const [prevInitialCategory, setPrevInitialCategory] = useState(initialCategory)
+  const navigate = useNavigate()
   const [selectedCategory, setSelectedCategory] = useState(initialCategory || 'all')
   const [searchQuery, setSearchQuery] = useState('')
   const [stockFilter, setStockFilter] = useState('all') // 'all' | 'in_stock' | 'low_stock' | 'out_of_stock'
   const [viewMode, setViewMode] = useState('grid') // 'grid' | 'table'
-
-  if (initialCategory !== prevInitialCategory) {
-    setPrevInitialCategory(initialCategory)
-    setSelectedCategory(initialCategory || 'all')
-  }
 
   // Merchant categories strictly relating to this merchant's assigned categories earlier
   const merchantCategories = useMemo(() => {
@@ -43,18 +38,8 @@ export default function BranchMenuItemsTabContent({
     )
   }, [merchant])
 
-  const categoryTabs = useMemo(() => {
-    return [
-      { id: 'all', label: 'All Categories', icon: 'apps' },
-      ...merchantCategories.map((c) => ({
-        id: c.name,
-        categoryId: c.id,
-        label: c.name,
-        icon: c.icon || getCategoryIcon(c.name, c.code),
-        code: c.code,
-      })),
-    ]
-  }, [merchantCategories])
+
+
 
   // Modal states
   const [inspectItem, setInspectItem] = useState(null)
@@ -96,14 +81,7 @@ export default function BranchMenuItemsTabContent({
     })
   }, [menuItems, selectedCategory, searchQuery, stockFilter])
 
-  // Quick stats
-  const stats = useMemo(() => {
-    const total = menuItems.length
-    const available = menuItems.filter((i) => i.is_available).length
-    const lowStock = menuItems.filter((i) => i.stock_quantity !== undefined && i.stock_quantity <= 15 && i.stock_quantity > 0).length
-    const rxCount = menuItems.filter((i) => i.requires_prescription).length
-    return { total, available, lowStock, rxCount }
-  }, [menuItems])
+
 
   // Handle Availability Toggle
   const handleToggleAvailability = (item) => {
@@ -144,242 +122,129 @@ export default function BranchMenuItemsTabContent({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner & Quick KPI Statistics */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-              Total Catalog
-            </span>
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40">
-              <span className="material-symbols-outlined text-base">inventory_2</span>
-            </span>
-          </div>
-          <p className="mt-2 text-2xl font-extrabold text-slate-900 dark:text-zinc-100">
-            {stats.total} <span className="text-xs font-normal text-slate-400">Products</span>
-          </p>
-          <p className="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
-            Across {merchantCategories.length} {merchant?.type ? `${merchant.type} ` : ''}categories
-          </p>
+      {/* Standardized Filter Bar matching unified management pages UI system */}
+      <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200/80 bg-slate-100/90 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
+        <div className="flex h-11 items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+          <span className="material-symbols-outlined text-lg text-slate-400">filter_list</span>
+          <span className="text-sm font-semibold text-slate-600 dark:text-zinc-300">Filters</span>
         </div>
+        <div className="mx-2 hidden h-6 w-px bg-slate-300/80 md:block dark:bg-zinc-600" />
 
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-              Live & Available
-            </span>
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40">
-              <span className="material-symbols-outlined text-base">check_circle</span>
-            </span>
-          </div>
-          <p className="mt-2 text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
-            {stats.available} <span className="text-xs font-normal text-slate-400">active</span>
-          </p>
-          <p className="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
-            Ready for customer dispatch
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-              Low Stock Alerts
-            </span>
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950/40">
-              <span className="material-symbols-outlined text-base">warning</span>
-            </span>
-          </div>
-          <p className="mt-2 text-2xl font-extrabold text-amber-600 dark:text-amber-400">
-            {stats.lowStock} <span className="text-xs font-normal text-slate-400">critical</span>
-          </p>
-          <p className="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
-            Under 15 units remaining
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-              {isPharmacyMerchant ? 'Controlled Items' : 'Out of Stock'}
-            </span>
-            <span
-              className={`inline-flex h-7 w-7 items-center justify-center rounded-lg ${
-                isPharmacyMerchant
-                  ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40'
-                  : 'bg-rose-50 text-rose-600 dark:bg-rose-950/40'
-              }`}
-            >
-              <span className="material-symbols-outlined text-base">
-                {isPharmacyMerchant ? 'verified' : 'inventory'}
-              </span>
-            </span>
-          </div>
-          <p
-            className={`mt-2 text-2xl font-extrabold ${
-              isPharmacyMerchant
-                ? 'text-blue-600 dark:text-blue-400'
-                : 'text-slate-900 dark:text-zinc-100'
-            }`}
-          >
-            {isPharmacyMerchant ? stats.rxCount : stats.total - stats.available}{' '}
-            <span className="text-xs font-normal text-slate-400">
-              {isPharmacyMerchant ? 'Rx/Restricted' : 'paused'}
-            </span>
-          </p>
-          <p className="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
-            {isPharmacyMerchant ? 'Verification mandated' : 'Temporarily unavailable'}
-          </p>
-        </div>
-      </div>
-
-      {/* Filter and Control Bar */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="flex flex-col gap-4">
-          {/* Category Tabs relating to Merchant Categories */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            {categoryTabs.map((tab) => {
-              const count =
-                tab.id === 'all'
-                  ? menuItems.length
-                  : menuItems.filter(
-                      (i) =>
-                        (i.category_type || '').toLowerCase() === tab.label.toLowerCase() ||
-                        i.menu_category_id === tab.categoryId
-                    ).length
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setSelectedCategory(tab.id)}
-                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${
-                    selectedCategory.toLowerCase() === tab.id.toLowerCase()
-                      ? 'bg-[#FF6B35] text-white shadow-xs'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-sm">{tab.icon}</span>
-                  <span>{tab.label}</span>
-                  <span
-                    className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] ${
-                      selectedCategory.toLowerCase() === tab.id.toLowerCase()
-                        ? 'bg-white/20 text-white'
-                        : 'bg-slate-200 text-slate-700 dark:bg-zinc-700 dark:text-zinc-200'
-                    }`}
-                  >
-                    {count}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Merchant Category Context Notice */}
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-orange-50/60 px-3.5 py-2 text-xs border border-orange-100 dark:bg-orange-950/20 dark:border-orange-900/40">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="material-symbols-outlined text-sm text-[#FF6B35]">storefront</span>
-              <span className="text-slate-700 dark:text-zinc-300">
-                <strong className="text-slate-900 dark:text-zinc-100">{merchant?.name || 'Branch'}</strong> Categories ({merchant?.type || 'Merchant'}):
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {merchantCategories.map((c) => (
-                <button
-                  key={c.id || c.name}
-                  type="button"
-                  onClick={() => setSelectedCategory(c.name)}
-                  className={`rounded-lg px-2 py-0.5 text-[11px] font-bold transition ${
-                    selectedCategory.toLowerCase() === c.name.toLowerCase()
-                      ? 'bg-[#FF6B35] text-white shadow-2xs'
-                      : 'bg-white text-slate-700 shadow-2xs hover:bg-orange-100 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700'
-                  }`}
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Search, Stock Filter, View Toggle & Add Button */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-slate-100 dark:border-zinc-800">
-            <div className="flex flex-1 flex-wrap items-center gap-3 min-w-[280px]">
-              {/* Search Input */}
-              <div className="relative flex-1 min-w-[200px]">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">
-                  search
-                </span>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by product name, SKU, ingredients..."
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-8 text-xs font-medium text-slate-800 outline-none transition focus:border-[#FF6B35] focus:bg-white dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-[#FF6B35]"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    <span className="material-symbols-outlined text-xs">close</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Stock Filter Dropdown */}
-              <select
-                value={stockFilter}
-                onChange={(e) => setStockFilter(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-              >
-                <option value="all">All Inventory States</option>
-                <option value="in_stock">In Stock & Active</option>
-                <option value="low_stock">Low Stock (≤ 15)</option>
-                <option value="out_of_stock">Out of Stock / Inactive</option>
-              </select>
-
-              {/* View Switcher */}
-              <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-0.5 dark:border-zinc-700 dark:bg-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setViewMode('grid')}
-                  className={`rounded-lg p-1.5 transition ${
-                    viewMode === 'grid'
-                      ? 'bg-white text-[#FF6B35] shadow-xs dark:bg-zinc-700'
-                      : 'text-slate-400 hover:text-slate-600'
-                  }`}
-                  title="Grid View"
-                >
-                  <span className="material-symbols-outlined text-base">grid_view</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode('table')}
-                  className={`rounded-lg p-1.5 transition ${
-                    viewMode === 'table'
-                      ? 'bg-white text-[#FF6B35] shadow-xs dark:bg-zinc-700'
-                      : 'text-slate-400 hover:text-slate-600'
-                  }`}
-                  title="Table View"
-                >
-                  <span className="material-symbols-outlined text-base">view_list</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Add Menu Item Button */}
+        {/* Search Engine */}
+        <div className="relative h-11 min-w-[260px] flex-1">
+          <span className="material-symbols-outlined pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-lg text-slate-400">
+            search
+          </span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search product name, SKU, ingredients..."
+            className="h-11 w-full rounded-xl border border-slate-200/80 bg-white pl-10 pr-9 text-sm font-medium text-slate-800 placeholder-slate-400 shadow-sm transition focus:border-[#FF6B35] focus:outline-none focus:ring-1 focus:ring-[#FF6B35]/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:placeholder-zinc-500"
+          />
+          {searchQuery && (
             <button
               type="button"
-              onClick={() => {
-                setEditingItem(null)
-                setIsAddModalOpen(true)
-              }}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
             >
-              <span className="material-symbols-outlined text-base">add</span>
-              <span>Add Menu Item</span>
+              <span className="material-symbols-outlined text-base">close</span>
             </button>
-          </div>
+          )}
         </div>
+
+        {/* Category Name Filter Dropdown */}
+        <div className="flex min-w-[160px] flex-col gap-1">
+          <label className="px-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            Category Name
+          </label>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="cursor-pointer border-none bg-transparent p-0 text-sm font-semibold text-slate-900 focus:ring-0 dark:text-zinc-100"
+          >
+            <option value="all">All Categories ({merchantCategories.length})</option>
+            {merchantCategories.map((c) => (
+              <option key={c.id || c.name} value={c.name}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Stock Inventory Status Filter */}
+        <div className="flex min-w-[140px] flex-col gap-1">
+          <label className="px-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            Stock Status
+          </label>
+          <select
+            value={stockFilter}
+            onChange={(e) => setStockFilter(e.target.value)}
+            className="cursor-pointer border-none bg-transparent p-0 text-sm font-semibold text-slate-900 focus:ring-0 dark:text-zinc-100"
+          >
+            <option value="all">All Inventory</option>
+            <option value="in_stock">In Stock & Active</option>
+            <option value="low_stock">Low Stock (≤ 15)</option>
+            <option value="out_of_stock">Out of Stock</option>
+          </select>
+        </div>
+
+        {/* View Switcher (Grid / Table) */}
+        <div className="flex h-11 items-center rounded-xl border border-slate-200/80 bg-white p-1 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+          <button
+            type="button"
+            onClick={() => setViewMode('grid')}
+            className={`rounded-lg p-1.5 transition ${
+              viewMode === 'grid'
+                ? 'bg-slate-100 text-[#FF6B35] dark:bg-zinc-800'
+                : 'text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200'
+            }`}
+            title="Grid View"
+          >
+            <span className="material-symbols-outlined text-base">grid_view</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('table')}
+            className={`rounded-lg p-1.5 transition ${
+              viewMode === 'table'
+                ? 'bg-slate-100 text-[#FF6B35] dark:bg-zinc-800'
+                : 'text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200'
+            }`}
+            title="Table View"
+          >
+            <span className="material-symbols-outlined text-base">view_list</span>
+          </button>
+        </div>
+
+        {/* Clear Filters */}
+        {(searchQuery || selectedCategory !== 'all' || stockFilter !== 'all') && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery('')
+              setSelectedCategory('all')
+              setStockFilter('all')
+            }}
+            className="rounded-lg px-4 py-2 text-sm font-bold text-[#FF6B35] transition-colors hover:bg-orange-500/10 md:ml-auto dark:text-orange-400"
+          >
+            Clear All Filters
+          </button>
+        )}
+
+        {/* Add Menu Item Button - Opens full merged page */}
+        <button
+          type="button"
+          onClick={() => {
+            const bId = branch?.id || ''
+            const mId = merchant?.id || ''
+            navigate(`/menu-items/new?merchantId=${mId}&branchId=${bId}`)
+          }}
+          className="inline-flex h-11 items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 text-xs font-bold text-white shadow-sm transition hover:bg-[#e0531f] active:scale-95 md:ml-auto"
+        >
+          <span className="material-symbols-outlined text-base">add</span>
+          <span>Add Menu Item</span>
+        </button>
       </div>
 
       {/* Items Rendering */}
@@ -409,8 +274,9 @@ export default function BranchMenuItemsTabContent({
             <button
               type="button"
               onClick={() => {
-                setEditingItem(null)
-                setIsAddModalOpen(true)
+                const bId = branch?.id || ''
+                const mId = merchant?.id || ''
+                navigate(`/menu-items/new?merchantId=${mId}&branchId=${bId}`)
               }}
               className="rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white hover:bg-[#e0531f]"
             >
@@ -570,8 +436,14 @@ export default function BranchMenuItemsTabContent({
                 <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-850/50">
                   <button
                     type="button"
-                    onClick={() => setInspectItem(item)}
+                    onClick={() => {
+                      const catId = item.menu_category_id || (item.category_type?.toLowerCase().includes('burger') ? 'mcat-food-001' : 'mcat-food-001')
+                      const bId = branch?.id || ''
+                      const mId = merchant?.id || ''
+                      navigate(`/menu-items/${item.id || catId}?merchantId=${mId}&branchId=${bId}`)
+                    }}
                     className="inline-flex items-center gap-1 text-xs font-bold text-[#FF6B35] hover:underline"
+                    title="View and configure extra options"
                   >
                     <span>View Configuration</span>
                     <span className="material-symbols-outlined text-xs">arrow_forward</span>
@@ -581,8 +453,10 @@ export default function BranchMenuItemsTabContent({
                     <button
                       type="button"
                       onClick={() => {
-                        setEditingItem(item)
-                        setIsAddModalOpen(true)
+                        const catId = item.menu_category_id || (item.category_type?.toLowerCase().includes('burger') ? 'mcat-food-001' : 'mcat-food-001')
+                        const bId = branch?.id || ''
+                        const mId = merchant?.id || ''
+                        navigate(`/menu-items/${item.id || catId}?merchantId=${mId}&branchId=${bId}`)
                       }}
                       className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-200 hover:text-slate-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
                       title="Edit Item"
@@ -698,20 +572,27 @@ export default function BranchMenuItemsTabContent({
                       <div className="flex items-center justify-end gap-1">
                         <button
                           type="button"
-                          onClick={() => setInspectItem(item)}
-                          className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-zinc-800"
-                          title="View Details"
+                          onClick={() => {
+                            const catId = item.menu_category_id || (item.category_type?.toLowerCase().includes('burger') ? 'mcat-food-001' : 'mcat-food-001')
+                            const bId = branch?.id || ''
+                            const mId = merchant?.id || ''
+                            navigate(`/menu-items/${item.id || catId}?merchantId=${mId}&branchId=${bId}`)
+                          }}
+                          className="rounded-lg p-1.5 text-slate-500 hover:bg-orange-50 hover:text-[#FF6B35] dark:hover:bg-zinc-800"
+                          title="View & customize menu item extra options"
                         >
                           <span className="material-symbols-outlined text-base">visibility</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => {
-                            setEditingItem(item)
-                            setIsAddModalOpen(true)
+                            const catId = item.menu_category_id || (item.category_type?.toLowerCase().includes('burger') ? 'mcat-food-001' : 'mcat-food-001')
+                            const bId = branch?.id || ''
+                            const mId = merchant?.id || ''
+                            navigate(`/menu-items/${item.id || catId}?merchantId=${mId}&branchId=${bId}`)
                           }}
                           className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-zinc-800"
-                          title="Edit"
+                          title="Edit Item & Extra Customizations"
                         >
                           <span className="material-symbols-outlined text-base">edit</span>
                         </button>
@@ -938,23 +819,41 @@ export default function BranchMenuItemsTabContent({
               <button
                 type="button"
                 onClick={() => {
-                  setEditingItem(inspectItem)
+                  const catId = inspectItem.menu_category_id || (inspectItem.category_type?.toLowerCase().includes('burger') ? 'mcat-food-001' : 'mcat-food-001')
+                  const bId = branch?.id || ''
+                  const mId = merchant?.id || ''
                   setInspectItem(null)
-                  setIsAddModalOpen(true)
+                  navigate(`/menu-items/${inspectItem.id || catId}?merchantId=${mId}&branchId=${bId}`)
                 }}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-orange-50 px-4 py-2 text-xs font-bold text-[#FF6B35] hover:bg-orange-100 dark:bg-orange-950/40"
               >
                 <span className="material-symbols-outlined text-sm">edit</span>
-                <span>Edit Product</span>
+                <span>Edit Product Details</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setInspectItem(null)}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-              >
-                Close
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const catId = inspectItem.menu_category_id || (inspectItem.category_type?.toLowerCase().includes('burger') ? 'mcat-food-001' : 'mcat-food-001')
+                    const bId = branch?.id || ''
+                    const mId = merchant?.id || ''
+                    setInspectItem(null)
+                    navigate(`/menu-items/${inspectItem.id || catId}?merchantId=${mId}&branchId=${bId}`)
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
+                >
+                  <span className="material-symbols-outlined text-sm">tune</span>
+                  <span>Open Customizations & Options</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInspectItem(null)}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

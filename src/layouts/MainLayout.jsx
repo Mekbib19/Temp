@@ -37,7 +37,7 @@ const MainLayout = ({
         breadcrumbCurrent={breadcrumbCurrent}
       />
       <main
-        className={`px-4 pb-12 transition-all duration-300 sm:px-6 lg:px-8 pt-20 ${
+        className={`px-4 pb-12 transition-all duration-300 sm:px-6 lg:px-6 pt-20 ${
           isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'
         }`}
       >

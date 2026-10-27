@@ -222,14 +222,53 @@ export const initialCuisines = [
     id: 'cs-groc-0004',
     category_id: CATEGORY_IDS.GROCERY,
     category_code: 'GROCERY',
-    name: 'Bulk',
-    slug: 'bulk',
-    description: 'Wholesale grains, pulses, legumes, raw nuts, flours, dried fruit, and zero-waste bulk pantry refills.',
+    name: 'Bulk Goods & Teff',
+    slug: 'bulk-teff',
+    description: 'Wholesale grains, pulses, Ethiopian highland teff, legumes, flours, and zero-waste pantry refills.',
     icon: 'inventory_2',
     is_active: true,
     sort_order: 4,
     created_at: getDynamicOffset(78),
     updated_at: getDynamicOffset(5),
+  },
+  {
+    id: 'cs-groc-0005',
+    category_id: CATEGORY_IDS.GROCERY,
+    category_code: 'GROCERY',
+    name: 'Farmstead Dairy & Cheese',
+    slug: 'dairy-cheese',
+    description: 'Refrigerated artisan cheeses, cultured butter, raw highland milk, kefir, and fresh cottage ayib.',
+    icon: 'egg',
+    is_active: true,
+    sort_order: 5,
+    created_at: getDynamicOffset(72),
+    updated_at: getDynamicOffset(2),
+  },
+  {
+    id: 'cs-groc-0006',
+    category_id: CATEGORY_IDS.GROCERY,
+    category_code: 'GROCERY',
+    name: 'Butcher & Deli Cuts',
+    slug: 'butcher-cuts',
+    description: 'Fresh hygienic halal cuts, prime aged beef, minced steak for kitfo, and poultry cold cuts.',
+    icon: 'set_meal',
+    is_active: true,
+    sort_order: 6,
+    created_at: getDynamicOffset(70),
+    updated_at: getDynamicOffset(3),
+  },
+  {
+    id: 'cs-groc-0007',
+    category_id: CATEGORY_IDS.GROCERY,
+    category_code: 'GROCERY',
+    name: 'Fresh Bakery & Pantry',
+    slug: 'bakery-pantry',
+    description: 'Daily fresh sourdough bread, pita, breakfast buns, olive oils, and staple family food items.',
+    icon: 'bakery_dining',
+    is_active: true,
+    sort_order: 7,
+    created_at: getDynamicOffset(68),
+    updated_at: getDynamicOffset(1),
   },
 
   // ==========================================
@@ -517,11 +556,15 @@ export const loadStoredCuisines = () => {
     if (raw) {
       const parsed = JSON.parse(raw)
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // Check if existing data contains category_code (FOOD, GROCERY, etc.)
-        const hasCategoryCode = parsed.some((c) => c.category_code === 'FOOD' || c.id === 'cs-food-0001')
-        if (hasCategoryCode) {
-          return parsed
+        // Merge any new initial cuisines (e.g. newly added grocery specializations)
+        const existingIds = new Set(parsed.map((c) => c.id))
+        const missing = initialCuisines.filter((c) => !existingIds.has(c.id))
+        if (missing.length > 0) {
+          const updated = [...parsed, ...missing]
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+          return updated
         }
+        return parsed
       }
     }
     // Seed new initial specializations table

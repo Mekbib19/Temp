@@ -107,13 +107,16 @@ export function getMerchantCategories(merchant) {
     ]
   }
 
-  if (typeStr.includes('groc') || typeStr.includes('supermarket') || typeStr.includes('market')) {
+  if (typeStr.includes('groc') || typeStr.includes('supermarket') || typeStr.includes('market') || typeStr === 'grocery') {
     return [
-      { id: 'mcat-groc-001', name: 'Fruits', code: 'GROCERY', icon: 'nutrition', description: 'Fresh organic fruits' },
-      { id: 'mcat-groc-002', name: 'Vegetables', code: 'GROCERY', icon: 'eco', description: 'Farm-fresh greens' },
-      { id: 'mcat-groc-003', name: 'Dairy', code: 'GROCERY', icon: 'egg', description: 'Milk, butter, and cheese' },
-      { id: 'mcat-groc-004', name: 'Bakery', code: 'GROCERY', icon: 'bakery_dining', description: 'Fresh loaves and rolls' },
-      { id: 'mcat-groc-005', name: 'Household', code: 'GROCERY', icon: 'cleaning_services', description: 'Home essentials' },
+      { id: 'mcat-groc-001', name: 'Fruits', code: 'GROCERY', icon: 'nutrition', description: 'Fresh organic and highland fruits' },
+      { id: 'mcat-groc-002', name: 'Vegetables', code: 'GROCERY', icon: 'eco', description: 'Direct farm-fresh greens and produce' },
+      { id: 'mcat-groc-003', name: 'Dairy', code: 'GROCERY', icon: 'egg', description: 'Pasteurized milk, farm ayib, and butter' },
+      { id: 'mcat-groc-004', name: 'Bakery', code: 'GROCERY', icon: 'bakery_dining', description: 'Fresh sourdough, baguettes, and rolls' },
+      { id: 'mcat-groc-007', name: 'Pantry & Grains', code: 'GROCERY', icon: 'inventory_2', description: 'Maganaja white teff, rice, and cooking oils' },
+      { id: 'mcat-groc-006', name: 'Meat & Deli', code: 'GROCERY', icon: 'set_meal', description: 'Prime beef cuts, kitfo mince, and poultry' },
+      { id: 'mcat-groc-008', name: 'Beverages', code: 'GROCERY', icon: 'local_bar', description: 'Spring water, cold juices, and sodas' },
+      { id: 'mcat-groc-005', name: 'Household', code: 'GROCERY', icon: 'cleaning_services', description: 'Home essentials and detergents' },
     ]
   }
 
@@ -503,7 +506,7 @@ const CATALOG_GENERATORS = {
       menu_category_id: 'mcat-groc-001',
       category_type: 'Fruits',
       name: 'Organic Hass Avocados (Pack of 3)',
-      description: 'Creamy ripe organic Hass avocados grown in Rift Valley highlands. Ready to eat.',
+      description: 'Creamy ripe organic Hass avocados grown in Rift Valley highlands. Rich in heart-healthy oleic acids.',
       price: 195,
       image_url: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=600&auto=format&fit=crop&q=80',
       is_available: true,
@@ -513,7 +516,8 @@ const CATALOG_GENERATORS = {
       requires_prescription: false,
       is_age_restricted: false,
       sizes: [
-        { id: 'sz-wh1-1', name: 'Pack of 3', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+        { id: 'sz-wh1-1', name: 'Pack of 3 (Medium)', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+        { id: 'sz-wh1-2', name: 'Family Pack of 6', price_delta: 160, is_default: false, is_active: true, sort_order: 2 },
       ],
       extra_groups: [],
     },
@@ -523,8 +527,8 @@ const CATALOG_GENERATORS = {
       merchant_id: merchantId,
       menu_category_id: 'mcat-groc-003',
       category_type: 'Dairy',
-      name: 'Highland Pure Fresh Whole Milk',
-      description: 'Farm-fresh pasteurized homogenized 3.5% milk in sealed BPA-free bottles.',
+      name: 'Highland Pure Fresh Whole Milk (Cold-Chain)',
+      description: 'Farm-fresh pasteurized homogenized 3.5% milk in sealed bottles. Stored at strict 2°C-4°C.',
       price: 110,
       image_url: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop&q=80',
       is_available: true,
@@ -534,8 +538,370 @@ const CATALOG_GENERATORS = {
       requires_prescription: false,
       is_age_restricted: false,
       sizes: [
-        { id: 'sz-wh2-1', name: '1 Liter', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
-        { id: 'sz-wh2-2', name: '2 Liters', price_delta: 95, is_default: false, is_active: true, sort_order: 2 },
+        { id: 'sz-wh2-1', name: '1 Liter Bottle', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+        { id: 'sz-wh2-2', name: '2 Liters Jug', price_delta: 95, is_default: false, is_active: true, sort_order: 2 },
+      ],
+      extra_groups: [],
+    },
+    {
+      id: `item-${branchId}-wh-3`,
+      merchant_branch_id: branchId,
+      merchant_id: merchantId,
+      menu_category_id: 'mcat-groc-002',
+      category_type: 'Vegetables',
+      name: 'Vine-Ripened Sweet Red Tomatoes (1kg)',
+      description: 'Naturally sun-ripened organic greenhouse tomatoes with sweet, tender pulp.',
+      price: 90,
+      image_url: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&auto=format&fit=crop&q=80',
+      is_available: true,
+      stock_quantity: 80,
+      unit: 'kg',
+      sku: 'GROC-TOM-014',
+      requires_prescription: false,
+      is_age_restricted: false,
+      sizes: [
+        { id: 'sz-wh3-1', name: '1 kg Tray', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+        { id: 'sz-wh3-2', name: '2.5 kg Crate', price_delta: 120, is_default: false, is_active: true, sort_order: 2 },
+      ],
+      extra_groups: [],
+    },
+    {
+      id: `item-${branchId}-wh-4`,
+      merchant_branch_id: branchId,
+      merchant_id: merchantId,
+      menu_category_id: 'mcat-groc-007',
+      category_type: 'Pantry & Grains',
+      name: 'Highland White Maganaja Teff Grain (5kg)',
+      description: 'Triple-sifted, stone-ground 100% Ethiopian white teff for authentic soft injera.',
+      price: 650,
+      image_url: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop&q=80',
+      is_available: true,
+      stock_quantity: 60,
+      unit: 'kg',
+      sku: 'GROC-TEF-050',
+      requires_prescription: false,
+      is_age_restricted: false,
+      sizes: [
+        { id: 'sz-wh4-1', name: '5 kg Sack', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+        { id: 'sz-wh4-2', name: '10 kg Sack', price_delta: 620, is_default: false, is_active: true, sort_order: 2 },
+      ],
+      extra_groups: [],
+    },
+    {
+      id: `item-${branchId}-wh-5`,
+      merchant_branch_id: branchId,
+      merchant_id: merchantId,
+      menu_category_id: 'mcat-groc-003',
+      category_type: 'Dairy',
+      name: 'Direct Farm Ayib Cottage Cheese (500g)',
+      description: 'Traditional mild Ethiopian cow milk cottage cheese with creamy texture, made fresh daily.',
+      price: 180,
+      image_url: 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=600&auto=format&fit=crop&q=80',
+      is_available: true,
+      stock_quantity: 35,
+      unit: 'pack',
+      sku: 'GROC-AYB-005',
+      requires_prescription: false,
+      is_age_restricted: false,
+      sizes: [
+        { id: 'sz-wh5-1', name: '500g Tub', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+        { id: 'sz-wh5-2', name: '1 kg Tub', price_delta: 160, is_default: false, is_active: true, sort_order: 2 },
+      ],
+      extra_groups: [],
+    },
+    {
+      id: `item-${branchId}-wh-6`,
+      merchant_branch_id: branchId,
+      merchant_id: merchantId,
+      menu_category_id: 'mcat-groc-004',
+      category_type: 'Bakery',
+      name: 'Artisan Crusty Sourdough Boule (650g)',
+      description: 'Slow-fermented 36-hour wild levain loaf with crisp blistered crust and open airy crumb.',
+      price: 160,
+      image_url: 'https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?w=600&auto=format&fit=crop&q=80',
+      is_available: true,
+      stock_quantity: 40,
+      unit: 'pcs',
+      sku: 'GROC-BAK-001',
+      requires_prescription: false,
+      is_age_restricted: false,
+      sizes: [
+        { id: 'sz-wh6-1', name: 'Whole Loaf (650g)', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+      ],
+      extra_groups: [],
+    },
+  ],
+
+  // FRESHMART 24/7 SUPERMARKET (m-007)
+  'm-007': (branchId, merchantId) => [
+    {
+      id: `item-${branchId}-fm-1`,
+      merchant_branch_id: branchId,
+      merchant_id: merchantId,
+      menu_category_id: 'mcat-groc-003',
+      category_type: 'Dairy',
+      name: 'Grade-A Farm Brown Eggs (Crate of 30)',
+      description: 'Free-range antibiotic-free brown eggs delivered in protective recycled egg cartons.',
+      price: 360,
+      image_url: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=600&auto=format&fit=crop&q=80',
+      is_available: true,
+      stock_quantity: 90,
+      unit: 'crate',
+      sku: 'GROC-EGG-030',
+      requires_prescription: false,
+      is_age_restricted: false,
+      sizes: [
+        { id: 'sz-fm1-1', name: 'Crate of 30', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+        { id: 'sz-fm1-2', name: 'Pack of 12', price_delta: -210, is_default: false, is_active: true, sort_order: 2 },
+      ],
+      extra_groups: [],
+    },
+    {
+      id: `item-${branchId}-fm-2`,
+      merchant_branch_id: branchId,
+      merchant_id: merchantId,
+      menu_category_id: 'mcat-groc-007',
+      category_type: 'Pantry & Grains',
+      name: 'Pure Cold-Pressed Sunflower Cooking Oil (3L)',
+      description: 'Triple-filtered golden cooking oil with high smoke point for daily Ethiopian cuisine.',
+      price: 520,
+      image_url: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&auto=format&fit=crop&q=80',
+      is_available: true,
+      stock_quantity: 65,
+      unit: 'liters',
+      sku: 'GROC-OIL-003',
+      requires_prescription: false,
+      is_age_restricted: false,
+      sizes: [
+        { id: 'sz-fm2-1', name: '3 Liters Jug', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+        { id: 'sz-fm2-2', name: '5 Liters Bulk Jug', price_delta: 310, is_default: false, is_active: true, sort_order: 2 },
+      ],
+      extra_groups: [],
+    },
+    {
+      id: `item-${branchId}-fm-3`,
+      merchant_branch_id: branchId,
+      merchant_id: merchantId,
+      menu_category_id: 'mcat-groc-005',
+      category_type: 'Household',
+      name: 'Eco Clean Multi-Surface Disinfectant (750ml)',
+      description: 'Hospitality-grade lemon antibacterial cleaning spray with easy trigger nozzle.',
+      price: 145,
+      image_url: 'https://images.unsplash.com/photo-1585421514738-01798e348b17?w=600&auto=format&fit=crop&q=80',
+      is_available: true,
+      stock_quantity: 110,
+      unit: 'bottle',
+      sku: 'GROC-CLN-750',
+      requires_prescription: false,
+      is_age_restricted: false,
+      sizes: [
+        { id: 'sz-fm3-1', name: '750ml Spray Bottle', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+      ],
+      extra_groups: [],
+    },
+    {
+      id: `item-${branchId}-fm-4`,
+      merchant_branch_id: branchId,
+      merchant_id: merchantId,
+      menu_category_id: 'mcat-groc-008',
+      category_type: 'Beverages',
+      name: 'Ambo Mineral Water (Pack of 6 Glass Bottles)',
+      description: 'Naturally sparkling thermal spring mineral water bottled at Senkele springs.',
+      price: 180,
+      image_url: 'https://images.unsplash.com/photo-1560023907-5f339617ea30?w=600&auto=format&fit=crop&q=80',
+      is_available: true,
+      stock_quantity: 150,
+      unit: 'pack',
+      sku: 'GROC-AMB-006',
+      requires_prescription: false,
+      is_age_restricted: false,
+      sizes: [
+        { id: 'sz-fm4-1', name: '6 x 500ml Bottles', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+      ],
+      extra_groups: [],
+    },
+  ],
+
+  // ADDIS GREEN FARM ORGANICS & DAIRY (m-017)
+  'm-017': (branchId, merchantId) => [
+    {
+      id: `item-${branchId}-agf-1`,
+      merchant_branch_id: branchId,
+      merchant_id: merchantId,
+      menu_category_id: 'mcat-groc-003',
+      category_type: 'Dairy',
+      name: 'Pasteurized Raw Highland Milk (2L Cold-Chain)',
+      description: 'Unadulterated morning milk straight from high-altitude dairy pastures. Chilled to 3°C.',
+      price: 210,
+      image_url: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop&q=80',
+      is_available: true,
+      stock_quantity: 50,
+      unit: 'liters',
+      sku: 'GROC-AGF-MLK',
+      requires_prescription: false,
+      is_age_restricted: false,
+      sizes: [
+        { id: 'sz-agf1-1', name: '2 Liters Bottle', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+      ],
+      extra_groups: [],
+    },
+    {
+      id: `item-${branchId}-agf-2`,
+      merchant_branch_id: branchId,
+      merchant_id: merchantId,
+      menu_category_id: 'mcat-groc-002',
+      category_type: 'Vegetables',
+      name: 'Hydroponic Tender Baby Spinach & Kale (500g)',
+      description: 'Triple-washed pesticide-free crispy dark leafy greens ready for salad and steaming.',
+      price: 130,
+      image_url: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=600&auto=format&fit=crop&q=80',
+      is_available: true,
+      stock_quantity: 70,
+      unit: 'pack',
+      sku: 'GROC-AGF-SPN',
+      requires_prescription: false,
+      is_age_restricted: false,
+      sizes: [
+        { id: 'sz-agf2-1', name: '500g Pouch', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+      ],
+      extra_groups: [],
+    },
+  ],
+
+  // GOURMET BUTCHER & DELI (m-019)
+  'm-019': (branchId, merchantId) => [
+    {
+      id: `item-${branchId}-gb-1`,
+      merchant_branch_id: branchId,
+      merchant_id: merchantId,
+      menu_category_id: 'mcat-groc-006',
+      category_type: 'Meat & Deli',
+      name: 'Prime Aged Beef Ribeye Steak (500g Cold-Cut)',
+      description: '21-day dry-aged highland steer ribeye steak with marbling score 4+. Vacuum sealed.',
+      price: 580,
+      image_url: 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?w=600&auto=format&fit=crop&q=80',
+      is_available: true,
+      stock_quantity: 30,
+      unit: 'kg',
+      sku: 'GROC-MEAT-RBE',
+      requires_prescription: false,
+      is_age_restricted: false,
+      sizes: [
+        { id: 'sz-gb1-1', name: '500g Cut', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+        { id: 'sz-gb1-2', name: '1 kg Double Cut', price_delta: 560, is_default: false, is_active: true, sort_order: 2 },
+      ],
+      extra_groups: [],
+    },
+    {
+      id: `item-${branchId}-gb-2`,
+      merchant_branch_id: branchId,
+      merchant_id: merchantId,
+      menu_category_id: 'mcat-groc-006',
+      category_type: 'Meat & Deli',
+      name: 'Special Minced Beef for Kitfo (1kg)',
+      description: 'Ultra-fresh top round lean beef finely minced on refrigerated sterile stone mills.',
+      price: 490,
+      image_url: 'https://images.unsplash.com/photo-1588168333986-5078d3ae3976?w=600&auto=format&fit=crop&q=80',
+      is_available: true,
+      stock_quantity: 40,
+      unit: 'kg',
+      sku: 'GROC-MEAT-KTF',
+      requires_prescription: false,
+      is_age_restricted: false,
+      sizes: [
+        { id: 'sz-gb2-1', name: '1 kg Pack', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+      ],
+      extra_groups: [],
+    },
+  ],
+
+  // SUNRIPE TROPICAL PRODUCE (m-025)
+  'm-025': (branchId, merchantId) => [
+    {
+      id: `item-${branchId}-sr-1`,
+      merchant_branch_id: branchId,
+      merchant_id: merchantId,
+      menu_category_id: 'mcat-groc-001',
+      category_type: 'Fruits',
+      name: 'Sun-Kissed Golden Papayas (Crate of 2)',
+      description: 'Sweet honey-ripe papayas harvested at peak fragrance from Arba Minch orchards.',
+      price: 180,
+      image_url: 'https://images.unsplash.com/photo-1617112848923-cc2234396a8d?w=600&auto=format&fit=crop&q=80',
+      is_available: true,
+      stock_quantity: 60,
+      unit: 'pack',
+      sku: 'GROC-PAP-002',
+      requires_prescription: false,
+      is_age_restricted: false,
+      sizes: [
+        { id: 'sz-sr1-1', name: '2 Large Papayas', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+      ],
+      extra_groups: [],
+    },
+    {
+      id: `item-${branchId}-sr-2`,
+      merchant_branch_id: branchId,
+      merchant_id: merchantId,
+      menu_category_id: 'mcat-groc-008',
+      category_type: 'Beverages',
+      name: 'Fresh Cold-Pressed Sugarcane & Ginger (1L)',
+      description: 'Pure extracted cane juice with a touch of zesty highland ginger and lime.',
+      price: 160,
+      image_url: 'https://images.unsplash.com/photo-1543362906-acfc16c67564?w=600&auto=format&fit=crop&q=80',
+      is_available: true,
+      stock_quantity: 45,
+      unit: 'liters',
+      sku: 'GROC-JCE-CAN',
+      requires_prescription: false,
+      is_age_restricted: false,
+      sizes: [
+        { id: 'sz-sr2-1', name: '1 Liter Bottle', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+      ],
+      extra_groups: [],
+    },
+  ],
+
+  // BOLE ARTISAN DAIRY & GOURMET DEPOT (m-026)
+  'm-026': (branchId, merchantId) => [
+    {
+      id: `item-${branchId}-bad-1`,
+      merchant_branch_id: branchId,
+      merchant_id: merchantId,
+      menu_category_id: 'mcat-groc-003',
+      category_type: 'Dairy',
+      name: 'Aged Smoked Farm Gouda Cheese (350g Wheel)',
+      description: 'Naturally smoked over beechwood, matured 6 months for a buttery crystalline crunch.',
+      price: 420,
+      image_url: 'https://images.unsplash.com/photo-1528750997573-59b89d56f4f7?w=600&auto=format&fit=crop&q=80',
+      is_available: true,
+      stock_quantity: 25,
+      unit: 'pcs',
+      sku: 'GROC-GOU-350',
+      requires_prescription: false,
+      is_age_restricted: false,
+      sizes: [
+        { id: 'sz-bad1-1', name: '350g Wheel', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+      ],
+      extra_groups: [],
+    },
+    {
+      id: `item-${branchId}-bad-2`,
+      merchant_branch_id: branchId,
+      merchant_id: merchantId,
+      menu_category_id: 'mcat-groc-003',
+      category_type: 'Dairy',
+      name: 'Cultured Highland Cow Butter (Nitir Qibe Grade) 500g',
+      description: 'Grass-fed cow milk butter churned traditionally, ready for spiced clarifying or baking.',
+      price: 380,
+      image_url: 'https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=600&auto=format&fit=crop&q=80',
+      is_available: true,
+      stock_quantity: 35,
+      unit: 'pack',
+      sku: 'GROC-BTR-500',
+      requires_prescription: false,
+      is_age_restricted: false,
+      sizes: [
+        { id: 'sz-bad2-1', name: '500g Block', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
       ],
       extra_groups: [],
     },
@@ -592,6 +958,151 @@ const CATALOG_GENERATORS = {
  * Generate default seed items for generic or newly created merchants based on their categories
  */
 function generateGenericMerchantCatalog(branchId, merchantId, merchant) {
+  const isGrocery =
+    (merchant?.category_name || '').toLowerCase() === 'grocery' ||
+    (merchant?.category_code || '').toUpperCase() === 'GROCERY' ||
+    (merchant?.type || '').toLowerCase().includes('grocery') ||
+    (merchant?.type || '').toLowerCase().includes('supermarket')
+
+  const isPharmacy =
+    (merchant?.category_name || '').toLowerCase() === 'pharmacy' ||
+    (merchant?.category_code || '').toUpperCase() === 'PHARMACY' ||
+    (merchant?.type || '').toLowerCase().includes('pharm')
+
+  if (isGrocery) {
+    return [
+      {
+        id: `item-${branchId}-groc-gen-1`,
+        merchant_branch_id: branchId,
+        merchant_id: merchantId,
+        menu_category_id: 'mcat-groc-001',
+        category_type: 'Fruits',
+        name: 'Highland Ripe Organic Avocados (Pack of 3)',
+        description: 'Fresh highland avocados ready to eat, rich in healthy omega fats and dietary fiber.',
+        price: 195,
+        image_url: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=600&auto=format&fit=crop&q=80',
+        is_available: true,
+        stock_quantity: 80,
+        unit: 'pack',
+        sku: 'GROC-AVO-GEN',
+        requires_prescription: false,
+        is_age_restricted: false,
+        sizes: [
+          { id: `sz-${branchId}-g1-1`, name: 'Pack of 3', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+          { id: `sz-${branchId}-g1-2`, name: 'Family Pack of 6', price_delta: 160, is_default: false, is_active: true, sort_order: 2 },
+        ],
+        extra_groups: [],
+      },
+      {
+        id: `item-${branchId}-groc-gen-2`,
+        merchant_branch_id: branchId,
+        merchant_id: merchantId,
+        menu_category_id: 'mcat-groc-002',
+        category_type: 'Vegetables',
+        name: 'Farm-Fresh Vine Tomatoes (1kg Tray)',
+        description: 'Crisp, sweet red vine-ripened greenhouse tomatoes for fresh salads and wot sauces.',
+        price: 90,
+        image_url: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&auto=format&fit=crop&q=80',
+        is_available: true,
+        stock_quantity: 95,
+        unit: 'kg',
+        sku: 'GROC-TOM-GEN',
+        requires_prescription: false,
+        is_age_restricted: false,
+        sizes: [
+          { id: `sz-${branchId}-g2-1`, name: '1 kg Tray', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+        ],
+        extra_groups: [],
+      },
+      {
+        id: `item-${branchId}-groc-gen-3`,
+        merchant_branch_id: branchId,
+        merchant_id: merchantId,
+        menu_category_id: 'mcat-groc-003',
+        category_type: 'Dairy',
+        name: 'Highland Pasteurized Pure Whole Milk (1L Bottle)',
+        description: 'Fresh dairy milk bottled under cold-chain standards at 2°C-4°C.',
+        price: 110,
+        image_url: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop&q=80',
+        is_available: true,
+        stock_quantity: 60,
+        unit: 'liters',
+        sku: 'GROC-MLK-GEN',
+        requires_prescription: false,
+        is_age_restricted: false,
+        sizes: [
+          { id: `sz-${branchId}-g3-1`, name: '1 Liter', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+          { id: `sz-${branchId}-g3-2`, name: '2 Liters', price_delta: 95, is_default: false, is_active: true, sort_order: 2 },
+        ],
+        extra_groups: [],
+      },
+      {
+        id: `item-${branchId}-groc-gen-4`,
+        merchant_branch_id: branchId,
+        merchant_id: merchantId,
+        menu_category_id: 'mcat-groc-007',
+        category_type: 'Pantry & Grains',
+        name: 'Premium White Maganaja Teff Grain (5kg Sack)',
+        description: 'Authentic Ethiopian high-grade white teff grain, triple cleaned for injera baking.',
+        price: 650,
+        image_url: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop&q=80',
+        is_available: true,
+        stock_quantity: 40,
+        unit: 'kg',
+        sku: 'GROC-TEF-GEN',
+        requires_prescription: false,
+        is_age_restricted: false,
+        sizes: [
+          { id: `sz-${branchId}-g4-1`, name: '5 kg Sack', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+          { id: `sz-${branchId}-g4-2`, name: '10 kg Sack', price_delta: 620, is_default: false, is_active: true, sort_order: 2 },
+        ],
+        extra_groups: [],
+      },
+      {
+        id: `item-${branchId}-groc-gen-5`,
+        merchant_branch_id: branchId,
+        merchant_id: merchantId,
+        menu_category_id: 'mcat-groc-004',
+        category_type: 'Bakery',
+        name: 'Freshly Baked Crusty Sourdough Loaf (Whole)',
+        description: 'Traditional hearth-baked sourdough bread with caramelized crust and soft open texture.',
+        price: 160,
+        image_url: 'https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?w=600&auto=format&fit=crop&q=80',
+        is_available: true,
+        stock_quantity: 35,
+        unit: 'pcs',
+        sku: 'GROC-BAK-GEN',
+        requires_prescription: false,
+        is_age_restricted: false,
+        sizes: [
+          { id: `sz-${branchId}-g5-1`, name: 'Whole Loaf (650g)', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+        ],
+        extra_groups: [],
+      },
+      {
+        id: `item-${branchId}-groc-gen-6`,
+        merchant_branch_id: branchId,
+        merchant_id: merchantId,
+        menu_category_id: 'mcat-groc-008',
+        category_type: 'Beverages',
+        name: 'Ambo Natural Sparkling Mineral Water (6x500ml)',
+        description: 'Authentic Ethiopian sparkling natural mineral water in classic glass bottles.',
+        price: 180,
+        image_url: 'https://images.unsplash.com/photo-1560023907-5f339617ea30?w=600&auto=format&fit=crop&q=80',
+        is_available: true,
+        stock_quantity: 75,
+        unit: 'pack',
+        sku: 'GROC-AMB-GEN',
+        requires_prescription: false,
+        is_age_restricted: false,
+        sizes: [
+          { id: `sz-${branchId}-g6-1`, name: '6 x 500ml Pack', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
+        ],
+        extra_groups: [],
+      },
+    ]
+  }
+
   const categories = getMerchantCategories(merchant)
   const items = []
 
@@ -611,7 +1122,7 @@ function generateGenericMerchantCatalog(branchId, merchantId, merchant) {
       stock_quantity: 50,
       unit: 'pcs',
       sku: `SKU-${catName.substring(0, 3).toUpperCase()}-101`,
-      requires_prescription: cat.code === 'PHARMACY',
+      requires_prescription: cat.code === 'PHARMACY' || isPharmacy,
       is_age_restricted: false,
       sizes: [
         { id: `sz-g-${idx}-1`, name: 'Standard Regular', price_delta: 0, is_default: true, is_active: true, sort_order: 1 },
@@ -662,8 +1173,8 @@ export function getCategoriesForBranch(merchant, menuItems = []) {
         base.push({
           id: item.menu_category_id || `cat-${cName.toLowerCase().replace(/\s+/g, '-')}`,
           name: cName,
-          code: item.category_code || 'FOOD',
-          icon: getCategoryIcon(cName),
+          code: item.category_code || (merchant?.category_code || 'FOOD'),
+          icon: getCategoryIcon(cName, item.category_code || merchant?.category_code),
           description: `${cName} catalog items`,
         })
       }
@@ -686,7 +1197,13 @@ export function getMenuItemsForBranch(branchId, merchantId, merchant) {
       (item) => item.merchant_branch_id === branchId || (branchId && item.merchant_branch_id?.includes(branchId))
     )
 
-    // Check if branchItems are valid and not contaminated with global default items from wrong merchant
+    const isGrocery =
+      (merchant?.category_name || '').toLowerCase() === 'grocery' ||
+      (merchant?.category_code || '').toUpperCase() === 'GROCERY' ||
+      (merchant?.type || '').toLowerCase().includes('grocery') ||
+      (merchant?.type || '').toLowerCase().includes('supermarket')
+
+    // Check if branchItems are valid and not contaminated with global default items from wrong merchant category
     const isMismatched = branchItems.length > 0 && branchItems.some(item => {
       // If merchant is Caffe Bella (m-006), should only have its assigned categories: Drinks, Bakery, Desserts, Sandwiches
       if (merchantId === 'm-006') {
@@ -696,6 +1213,28 @@ export function getMenuItemsForBranch(branchId, merchantId, merchant) {
           return true
         }
       }
+
+      // If merchant is Grocery, must NOT have restaurant/fast food items (Burgers, Appetizers, etc.)
+      if (isGrocery) {
+        const groceryCats = [
+          'fruits',
+          'vegetables',
+          'dairy',
+          'bakery',
+          'household',
+          'meat',
+          'deli',
+          'pantry',
+          'grains',
+          'beverages',
+        ]
+        const currentCat = (item.category_type || item.category_name || '').toLowerCase()
+        const hasGroceryCat = groceryCats.some((gc) => currentCat.includes(gc))
+        if (!hasGroceryCat || (item.name || '').includes('Chef Special') || (item.name || '').includes('Signature Main Dishes')) {
+          return true
+        }
+      }
+
       return false
     })
 

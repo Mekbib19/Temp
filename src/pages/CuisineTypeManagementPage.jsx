@@ -444,7 +444,7 @@ const CuisineTypeManagementPage = () => {
     <MainLayout
       activeMenuKey="cuisineManagement"
       breadcrumbParent="Dashboard"
-      breadcrumbCurrent="Specializations (cuisine_types)"
+      breadcrumbCurrent="Cuisine types"
     >
       <div className="space-y-6 pb-12">
         {/* Toast Notification */}
@@ -467,7 +467,7 @@ const CuisineTypeManagementPage = () => {
             
             </div>
             <p className="mt-2 text-sm font-medium text-slate-500 dark:text-zinc-400">
-              Specialization and cuisine types for merchants within each category 
+              Cuisine types for merchants within each category 
             </p>
           </div>
 
@@ -1067,10 +1067,10 @@ const CuisineTypeManagementPage = () => {
                   </span>
                   <div>
                     <h2 className="font-['Plus_Jakarta_Sans'] text-lg font-bold text-slate-900 dark:text-zinc-50">
-                      {editingCuisine ? 'Edit Specialization Type' : 'Add New Specialization Type'}
+                      {editingCuisine ? 'Edit Specialization Type' : 'Add New Cuisine Type'}
                     </h2>
                     <p className="text-xs text-slate-500 dark:text-zinc-400">
-                      Define a category-specific specialization type (<code className="font-mono text-[11px] text-[#FF6B35]">cuisine_types</code>) for merchants.
+                      Define a category-specific Cuisine type for merchants.
                     </p>
                   </div>
                 </div>
