@@ -6,6 +6,8 @@ import { getMerchantById, loadStoredMerchants, saveStoredMerchants } from '../da
 import { orderStatusConfig, generateOrdersForBranch } from '../data/demoOrders'
 import { getMenuItemsForBranch, getCategoriesForBranch } from '../data/demoMenuItems'
 import BranchMenuItemsTabContent from '../components/BranchMenuItemsTabContent'
+import CustomerRatingReviews from '../components/CustomerRatingReviews'
+import { getBranchReviews, saveBranchReviews } from '../data/demoRatingsReviews'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -617,6 +619,7 @@ export default function BranchDetailPage() {
   const [orders, setOrders] = useState(() => generateOrdersForBranch(merchant, branch))
   const [menuItems, setMenuItems] = useState(() => getMenuItemsForBranch(branch?.id, merchant?.id, merchant))
   const [initialMenuCategory, setInitialMenuCategory] = useState('all')
+  const [branchReviews, setBranchReviews] = useState(() => getBranchReviews(branch?.id || branchId))
 
   const merchantCategories = useMemo(() => {
     return getCategoriesForBranch(merchant, menuItems)
@@ -860,6 +863,7 @@ export default function BranchDetailPage() {
     setPrevBranchKey(currentBranchKey)
     setOrders(generateOrdersForBranch(merchant, branch))
     setMenuItems(getMenuItemsForBranch(branch?.id, merchant?.id, merchant))
+    setBranchReviews(getBranchReviews(branch?.id))
   }
 
   if (!merchant || !branch) {
@@ -1207,6 +1211,7 @@ export default function BranchDetailPage() {
               { id: 'overview', label: 'Overview & Statistics', icon: 'analytics' },
               { id: 'orders', label: `Recent Orders (${orders.length})`, icon: 'receipt_long' },
               { id: 'menu_items', label: `Menu Items (${menuItems.length})`, icon: 'restaurant_menu' },
+              { id: 'ratings', label: `Ratings & Reviews (${branchReviews.length})`, icon: 'hotel_class' },
               { id: 'staff', label: 'Manager & Staff', icon: 'badge' },
               { id: 'settings', label: 'Settings', icon: 'settings' },
             ].map((tab) => (
@@ -1286,7 +1291,11 @@ export default function BranchDetailPage() {
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div
+                  onClick={() => setActiveTab('ratings')}
+                  className="cursor-pointer transition hover:border-amber-400 hover:shadow-xs rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900"
+                  title="Click to view all Play Store style customer reviews and ratings"
+                >
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
                       Satisfaction
@@ -1295,11 +1304,12 @@ export default function BranchDetailPage() {
                       <span className="material-symbols-outlined text-base">star</span>
                     </span>
                   </div>
-                  <p className="mt-2 text-xl font-extrabold text-slate-900 dark:text-zinc-100">
-                    4.9 / 5.0
+                  <p className="mt-2 text-xl font-extrabold text-slate-900 dark:text-zinc-100 flex items-center gap-1.5">
+                    <span>4.9 / 5.0</span>
+                    <span className="material-symbols-outlined text-xs text-amber-500">arrow_forward</span>
                   </p>
                   <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
-                    From 328 ratings
+                    From 328 ratings • View reviews →
                   </p>
                 </div>
               </div>
@@ -2469,6 +2479,29 @@ export default function BranchDetailPage() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* TAB: CUSTOMER RATINGS & REVIEWS */}
+        {activeTab === 'ratings' && (
+          <div className="animate-fade-in">
+            <CustomerRatingReviews
+              entityType="branch"
+              entityName={branch.branch_name}
+              initialReviews={branchReviews}
+              onSaveReviews={(updated) => {
+                setBranchReviews(updated)
+                saveBranchReviews(updated)
+                showToast('Customer feedback and responses updated successfully')
+              }}
+              aspectCriteria={[
+                { label: 'Food Quality & Taste', score: '4.9 ★', sub: '98% Positive' },
+                { label: 'Packaging & Temp', score: '4.8 ★', sub: '96% Positive' },
+                { label: 'Preparation Speed', score: '4.7 ★', sub: '16.5m Avg SLA' },
+                { label: 'Order Accuracy', score: '4.9 ★', sub: '99% Error-Free' },
+              ]}
+              baseRatingsCount={328}
+            />
           </div>
         )}
       </div>

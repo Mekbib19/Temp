@@ -6,7 +6,11 @@ import {
   generateUUID,
 } from '../data/demoMenuCategories'
 import { loadStoredCategories } from '../data/demoCategories'
-import { MENU_ITEMS_STORAGE_KEY, saveMenuItem } from '../data/demoMenuItems'
+import {
+  MENU_ITEMS_STORAGE_KEY,
+  saveMenuItem,
+  getSupplementaryPhotos,
+} from '../data/demoMenuItems'
 
 // Dedicated category customizations storage key to prevent collision
 const CATEGORY_PROTOTYPE_KEY = 'deliver_app_category_prototype_customizations_v5'
@@ -483,10 +487,29 @@ export default function MenuCategoryDetailsPage() {
   const [itemSku, setItemSku] = useState(() => existingStoredItem?.sku || '')
   const [itemUnit, setItemUnit] = useState(() => existingStoredItem?.unit || 'pcs')
   const [itemIsAvailable, setItemIsAvailable] = useState(() => existingStoredItem?.is_available !== false)
-  const [itemImageUrl, setItemImageUrl] = useState(() => existingStoredItem?.image_url || '')
+  const [itemImages, setItemImages] = useState(() => {
+    if (existingStoredItem?.images && Array.isArray(existingStoredItem.images) && existingStoredItem.images.length > 0) {
+      return existingStoredItem.images
+    }
+    if (existingStoredItem?.image_url) {
+      return [existingStoredItem.image_url, ...getSupplementaryPhotos(existingStoredItem.category_type, existingStoredItem.image_url)]
+    }
+    return [
+      CATEGORY_HERO_IMAGES.burgers,
+      'https://images.unsplash.com/photo-1550547660-d9450f859349?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=800&auto=format&fit=crop&q=80',
+    ]
+  })
+  const [primaryImageIdx, setPrimaryImageIdx] = useState(0)
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [showUrlAddModal, setShowUrlAddModal] = useState(false)
+  const [newUrlInput, setNewUrlInput] = useState('')
   const [itemRequiresPrescription, setItemRequiresPrescription] = useState(() => Boolean(existingStoredItem?.requires_prescription))
   const [itemIsAgeRestricted, setItemIsAgeRestricted] = useState(() => Boolean(existingStoredItem?.is_age_restricted))
   const fileInputRef = useRef(null)
+
+  // Derived primary image URL
+  const itemImageUrl = itemImages[primaryImageIdx] || itemImages[0] || ''
 
   // Active category derived dynamically from selected category dropdown
   const activeSelectedCategory = useMemo(() => {
@@ -529,7 +552,12 @@ export default function MenuCategoryDetailsPage() {
       setItemSku(existingStoredItem.sku || '')
       setItemUnit(existingStoredItem.unit || 'pcs')
       setItemIsAvailable(existingStoredItem.is_available !== false)
-      setItemImageUrl(existingStoredItem.image_url || '')
+      if (existingStoredItem.images && Array.isArray(existingStoredItem.images) && existingStoredItem.images.length > 0) {
+        setItemImages(existingStoredItem.images)
+      } else if (existingStoredItem.image_url) {
+        setItemImages([existingStoredItem.image_url, ...getSupplementaryPhotos(existingStoredItem.category_type, existingStoredItem.image_url)])
+      }
+      setPrimaryImageIdx(0)
       setItemRequiresPrescription(Boolean(existingStoredItem.requires_prescription))
       setItemIsAgeRestricted(Boolean(existingStoredItem.is_age_restricted))
     }
@@ -552,22 +580,89 @@ export default function MenuCategoryDetailsPage() {
     return foodItems.find((f) => f.id === selectedFoodId) || foodItems[0] || null
   }, [foodItems, selectedFoodId])
 
-  // Image Upload Handler
-  const handleImageUpload = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (!file.type.startsWith('image/')) {
-      showToast('Please select a valid image file.')
+  // Multi-Image Processing: Read multiple files via FileReader
+  const handleProcessFiles = (files) => {
+    if (!files || files.length === 0) return
+    const validFiles = Array.from(files).filter((f) => f.type.startsWith('image/'))
+    if (validFiles.length === 0) {
+      showToast('Please select valid image files (JPG, PNG, WEBP).')
       return
     }
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setItemImageUrl(event.target.result)
-        showToast('Image uploaded successfully.')
+
+    let loadedCount = 0
+    const newImages = []
+    validFiles.forEach((file) => {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          newImages.push(event.target.result)
+        }
+        loadedCount++
+        if (loadedCount === validFiles.length) {
+          setItemImages((prev) => [...prev, ...newImages])
+          showToast(`Uploaded ${newImages.length} image${newImages.length > 1 ? 's' : ''} successfully!`)
+        }
       }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  // Drag and drop event handlers
+  const handleDragOver = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+    if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+      handleProcessFiles(e.dataTransfer.files)
     }
-    reader.readAsDataURL(file)
+  }
+
+  const handleFileInputChange = (e) => {
+    if (e.target.files) {
+      handleProcessFiles(e.target.files)
+    }
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handleRemoveImage = (indexToRemove) => {
+    if (itemImages.length <= 1) {
+      showToast('At least one item image is recommended.')
+      return
+    }
+    setItemImages((prev) => prev.filter((_, idx) => idx !== indexToRemove))
+    if (primaryImageIdx === indexToRemove) {
+      setPrimaryImageIdx(0)
+    } else if (primaryImageIdx > indexToRemove) {
+      setPrimaryImageIdx((prev) => prev - 1)
+    }
+    showToast('Image removed.')
+  }
+
+  const handleSetPrimary = (idx) => {
+    setPrimaryImageIdx(idx)
+    showToast('Cover / Primary photo set.')
+  }
+
+  const handleAddImageUrl = (e) => {
+    e.preventDefault()
+    const url = newUrlInput.trim()
+    if (!url) return
+    setItemImages((prev) => [...prev, url])
+    setNewUrlInput('')
+    setShowUrlAddModal(false)
+    showToast('Image URL added successfully!')
   }
 
   // Navigation Back Handler
@@ -1120,7 +1215,8 @@ export default function MenuCategoryDetailsPage() {
       unit: showUnitInput ? (itemUnit || 'pcs') : '',
       stock_quantity: showStockQuantityInput ? (parseInt(itemStock, 10) || 0) : null,
       is_available: itemIsAvailable,
-      image_url: itemImageUrl || categoryPicture,
+      images: itemImages.length > 0 ? itemImages : [categoryPicture],
+      image_url: itemImageUrl || itemImages[0] || categoryPicture,
       requires_prescription: showPrescriptionField ? Boolean(itemRequiresPrescription) : false,
       is_age_restricted: showAgeRestrictedField ? Boolean(itemIsAgeRestricted) : false,
       merchant_id: merchantId || 'm-1',
@@ -1408,52 +1504,191 @@ export default function MenuCategoryDetailsPage() {
               )}
             </div>
 
-            {/* Photo preview: 4 cols */}
-            <div className="lg:col-span-4">
-              <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-300">
-                Item Photo
-              </label>
-              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-zinc-700 dark:bg-zinc-850">
-                <div className="relative h-36 w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-zinc-800">
-                  <img
-                    src={categoryPicture}
-                    alt={itemName || 'Product photo'}
-                    className="h-full w-full object-cover"
-                  />
-                  <span className="absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-white backdrop-blur-xs">
-                    {itemImageUrl ? 'Custom Image' : 'Hero Preset'}
+            {/* Multi-Image Upload & Drag-and-Drop Gallery: 5 cols */}
+            <div className="space-y-3 lg:col-span-4">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                  Product Photos ({itemImages.length})
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowUrlAddModal(true)}
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#FF6B35] hover:underline"
+                >
+                  <span className="material-symbols-outlined text-xs">link</span>
+                  <span>Add by URL</span>
+                </button>
+              </div>
+
+              {/* Drag and Drop Zone */}
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`group relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-4 text-center transition-all ${
+                  isDragOver
+                    ? 'border-[#FF6B35] bg-orange-50/80 scale-[1.01] ring-4 ring-[#FF6B35]/20 dark:bg-orange-950/40'
+                    : 'border-slate-300 bg-slate-50/70 hover:border-[#FF6B35]/60 hover:bg-orange-50/20 dark:border-zinc-700 dark:bg-zinc-850 dark:hover:border-orange-500/50'
+                }`}
+              >
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  multiple
+                  accept="image/*"
+                  onChange={handleFileInputChange}
+                  className="hidden"
+                />
+
+                <div className={`flex h-11 w-11 items-center justify-center rounded-xl transition ${
+                  isDragOver ? 'bg-[#FF6B35] text-white animate-bounce' : 'bg-orange-100 text-[#FF6B35] group-hover:scale-110 dark:bg-orange-950/60'
+                }`}>
+                  <span className="material-symbols-outlined text-2xl">
+                    {isDragOver ? 'file_download' : 'add_photo_alternate'}
                   </span>
                 </div>
-                <div className="mt-2.5 flex flex-col gap-1.5">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                  >
-                    <span className="material-symbols-outlined text-sm">upload</span>
-                    <span>Upload Photo</span>
-                  </button>
-                  {itemImageUrl && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setItemImageUrl('')
-                        if (fileInputRef.current) fileInputRef.current.value = ''
-                      }}
-                      className="text-center text-[11px] font-medium text-rose-500 hover:underline"
-                    >
-                      Reset to Category Hero
-                    </button>
-                  )}
+
+                <p className="mt-2 text-xs font-bold text-slate-800 dark:text-zinc-200">
+                  {isDragOver ? 'Drop images here!' : 'Drag & drop photos or click to browse'}
+                </p>
+                <p className="mt-0.5 text-[10px] text-slate-400 dark:text-zinc-500">
+                  Upload multiple photos (PNG, JPG, WEBP). Select all at once.
+                </p>
+
+                <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-[#FF6B35] shadow-xs ring-1 ring-slate-200/80 dark:bg-zinc-800 dark:ring-zinc-700">
+                  <span className="material-symbols-outlined text-sm">add</span>
+                  <span>Select Multiple Files</span>
                 </div>
               </div>
+
+              {/* Uploaded Images Preview Gallery with Drag & Drop Plus Button */}
+              <div>
+                <div className="mb-1.5 flex items-center justify-between text-[11px]">
+                  <span className="font-semibold text-slate-500 dark:text-zinc-400">
+                    Uploaded Gallery ({itemImages.length} image{itemImages.length > 1 ? 's' : ''}):
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    ⭐ Cover: Image #{primaryImageIdx + 1}
+                  </span>
+                </div>
+
+                {/* Horizontal scrollable previews with plus tile */}
+                <div className="flex gap-2.5 overflow-x-auto pb-2 pt-1 scroll-smooth scrollbar-thin">
+                  {itemImages.map((imgUrl, idx) => {
+                    const isCover = primaryImageIdx === idx
+                    return (
+                      <div
+                        key={idx}
+                        className={`group/thumb relative h-24 w-28 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${
+                          isCover
+                            ? 'border-[#FF6B35] ring-2 ring-[#FF6B35]/30 shadow-md'
+                            : 'border-slate-200 hover:border-slate-400 dark:border-zinc-700'
+                        }`}
+                      >
+                        <img
+                          src={imgUrl}
+                          alt={`Upload ${idx + 1}`}
+                          className="h-full w-full object-cover"
+                        />
+
+                        {/* Cover Badge */}
+                        {isCover ? (
+                          <span className="absolute left-1 top-1 flex items-center gap-0.5 rounded-md bg-[#FF6B35] px-1.5 py-0.5 text-[9px] font-black text-white shadow-xs">
+                            <span className="material-symbols-outlined text-[10px]">star</span>
+                            Cover
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleSetPrimary(idx)
+                            }}
+                            className="absolute left-1 top-1 hidden rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-bold text-white backdrop-blur-xs group-hover/thumb:flex hover:bg-[#FF6B35]"
+                            title="Set as cover image"
+                          >
+                            Set Cover
+                          </button>
+                        )}
+
+                        {/* Remove Button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleRemoveImage(idx)
+                          }}
+                          className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-md bg-black/60 text-white opacity-0 transition group-hover/thumb:opacity-100 hover:bg-rose-600"
+                          title="Remove image"
+                        >
+                          <span className="material-symbols-outlined text-[12px]">close</span>
+                        </button>
+
+                        <div className="absolute bottom-1 right-1 rounded bg-black/60 px-1 py-0.2 text-[8px] font-mono text-white">
+                          #{idx + 1}
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  {/* Future Drag & Drop PLUS Card */}
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`flex h-24 w-24 shrink-0 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed transition ${
+                      isDragOver
+                        ? 'border-[#FF6B35] bg-orange-100/60 dark:bg-orange-950/40'
+                        : 'border-slate-300 bg-white hover:border-[#FF6B35] hover:bg-orange-50/30 dark:border-zinc-700 dark:bg-zinc-800'
+                    }`}
+                    title="Click or drag photos here to add more"
+                  >
+                    <span className="material-symbols-outlined text-2xl text-[#FF6B35]">
+                      add
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-600 dark:text-zinc-300">
+                      Add +
+                    </span>
+                    <span className="text-[8px] text-slate-400">Drag & Drop</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* URL Add Modal/Input */}
+              {showUrlAddModal && (
+                <div className="rounded-xl border border-orange-200 bg-orange-50/70 p-3 dark:border-zinc-700 dark:bg-zinc-800">
+                  <div className="flex items-center justify-between pb-1.5">
+                    <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">
+                      Add Image via Web URL
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowUrlAddModal(false)}
+                      className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
+                    >
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={newUrlInput}
+                      onChange={(e) => setNewUrlInput(e.target.value)}
+                      placeholder="https://images.unsplash.com/photo-..."
+                      className="h-8 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-900 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddImageUrl}
+                      className="rounded-lg bg-[#FF6B35] px-3 text-xs font-bold text-white hover:bg-[#e0531f]"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

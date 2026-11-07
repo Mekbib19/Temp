@@ -258,9 +258,20 @@ export default function RealTimeLogisticsMap({
   selectedOrderId = null,
   onSelectOrder = null,
   className = '',
+  customRoutes = null,
+  title = null,
+  subtitle = null,
+  badgeText = null,
+  pickupLabel = 'Pickup:',
+  destinationLabel = 'Delivery:',
+  singleLineOnly = false,
+  merchantName = null,
+  customerName = null,
+  riderName = null,
 }) {
-  const [routes, setRoutes] = useState(DEMO_FLEET_ROUTES)
-  const [internalActiveRouteId, setInternalActiveRouteId] = useState('ORD-9021')
+  const [routes, setRoutes] = useState(() => customRoutes || DEMO_FLEET_ROUTES)
+  const [prevCustomRoutes, setPrevCustomRoutes] = useState(customRoutes)
+  const [internalActiveRouteId, setInternalActiveRouteId] = useState(() => customRoutes?.[0]?.id || 'ORD-9021')
   const activeRouteId = selectedOrderId || internalActiveRouteId
   const [isSimulating, setIsSimulating] = useState(true)
   const [simulationSpeed, setSimulationSpeed] = useState(1) // 1x, 2x, 5x
@@ -270,34 +281,75 @@ export default function RealTimeLogisticsMap({
   const [isFullscreen, setIsFullscreen] = useState(false)
   const containerRef = useRef(null)
 
+  // Single Route Mode: 1 line from Merchant (170, 170) to Customer (630, 330)
+  const singleLineWaypoints = useMemo(
+    () => [
+      { x: 170, y: 170 },
+      { x: 230, y: 175 },
+      { x: 295, y: 190 },
+      { x: 360, y: 220 },
+      { x: 425, y: 260 },
+      { x: 495, y: 295 },
+      { x: 565, y: 320 },
+      { x: 630, y: 330 },
+    ],
+    []
+  )
+  const singleLinePathD = 'M 170 170 C 290 170, 380 230, 480 290 S 580 330, 630 330'
+  const [singleProgress, setSingleProgress] = useState(0.48)
+
+  const singleRiderPos = useMemo(
+    () => interpolateWaypoint(singleLineWaypoints, singleProgress),
+    [singleLineWaypoints, singleProgress]
+  )
+
+  // Sync customRoutes during render phase when prop changes
+  if (customRoutes !== prevCustomRoutes) {
+    setPrevCustomRoutes(customRoutes)
+    setRoutes(customRoutes || DEMO_FLEET_ROUTES)
+    if (selectedOrderId) {
+      setInternalActiveRouteId(selectedOrderId)
+    } else if (customRoutes && customRoutes.length > 0 && !customRoutes.some((r) => r.id === internalActiveRouteId)) {
+      setInternalActiveRouteId(customRoutes[0].id)
+    }
+  }
+
   // Real-time GPS movement simulation
   useEffect(() => {
     if (!isSimulating) return
 
     const interval = setInterval(() => {
-      setRoutes((prevRoutes) =>
-        prevRoutes.map((r) => {
-          if (r.status === 'Arrived') return r // Arrived stays at destination
-          const step = 0.015 * simulationSpeed
-          let nextProgress = (r.currentProgress ?? r.initialProgress) + step
-          if (nextProgress > 1) {
-            nextProgress = 0.05 // loop back around for continuous demo
-          }
-          return {
-            ...r,
-            currentProgress: nextProgress,
-          }
+      if (singleLineOnly) {
+        setSingleProgress((prev) => {
+          const step = 0.012 * simulationSpeed
+          const next = prev + step
+          return next > 0.96 ? 0.04 : next
         })
-      )
+      } else {
+        setRoutes((prevRoutes) =>
+          prevRoutes.map((r) => {
+            if (r.status === 'Arrived') return r // Arrived stays at destination
+            const step = 0.015 * simulationSpeed
+            let nextProgress = (r.currentProgress ?? r.initialProgress) + step
+            if (nextProgress > 1) {
+              nextProgress = 0.05 // loop back around for continuous demo
+            }
+            return {
+              ...r,
+              currentProgress: nextProgress,
+            }
+          })
+        )
+      }
     }, 600)
 
     return () => clearInterval(interval)
-  }, [isSimulating, simulationSpeed])
+  }, [isSimulating, simulationSpeed, singleLineOnly])
 
   // Filtered routes
   const filteredRoutes = useMemo(() => {
     return routes.filter((r) => {
-      if (statusFilter === 'TRANSIT') return r.status === 'On the way'
+      if (statusFilter === 'TRANSIT') return r.status === 'On the way' || r.status?.includes('Route')
       if (statusFilter === 'ARRIVED') return r.status === 'Arrived'
       if (statusFilter === 'PICKED_UP') return r.status === 'Picked up'
       return true
@@ -327,7 +379,7 @@ export default function RealTimeLogisticsMap({
       <div className="relative z-20 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/90 bg-[#090D16]/95 px-5 py-3.5 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/30">
-            <span className="material-symbols-outlined text-lg">explore</span>
+            <span className="material-symbols-outlined text-lg">navigation</span>
             <span className="absolute -top-1 -right-1 flex h-3 w-3">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500" />
@@ -336,94 +388,104 @@ export default function RealTimeLogisticsMap({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-['Plus_Jakarta_Sans'] text-base font-bold text-white tracking-tight">
-                Real-time Fleet Logistics Map
+                {singleLineOnly
+                  ? `${merchantName || 'Merchant'} ➔ ${customerName || 'Customer'}`
+                  : (title || 'Real-time Fleet Logistics Map')}
               </h3>
               <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-extrabold text-emerald-400 ring-1 ring-emerald-500/30">
-                {routes.length} Active Direction Routes
+                {singleLineOnly
+                  ? 'Live Delivery Route'
+                  : (badgeText || `${routes.length} Active Direction Routes`)}
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Live GPS direction arrows, multi-route courier navigation & arrival telemetry
+              {singleLineOnly
+                ? 'Single route line from Merchant to Customer with real-time rider arrow'
+                : (subtitle || 'Live GPS direction arrows, multi-route courier navigation & arrival telemetry')}
             </p>
           </div>
         </div>
 
         {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Status Filter Pills */}
-          <div className="hidden sm:flex items-center rounded-xl border border-slate-800 bg-slate-900/80 p-0.5 text-xs">
-            <button
-              type="button"
-              onClick={() => setStatusFilter('ALL')}
-              className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
-                statusFilter === 'ALL'
-                  ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              All ({routes.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('TRANSIT')}
-              className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
-                statusFilter === 'TRANSIT'
-                  ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              On The Way (5)
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('ARRIVED')}
-              className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
-                statusFilter === 'ARRIVED'
-                  ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Arrived (1)
-            </button>
-          </div>
+          {!singleLineOnly && (
+            <>
+              {/* Status Filter Pills */}
+              <div className="hidden sm:flex items-center rounded-xl border border-slate-800 bg-slate-900/80 p-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('ALL')}
+                  className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
+                    statusFilter === 'ALL'
+                      ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  All ({routes.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('TRANSIT')}
+                  className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
+                    statusFilter === 'TRANSIT'
+                      ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  On The Way (5)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('ARRIVED')}
+                  className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
+                    statusFilter === 'ARRIVED'
+                      ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Arrived (1)
+                </button>
+              </div>
 
-          {/* Green Map Arrow Toggle */}
-          <button
-            type="button"
-            onClick={() => setShowDirectionArrows((v) => !v)}
-            title="Toggle Green Direction Arrows along routes"
-            className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition ${
-              showDirectionArrows
-                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-                : 'border-slate-800 bg-slate-900/80 text-slate-400 hover:text-white'
-            }`}
-          >
-            <span className="material-symbols-outlined text-sm text-emerald-400">navigation</span>
-            <span className="hidden md:inline">Green Arrows:</span>
-            <span className="font-bold">{showDirectionArrows ? 'ON' : 'OFF'}</span>
-          </button>
+              {/* Green Map Arrow Toggle */}
+              <button
+                type="button"
+                onClick={() => setShowDirectionArrows((v) => !v)}
+                title="Toggle Green Direction Arrows along routes"
+                className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition ${
+                  showDirectionArrows
+                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                    : 'border-slate-800 bg-slate-900/80 text-slate-400 hover:text-white'
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm text-emerald-400">navigation</span>
+                <span className="hidden md:inline">Green Arrows:</span>
+                <span className="font-bold">{showDirectionArrows ? 'ON' : 'OFF'}</span>
+              </button>
 
-          {/* District Labels Toggle */}
-          <button
-            type="button"
-            onClick={() => setShowDistrictLabels((v) => !v)}
-            title="Toggle district labels"
-            className={`hidden sm:inline-flex items-center gap-1 rounded-xl border px-2 py-1.5 text-xs font-semibold transition ${
-              showDistrictLabels
-                ? 'border-slate-700 bg-slate-800/80 text-slate-300'
-                : 'border-slate-800 bg-slate-900/60 text-slate-500'
-            }`}
-          >
-            <span className="material-symbols-outlined text-xs">label</span>
-            <span>Districts</span>
-          </button>
+              {/* District Labels Toggle */}
+              <button
+                type="button"
+                onClick={() => setShowDistrictLabels((v) => !v)}
+                title="Toggle district labels"
+                className={`hidden sm:inline-flex items-center gap-1 rounded-xl border px-2 py-1.5 text-xs font-semibold transition ${
+                  showDistrictLabels
+                    ? 'border-slate-700 bg-slate-800/80 text-slate-300'
+                    : 'border-slate-800 bg-slate-900/60 text-slate-500'
+                }`}
+              >
+                <span className="material-symbols-outlined text-xs">label</span>
+                <span>Districts</span>
+              </button>
+            </>
+          )}
 
           {/* GPS Simulation Toggle */}
           <button
             type="button"
             onClick={() => setIsSimulating((v) => !v)}
             title="Simulate live GPS movement along routes"
-            className={`inline-flex items-center gap-1 rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition ${
+            className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition ${
               isSimulating
                 ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-300'
                 : 'border-amber-500/40 bg-amber-500/10 text-amber-300'
@@ -432,7 +494,7 @@ export default function RealTimeLogisticsMap({
             <span className="material-symbols-outlined text-sm">
               {isSimulating ? 'pause' : 'play_arrow'}
             </span>
-            <span className="hidden lg:inline">{isSimulating ? 'Simulating Live GPS' : 'Paused'}</span>
+            <span className="hidden sm:inline">{isSimulating ? 'Rider Moving' : 'Paused'}</span>
           </button>
 
           {/* Speed Selector */}
@@ -478,35 +540,41 @@ export default function RealTimeLogisticsMap({
             <rect width="100%" height="100%" fill="url(#majorGrid)" />
 
             {/* River / Water Canal Curve */}
-            <path
-              d="M 0 380 Q 250 360 420 420 T 800 460"
-              fill="none"
-              stroke="#0369a1"
-              strokeWidth="24"
-              opacity="0.25"
-            />
+            {!singleLineOnly && (
+              <path
+                d="M 0 380 Q 250 360 420 420 T 800 460"
+                fill="none"
+                stroke="#0369a1"
+                strokeWidth="24"
+                opacity="0.25"
+              />
+            )}
             {/* Expressways */}
-            <path
-              d="M 60 0 Q 300 180 750 160"
-              fill="none"
-              stroke="#475569"
-              strokeWidth="8"
-              opacity="0.3"
-            />
-            <path
-              d="M 120 480 Q 400 300 700 0"
-              fill="none"
-              stroke="#475569"
-              strokeWidth="8"
-              opacity="0.3"
-            />
-            <path
-              d="M 380 0 L 380 500"
-              fill="none"
-              stroke="#334155"
-              strokeWidth="6"
-              opacity="0.35"
-            />
+            {!singleLineOnly && (
+              <>
+                <path
+                  d="M 60 0 Q 300 180 750 160"
+                  fill="none"
+                  stroke="#475569"
+                  strokeWidth="8"
+                  opacity="0.3"
+                />
+                <path
+                  d="M 120 480 Q 400 300 700 0"
+                  fill="none"
+                  stroke="#475569"
+                  strokeWidth="8"
+                  opacity="0.3"
+                />
+                <path
+                  d="M 380 0 L 380 500"
+                  fill="none"
+                  stroke="#334155"
+                  strokeWidth="6"
+                  opacity="0.35"
+                />
+              </>
+            )}
           </svg>
         </div>
 
@@ -515,7 +583,7 @@ export default function RealTimeLogisticsMap({
         <div className="pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-blue-500/10 blur-3xl" />
 
         {/* District Zones & Landmarks */}
-        {showDistrictLabels && (
+        {!singleLineOnly && showDistrictLabels && (
           <div className="pointer-events-none absolute inset-0 text-[10px] font-extrabold uppercase tracking-widest text-slate-500/60">
             <span className="absolute top-12 left-14">Piassa Old Quarter</span>
             <span className="absolute top-10 left-[48%]">Kazanchis Financial Hub</span>
@@ -582,199 +650,410 @@ export default function RealTimeLogisticsMap({
             </marker>
           </defs>
 
-          {/* 1. All Route Polylines */}
-          {filteredRoutes.map((route) => {
-            const isSelected = route.id === activeRouteId
-            return (
-              <g
-                key={`route-path-${route.id}`}
-                onClick={() => handleSelectRoute(route.id)}
-                className="cursor-pointer group"
-              >
-                {/* Wider Invisible Hit Target */}
-                <path
-                  d={route.pathD}
-                  fill="none"
-                  stroke="transparent"
-                  strokeWidth="24"
-                />
+          {singleLineOnly ? (
+            <g>
+              {/* 1. THE ONE PROMINENT ROUTE LINE: Merchant to Customer */}
+              {/* Outer ambient glow */}
+              <path
+                d={singleLinePathD}
+                fill="none"
+                stroke="#10B981"
+                strokeWidth="14"
+                strokeOpacity="0.25"
+                strokeLinecap="round"
+              />
+              {/* Middle halo */}
+              <path
+                d={singleLinePathD}
+                fill="none"
+                stroke="#10B981"
+                strokeWidth="8"
+                strokeOpacity="0.5"
+                strokeLinecap="round"
+              />
+              {/* Solid high-visibility route stroke */}
+              <path
+                d={singleLinePathD}
+                fill="none"
+                stroke="#10B981"
+                strokeWidth="4.5"
+                strokeLinecap="round"
+              />
+              {/* Crisp white dashed core line for unmistakable visibility */}
+              <path
+                d={singleLinePathD}
+                fill="none"
+                stroke="#FFFFFF"
+                strokeWidth="2"
+                strokeDasharray="8 6"
+                strokeLinecap="round"
+              />
 
-                {/* Outer route glow */}
-                <path
-                  d={route.pathD}
-                  fill="none"
-                  stroke={isSelected ? '#10B981' : '#059669'}
-                  strokeWidth={isSelected ? '6' : '3'}
-                  strokeOpacity={isSelected ? '0.4' : '0.15'}
-                  filter={isSelected ? 'url(#routeGlow)' : undefined}
-                />
-
-                {/* Primary Route Line with Dash Effect */}
-                <path
-                  d={route.pathD}
-                  fill="none"
-                  stroke={isSelected ? '#34D399' : '#10B981'}
-                  strokeWidth={isSelected ? '3' : '2'}
-                  strokeDasharray={isSelected ? 'none' : '6 4'}
-                  strokeOpacity={isSelected ? '1' : '0.65'}
-                  className="transition-all duration-300"
-                />
-
-                {/* Intermediate Green Direction Arrows along the polyline path */}
-                {showDirectionArrows &&
-                  route.waypoints.slice(1, -1).map((wp, wIdx) => (
-                    <g
-                      key={`arrow-${route.id}-${wIdx}`}
-                      transform={`translate(${wp.x}, ${wp.y}) rotate(${wp.heading - 90})`}
-                      className="pointer-events-none"
-                    >
-                      {/* Direction Arrow Symbol (Green Map Arrow) */}
-                      <polygon
-                        points="-5,-7 7,0 -5,7 -2,0"
-                        fill="#22C55E"
-                        stroke="#090D16"
-                        strokeWidth="1.2"
-                        opacity={isSelected ? 1 : 0.85}
-                      />
-                    </g>
-                  ))}
-              </g>
-            )
-          })}
-
-          {/* 2. Restaurant Pickup Points */}
-          {filteredRoutes.map((route) => {
-            const isSelected = route.id === activeRouteId
-            return (
-              <g
-                key={`pickup-${route.id}`}
-                transform={`translate(${route.pickup.x}, ${route.pickup.y})`}
-                onClick={() => handleSelectRoute(route.id)}
-                className="cursor-pointer group"
-              >
-                {/* Pulse ring for selected */}
-                {isSelected && (
-                  <circle r="16" fill="#F97316" fillOpacity="0.25" className="animate-ping" />
-                )}
-                <circle
-                  r={isSelected ? '10' : '7'}
-                  fill="#F97316"
-                  stroke="#090D16"
-                  strokeWidth="2.5"
-                  className="transition-all duration-200"
-                />
-                <circle r="3" fill="#FFFFFF" />
-              </g>
-            )
-          })}
-
-          {/* 3. Destination Points */}
-          {filteredRoutes.map((route) => {
-            const isSelected = route.id === activeRouteId
-            return (
-              <g
-                key={`dest-${route.id}`}
-                transform={`translate(${route.destination.x}, ${route.destination.y})`}
-                onClick={() => handleSelectRoute(route.id)}
-                className="cursor-pointer group"
-              >
-                {/* Destination Beacon */}
-                <circle
-                  r={isSelected ? '11' : '8'}
-                  fill={route.status === 'Arrived' ? '#10B981' : '#3B82F6'}
-                  stroke="#090D16"
-                  strokeWidth="2.5"
-                />
+              {/* 2. MERCHANT TO CUSTOMER */}
+              {/* Point A: Merchant Location */}
+              <g transform="translate(170, 170)">
+                <circle r="18" fill="#FF6B35" fillOpacity="0.25" className="animate-pulse" />
+                <circle r="11" fill="#FF6B35" stroke="#FFFFFF" strokeWidth="2.5" />
                 <circle r="3.5" fill="#FFFFFF" />
+
+                {/* Badge Above */}
+                <g transform="translate(0, -24)" className="pointer-events-none">
+                  <rect
+                    x="-64"
+                    y="-12"
+                    width="128"
+                    height="24"
+                    rx="12"
+                    fill="#0B1120"
+                    stroke="#FF6B35"
+                    strokeWidth="1.5"
+                  />
+                  <text
+                    x="0"
+                    y="4.5"
+                    textAnchor="middle"
+                    fill="#FFFFFF"
+                    fontSize="11"
+                    fontWeight="bold"
+                    fontFamily="system-ui"
+                  >
+                    🏪 Merchant
+                  </text>
+                </g>
+
+                {/* Label Below */}
+                <text
+                  x="0"
+                  y="26"
+                  textAnchor="middle"
+                  fill="#E2E8F0"
+                  fontSize="11"
+                  fontWeight="bold"
+                  fontFamily="system-ui"
+                >
+                  {merchantName || 'Merchant'}
+                </text>
               </g>
-            )
-          })}
 
-          {/* 4. Couriers with PROMINENT GREEN MAP ARROWS & Direction Headings */}
-          {filteredRoutes.map((route) => {
-            const isSelected = route.id === activeRouteId
-            const curProg = route.currentProgress ?? route.initialProgress
-            const currentPos = interpolateWaypoint(route.waypoints, curProg)
+              {/* Point B: Customer Destination */}
+              <g transform="translate(630, 330)">
+                <circle r="18" fill="#3B82F6" fillOpacity="0.25" className="animate-pulse" />
+                <circle r="11" fill="#3B82F6" stroke="#FFFFFF" strokeWidth="2.5" />
+                <circle r="3.5" fill="#FFFFFF" />
 
-            return (
-              <g
-                key={`courier-${route.id}`}
-                transform={`translate(${currentPos.x}, ${currentPos.y})`}
-                onClick={() => handleSelectRoute(route.id)}
-                className="cursor-pointer"
-              >
-                {/* Pulsing Green Radar Wave Ring */}
+                {/* Badge Above */}
+                <g transform="translate(0, -24)" className="pointer-events-none">
+                  <rect
+                    x="-64"
+                    y="-12"
+                    width="128"
+                    height="24"
+                    rx="12"
+                    fill="#0B1120"
+                    stroke="#3B82F6"
+                    strokeWidth="1.5"
+                  />
+                  <text
+                    x="0"
+                    y="4.5"
+                    textAnchor="middle"
+                    fill="#FFFFFF"
+                    fontSize="11"
+                    fontWeight="bold"
+                    fontFamily="system-ui"
+                  >
+                    📍 Customer
+                  </text>
+                </g>
+
+                {/* Label Below */}
+                <text
+                  x="0"
+                  y="26"
+                  textAnchor="middle"
+                  fill="#E2E8F0"
+                  fontSize="11"
+                  fontWeight="bold"
+                  fontFamily="system-ui"
+                >
+                  {customerName || 'Customer'}
+                </text>
+              </g>
+
+              {/* 3. ARROW: THE RIDER ONLY */}
+              <g transform={`translate(${singleRiderPos.x}, ${singleRiderPos.y})`}>
+                <circle r="22" fill="#10B981" fillOpacity="0.3" className="animate-ping" />
                 <circle
-                  r={isSelected ? '24' : '18'}
-                  fill="#10B981"
-                  fillOpacity={isSelected ? '0.35' : '0.2'}
-                  className="animate-ping"
-                />
-
-                {/* Courier Badge Outer Halo */}
-                <circle
-                  r={isSelected ? '18' : '14'}
+                  r="16"
                   fill="#064E3B"
                   stroke="#10B981"
-                  strokeWidth={isSelected ? '2.5' : '1.8'}
+                  strokeWidth="2.2"
                   filter="url(#routeGlow)"
                 />
+                <circle r="11" fill="#090D16" />
 
-                {/* Inner Base */}
-                <circle r={isSelected ? '13' : '10'} fill="#090D16" />
+                {/* The Rider Navigation Arrow pointing towards customer */}
+                <g transform={`rotate(${singleRiderPos.heading})`}>
+                  <path
+                    d="M 0 -15 L 8 9 L 0 4 L -8 9 Z"
+                    fill="#22C55E"
+                    stroke="#FFFFFF"
+                    strokeWidth="1.5"
+                    className="drop-shadow-[0_0_8px_rgba(34,197,94,0.9)]"
+                  />
+                </g>
 
-                {/* THE GREEN DIRECTION ARROW: Rotated to match vehicle direction / heading */}
-                {showDirectionArrows && (
-                  <g transform={`rotate(${currentPos.heading})`}>
-                    {/* Directional navigation pointer (Arrow Cone) */}
+                {/* Rider Label Badge */}
+                <g transform="translate(0, 26)" className="pointer-events-none">
+                  <rect
+                    x="-42"
+                    y="-9"
+                    width="84"
+                    height="18"
+                    rx="9"
+                    fill="#064E3B"
+                    stroke="#10B981"
+                    strokeWidth="1.2"
+                  />
+                  <text
+                    x="0"
+                    y="3.5"
+                    textAnchor="middle"
+                    fill="#FFFFFF"
+                    fontSize="9.5"
+                    fontWeight="bold"
+                    fontFamily="system-ui"
+                  >
+                    ➤ {riderName ? riderName.split(' ')[0] : 'Rider'}
+                  </text>
+                </g>
+              </g>
+            </g>
+          ) : (
+            <>
+              {/* 1. All Route Polylines */}
+              {filteredRoutes.map((route) => {
+                const isSelected = route.id === activeRouteId
+                return (
+                  <g
+                    key={`route-path-${route.id}`}
+                    onClick={() => handleSelectRoute(route.id)}
+                    className="cursor-pointer group"
+                  >
+                    {/* Wider Invisible Hit Target */}
                     <path
-                      d="M 0 -11 L 6 7 L 0 4 L -6 7 Z"
-                      fill="#22C55E"
-                      stroke="#FFFFFF"
-                      strokeWidth="1.2"
-                      className="drop-shadow-[0_0_8px_rgba(34,197,94,0.9)]"
+                      d={route.pathD}
+                      fill="none"
+                      stroke="transparent"
+                      strokeWidth="24"
                     />
+
+                    {/* Outer route glow */}
+                    <path
+                      d={route.pathD}
+                      fill="none"
+                      stroke={isSelected ? '#10B981' : '#059669'}
+                      strokeWidth={isSelected ? '6' : '3'}
+                      strokeOpacity={isSelected ? '0.4' : '0.15'}
+                      filter={isSelected ? 'url(#routeGlow)' : undefined}
+                    />
+
+                    {/* Primary Route Line with Dash Effect */}
+                    <path
+                      d={route.pathD}
+                      fill="none"
+                      stroke={isSelected ? '#34D399' : '#10B981'}
+                      strokeWidth={isSelected ? '3' : '2'}
+                      strokeDasharray={isSelected ? 'none' : '6 4'}
+                      strokeOpacity={isSelected ? '1' : '0.65'}
+                      className="transition-all duration-300"
+                    />
+
+                    {/* Intermediate Green Direction Arrows along the polyline path */}
+                    {showDirectionArrows &&
+                      route.waypoints.slice(1, -1).map((wp, wIdx) => (
+                        <g
+                          key={`arrow-${route.id}-${wIdx}`}
+                          transform={`translate(${wp.x}, ${wp.y}) rotate(${wp.heading - 90})`}
+                          className="pointer-events-none"
+                        >
+                          {/* Direction Arrow Symbol (Green Map Arrow) */}
+                          <polygon
+                            points="-5,-7 7,0 -5,7 -2,0"
+                            fill="#22C55E"
+                            stroke="#090D16"
+                            strokeWidth="1.2"
+                            opacity={isSelected ? 1 : 0.85}
+                          />
+                        </g>
+                      ))}
                   </g>
-                )}
+                )
+              })}
 
-                {/* Center Core Dot if arrows off */}
-                {!showDirectionArrows && (
-                  <circle r="4" fill="#22C55E" />
-                )}
+              {/* 2. Restaurant Pickup Points */}
+              {filteredRoutes.map((route) => {
+                const isSelected = route.id === activeRouteId
+                return (
+                  <g
+                    key={`pickup-${route.id}`}
+                    transform={`translate(${route.pickup.x}, ${route.pickup.y})`}
+                    onClick={() => handleSelectRoute(route.id)}
+                    className="cursor-pointer group"
+                  >
+                    {/* Pulse ring for selected */}
+                    {isSelected && (
+                      <circle r="16" fill="#F97316" fillOpacity="0.25" className="animate-ping" />
+                    )}
+                    <circle
+                      r={isSelected ? '10' : '7'}
+                      fill="#F97316"
+                      stroke="#090D16"
+                      strokeWidth="2.5"
+                      className="transition-all duration-200"
+                    />
+                    <circle r="3" fill="#FFFFFF" />
+                  </g>
+                )
+              })}
 
-                {/* Selected Float Badge with Driver Name & Green Direction Arrow Icon */}
-                {isSelected && (
-                  <g transform="translate(0, -32)" className="pointer-events-none">
-                    <rect
-                      x="-70"
-                      y="-12"
-                      width="140"
-                      height="24"
-                      rx="12"
+              {/* 3. Destination Points */}
+              {filteredRoutes.map((route) => {
+                const isSelected = route.id === activeRouteId
+                return (
+                  <g
+                    key={`dest-${route.id}`}
+                    transform={`translate(${route.destination.x}, ${route.destination.y})`}
+                    onClick={() => handleSelectRoute(route.id)}
+                    className="cursor-pointer group"
+                  >
+                    {/* Destination Beacon */}
+                    <circle
+                      r={isSelected ? '11' : '8'}
+                      fill={route.status === 'Arrived' ? '#10B981' : '#3B82F6'}
+                      stroke="#090D16"
+                      strokeWidth="2.5"
+                    />
+                    <circle r="3.5" fill="#FFFFFF" />
+                  </g>
+                )
+              })}
+
+              {/* 4. Couriers with PROMINENT GREEN MAP ARROWS & Direction Headings */}
+              {filteredRoutes.map((route) => {
+                const isSelected = route.id === activeRouteId
+                const curProg = route.currentProgress ?? route.initialProgress
+                const currentPos = interpolateWaypoint(route.waypoints, curProg)
+
+                return (
+                  <g
+                    key={`courier-${route.id}`}
+                    transform={`translate(${currentPos.x}, ${currentPos.y})`}
+                    onClick={() => handleSelectRoute(route.id)}
+                    className="cursor-pointer"
+                  >
+                    {/* Pulsing Green Radar Wave Ring */}
+                    <circle
+                      r={isSelected ? '24' : '18'}
+                      fill="#10B981"
+                      fillOpacity={isSelected ? '0.35' : '0.2'}
+                      className="animate-ping"
+                    />
+
+                    {/* Courier Badge Outer Halo */}
+                    <circle
+                      r={isSelected ? '18' : '14'}
                       fill="#064E3B"
                       stroke="#10B981"
-                      strokeWidth="1.5"
+                      strokeWidth={isSelected ? '2.5' : '1.8'}
+                      filter="url(#routeGlow)"
                     />
-                    <text
-                      x="0"
-                      y="4"
-                      textAnchor="middle"
-                      fill="#FFFFFF"
-                      fontSize="10"
-                      fontWeight="bold"
-                      fontFamily="system-ui"
-                    >
-                      ➤ {route.driver.name} ({route.etaText})
-                    </text>
+
+                    {/* Inner Base */}
+                    <circle r={isSelected ? '13' : '10'} fill="#090D16" />
+
+                    {/* THE GREEN DIRECTION ARROW: Rotated to match vehicle direction / heading */}
+                    {showDirectionArrows && (
+                      <g transform={`rotate(${currentPos.heading})`}>
+                        {/* Directional navigation pointer (Arrow Cone) */}
+                        <path
+                          d="M 0 -11 L 6 7 L 0 4 L -6 7 Z"
+                          fill="#22C55E"
+                          stroke="#FFFFFF"
+                          strokeWidth="1.2"
+                          className="drop-shadow-[0_0_8px_rgba(34,197,94,0.9)]"
+                        />
+                      </g>
+                    )}
+
+                    {/* Center Core Dot if arrows off */}
+                    {!showDirectionArrows && (
+                      <circle r="4" fill="#22C55E" />
+                    )}
+
+                    {/* Selected Float Badge with Driver Name & Green Direction Arrow Icon */}
+                    {isSelected && (
+                      <g transform="translate(0, -32)" className="pointer-events-none">
+                        <rect
+                          x="-70"
+                          y="-12"
+                          width="140"
+                          height="24"
+                          rx="12"
+                          fill="#064E3B"
+                          stroke="#10B981"
+                          strokeWidth="1.5"
+                        />
+                        <text
+                          x="0"
+                          y="4"
+                          textAnchor="middle"
+                          fill="#FFFFFF"
+                          fontSize="10"
+                          fontWeight="bold"
+                          fontFamily="system-ui"
+                        >
+                          ➤ {route.driver.name} ({route.etaText})
+                        </text>
+                      </g>
+                    )}
                   </g>
-                )}
-              </g>
-            )
-          })}
+                )
+              })}
+            </>
+          )}
         </svg>
 
+        {/* Single Route Telemetry Badge (Bottom Left) */}
+        {singleLineOnly && (
+          <div className="absolute bottom-4 left-4 z-20 flex items-center gap-3 rounded-2xl border border-slate-700/80 bg-[#0B1120]/90 px-4 py-2.5 backdrop-blur-md shadow-xl text-xs">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/30">
+              <span
+                className="material-symbols-outlined text-lg text-emerald-400"
+                style={{
+                  transform: `rotate(${singleRiderPos.heading}deg)`,
+                  transition: 'transform 0.4s ease',
+                }}
+              >
+                navigation
+              </span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-white">{riderName || 'Dawit Mengistu'}</span>
+                <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-extrabold text-emerald-400 ring-1 ring-emerald-500/30">
+                  En Route (38 km/h)
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                <span className="text-orange-400 font-semibold">{merchantName || 'Merchant'}</span> ➔ <span className="text-blue-400 font-semibold">{customerName || 'Customer'}</span>
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Selected Route Info Drawer & Telemetry Card (Bottom Left Overlay) */}
-        {activeRoute && (
+        {!singleLineOnly && activeRoute && (
           <div className="absolute bottom-4 left-4 z-30 max-w-sm rounded-2xl border border-slate-700/80 bg-[#0B1120]/95 p-4 shadow-2xl backdrop-blur-md">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2.5">
@@ -823,13 +1102,13 @@ export default function RealTimeLogisticsMap({
               <div className="flex items-center gap-2 text-slate-300">
                 <span className="h-2 w-2 rounded-full bg-orange-500 shrink-0" />
                 <span className="truncate">
-                  <span className="font-semibold text-orange-400">Pickup:</span> {activeRoute.pickup.name}
+                  <span className="font-semibold text-orange-400">{pickupLabel}</span> {activeRoute.pickup.name}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-slate-300">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
                 <span className="truncate">
-                  <span className="font-semibold text-emerald-400">Delivery:</span> {activeRoute.destination.line1}
+                  <span className="font-semibold text-emerald-400">{destinationLabel}</span> {activeRoute.destination.line1}
                 </span>
               </div>
             </div>
@@ -858,53 +1137,57 @@ export default function RealTimeLogisticsMap({
         )}
 
         {/* Map Legend Overlay (Top Right) */}
-        <div className="absolute top-4 right-4 z-20 flex flex-col gap-1.5 rounded-xl border border-slate-800/80 bg-[#090D16]/90 p-2.5 text-[11px] backdrop-blur-md">
-          <div className="flex items-center gap-2">
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
-              <span className="material-symbols-outlined text-xs">navigation</span>
-            </span>
-            <span className="text-slate-300 font-semibold">Green Map Direction Arrow</span>
+        {!singleLineOnly && (
+          <div className="absolute top-4 right-4 z-20 flex flex-col gap-1.5 rounded-xl border border-slate-800/80 bg-[#090D16]/90 p-2.5 text-[11px] backdrop-blur-md">
+            <div className="flex items-center gap-2">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+                <span className="material-symbols-outlined text-xs">navigation</span>
+              </span>
+              <span className="text-slate-300 font-semibold">Green Map Direction Arrow</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-orange-500" />
+              <span className="text-slate-400">Pickup Restaurant</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
+              <span className="text-slate-400">Delivery Destination</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-0.5 w-4 bg-emerald-400" />
+              <span className="text-slate-400">Active Live Route</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-orange-500" />
-            <span className="text-slate-400">Pickup Restaurant</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
-            <span className="text-slate-400">Delivery Destination</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="h-0.5 w-4 bg-emerald-400" />
-            <span className="text-slate-400">Active Live Route</span>
-          </div>
-        </div>
+        )}
 
         {/* Bottom Quick Courier Switcher Ribbon */}
-        <div className="absolute bottom-4 right-4 z-20 hidden md:flex items-center gap-1.5 rounded-xl border border-slate-800/90 bg-[#090D16]/90 p-1.5 backdrop-blur-md">
-          <span className="px-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            Routes:
-          </span>
-          {filteredRoutes.slice(0, 6).map((r) => {
-            const isSelected = r.id === activeRouteId
-            return (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => handleSelectRoute(r.id)}
-                className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold transition ${
-                  isSelected
-                    ? 'bg-emerald-500 text-slate-950 shadow-md'
-                    : 'bg-slate-900/60 text-slate-400 hover:bg-slate-800 hover:text-white'
-                }`}
-              >
-                <span className="material-symbols-outlined text-xs">
-                  {isSelected ? 'near_me' : 'two_wheeler'}
-                </span>
-                <span>{r.orderNumber.replace('#ORD-', '#')}</span>
-              </button>
-            )
-          })}
-        </div>
+        {!singleLineOnly && (
+          <div className="absolute bottom-4 right-4 z-20 hidden md:flex items-center gap-1.5 rounded-xl border border-slate-800/90 bg-[#090D16]/90 p-1.5 backdrop-blur-md">
+            <span className="px-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Routes:
+            </span>
+            {filteredRoutes.slice(0, 6).map((r) => {
+              const isSelected = r.id === activeRouteId
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => handleSelectRoute(r.id)}
+                  className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold transition ${
+                    isSelected
+                      ? 'bg-emerald-500 text-slate-950 shadow-md'
+                      : 'bg-slate-900/60 text-slate-400 hover:bg-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-xs">
+                    {isSelected ? 'near_me' : 'two_wheeler'}
+                  </span>
+                  <span>{r.orderNumber.replace('#ORD-', '#')}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )

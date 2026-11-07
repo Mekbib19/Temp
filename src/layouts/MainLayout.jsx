@@ -1,16 +1,39 @@
 import { useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import Header from '../components/Header'
 
 const MainLayout = ({
   children,
-  activeMenuKey = 'dashboard',
+  activeMenuKey,
   breadcrumbParent,
   breadcrumbMiddle,
   breadcrumbCurrent,
 }) => {
+  const location = useLocation()
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+
+  // Automatically determine active menu key if not explicitly supplied
+  let resolvedActiveMenuKey = activeMenuKey
+  if (!resolvedActiveMenuKey) {
+    const path = location.pathname
+    if (path.startsWith('/order')) resolvedActiveMenuKey = 'orderManagement'
+    else if (path.startsWith('/customers')) resolvedActiveMenuKey = 'customerManagement'
+    else if (path.startsWith('/riders/verification')) resolvedActiveMenuKey = 'riderVerification'
+    else if (path.startsWith('/riders')) resolvedActiveMenuKey = 'riderManagement'
+    else if (path.startsWith('/staff')) resolvedActiveMenuKey = 'staffManagement'
+    else if (path.startsWith('/restaurants') || path.startsWith('/merchants')) resolvedActiveMenuKey = 'merchantManagement'
+    else if (path.startsWith('/categories')) resolvedActiveMenuKey = 'categoryManagement'
+    else if (path.startsWith('/cuisines')) resolvedActiveMenuKey = 'cuisineManagement'
+    else if (path.startsWith('/menu-categories')) resolvedActiveMenuKey = 'menuCategory'
+    else if (path.startsWith('/delivery')) resolvedActiveMenuKey = 'deliveryManagement'
+    else if (path.startsWith('/finance')) resolvedActiveMenuKey = 'finance'
+    else if (path.startsWith('/insights')) resolvedActiveMenuKey = 'insights'
+    else if (path.startsWith('/security')) resolvedActiveMenuKey = 'security'
+    else if (path.startsWith('/settings')) resolvedActiveMenuKey = 'settings'
+    else resolvedActiveMenuKey = 'dashboard'
+  }
 
   return (
     <div className="min-h-screen bg-[#f7f7f7] text-slate-900 dark:bg-zinc-950 dark:text-zinc-100">
@@ -18,7 +41,7 @@ const MainLayout = ({
         isCollapsed={isSidebarCollapsed}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
-        activeMenuKey={activeMenuKey}
+        activeMenuKey={resolvedActiveMenuKey}
       />
       {isMobileSidebarOpen && (
         <button

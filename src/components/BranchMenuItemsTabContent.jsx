@@ -4,7 +4,168 @@ import {
   saveMenuItem,
   deleteMenuItem,
   getCategoriesForBranch,
+  getItemImages,
 } from '../data/demoMenuItems'
+
+/**
+ * Compact Independent Menu Item Card with Image Pagination (Black arrow on white circle)
+ */
+function MenuItemCard({
+  item,
+  onToggleAvailability,
+  onEdit,
+  onDelete,
+  onImagePreview,
+}) {
+  const [primaryImageIdx, setPrimaryImageIdx] = useState(0)
+  const itemImages = useMemo(() => {
+    const imgs = getItemImages(item)
+    return imgs && imgs.length > 0
+      ? imgs
+      : [item.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80']
+  }, [item])
+
+  const handlePrevImage = (e) => {
+    e.stopPropagation()
+    setPrimaryImageIdx((prev) => (prev === 0 ? itemImages.length - 1 : prev - 1))
+  }
+
+  const handleNextImage = (e) => {
+    e.stopPropagation()
+    setPrimaryImageIdx((prev) => (prev === itemImages.length - 1 ? 0 : prev + 1))
+  }
+
+  return (
+    <div className="group flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
+      {/* 1. Image Section with Black Arrow on White Circle Pagination */}
+      <div className="relative h-44 sm:h-48 w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-zinc-800">
+        <img
+          src={itemImages[primaryImageIdx] || itemImages[0]}
+          alt={item.name}
+          onClick={() => onImagePreview?.(itemImages[primaryImageIdx] || itemImages[0])}
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 cursor-pointer"
+        />
+
+        {/* Badges on image */}
+        <span className="absolute top-2.5 left-2.5 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white shadow-xs backdrop-blur-md">
+          {primaryImageIdx === 0 ? 'Cover Photo' : `Photo ${primaryImageIdx + 1}/${itemImages.length}`}
+        </span>
+
+        <button
+          type="button"
+          onClick={() => onToggleAvailability?.(item)}
+          className={`absolute top-2.5 right-2.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold shadow-xs backdrop-blur-md transition cursor-pointer ${
+            item.is_available
+              ? 'bg-emerald-500/95 text-white hover:bg-emerald-600'
+              : 'bg-black/70 text-zinc-300 hover:bg-black/90'
+          }`}
+        >
+          {item.is_available ? 'Available' : 'Paused'}
+        </button>
+
+        {/* Image Pagination: Black arrow button with background of white circle */}
+        {itemImages.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={handlePrevImage}
+              aria-label="Previous image"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-black shadow-md hover:scale-110 active:scale-95 transition cursor-pointer z-10"
+              title="Previous image"
+            >
+              <span className="material-symbols-outlined text-lg leading-none font-bold">chevron_left</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleNextImage}
+              aria-label="Next image"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-black shadow-md hover:scale-110 active:scale-95 transition cursor-pointer z-10"
+              title="Next image"
+            >
+              <span className="material-symbols-outlined text-lg leading-none font-bold">chevron_right</span>
+            </button>
+
+            {/* Bottom dots pagination indicator */}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 backdrop-blur-xs">
+              {itemImages.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setPrimaryImageIdx(idx)
+                  }}
+                  className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                    primaryImageIdx === idx ? 'w-3.5 bg-white' : 'w-1.5 bg-white/50 hover:bg-white/80'
+                  }`}
+                  aria-label={`Jump to image ${idx + 1}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* 2. Compact Item Info Section (Extra info moved to detail page) */}
+      <div className="mt-3 flex-1 flex flex-col justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-1.5">
+            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700 dark:bg-zinc-800 dark:text-zinc-300">
+              {item.category_type || item.category || 'Menu Item'}
+            </span>
+            {item.requires_prescription && (
+              <span className="flex items-center gap-0.5 rounded-md bg-rose-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-xs">
+                Rx
+              </span>
+            )}
+            {item.is_age_restricted && (
+              <span className="rounded-md bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-xs">
+                18+
+              </span>
+            )}
+          </div>
+
+          <h3 className="mt-1.5 text-sm font-bold text-slate-900 dark:text-zinc-100 line-clamp-1" title={item.name}>
+            {item.name}
+          </h3>
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-zinc-400 line-clamp-1">
+            {item.description || 'View detail for portions, ingredients and modifiers.'}
+          </p>
+        </div>
+
+        {/* Pricing and Stock Row */}
+        <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between">
+          <span className="text-sm font-extrabold text-slate-900 dark:text-zinc-100">
+            ETB {item.price} <span className="text-[11px] font-normal text-slate-500">/ {item.unit || 'portion'}</span>
+          </span>
+          <span className="text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+            Stock: <strong className="text-slate-800 dark:text-zinc-200">{item.stock_quantity ?? 50}</strong>
+          </span>
+        </div>
+
+        {/* Card Action Buttons: See Detail / Edit & Delete */}
+        <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
+          <button
+            type="button"
+            onClick={() => onEdit?.(item)}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-orange-50 px-3 py-1.5 text-xs font-bold text-[#FF6B35] shadow-2xs hover:bg-orange-100 dark:bg-orange-950/30 dark:hover:bg-orange-950/50 transition cursor-pointer"
+          >
+            <span>See Detail</span>
+            <span className="material-symbols-outlined text-sm">arrow_forward</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete?.(item)}
+            className="rounded-xl border border-red-200 p-1.5 text-red-500 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-950/30 transition cursor-pointer"
+            title="Delete Item"
+          >
+            <span className="material-symbols-outlined text-base">delete</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function BranchMenuItemsTabContent({
   menuItems,
@@ -19,6 +180,7 @@ export default function BranchMenuItemsTabContent({
   const [searchQuery, setSearchQuery] = useState('')
   const [stockFilter, setStockFilter] = useState('all') // 'all' | 'in_stock' | 'low_stock' | 'out_of_stock'
   const [viewMode, setViewMode] = useState('grid') // 'grid' | 'table'
+  const [previewModalImage, setPreviewModalImage] = useState(null)
 
   // Merchant categories strictly relating to this merchant's assigned categories earlier
   const merchantCategories = useMemo(() => {
@@ -194,7 +356,7 @@ export default function BranchMenuItemsTabContent({
           <button
             type="button"
             onClick={() => setViewMode('grid')}
-            className={`rounded-lg p-1.5 transition ${
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition cursor-pointer ${
               viewMode === 'grid'
                 ? 'bg-slate-100 text-[#FF6B35] dark:bg-zinc-800'
                 : 'text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200'
@@ -202,11 +364,12 @@ export default function BranchMenuItemsTabContent({
             title="Grid View"
           >
             <span className="material-symbols-outlined text-base">grid_view</span>
+            <span className="hidden sm:inline">Grid</span>
           </button>
           <button
             type="button"
             onClick={() => setViewMode('table')}
-            className={`rounded-lg p-1.5 transition ${
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition cursor-pointer ${
               viewMode === 'table'
                 ? 'bg-slate-100 text-[#FF6B35] dark:bg-zinc-800'
                 : 'text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200'
@@ -214,6 +377,7 @@ export default function BranchMenuItemsTabContent({
             title="Table View"
           >
             <span className="material-symbols-outlined text-base">view_list</span>
+            <span className="hidden sm:inline">Table</span>
           </button>
         </div>
 
@@ -285,197 +449,29 @@ export default function BranchMenuItemsTabContent({
           </div>
         </div>
       ) : viewMode === 'grid' ? (
-        /* GRID VIEW */
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredItems.map((item) => {
-            const hasLowStock =
-              item.stock_quantity !== undefined &&
-              item.stock_quantity <= 15 &&
-              item.stock_quantity > 0
-            const isOutOfStock =
-              !item.is_available ||
-              (item.stock_quantity !== undefined && item.stock_quantity <= 0)
-
-            return (
-              <div
-                key={item.id}
-                className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs transition hover:border-[#FF6B35]/60 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
-              >
-                {/* Image and Badges */}
-                <div>
-                  <div className="relative h-44 w-full overflow-hidden bg-slate-100 dark:bg-zinc-800">
-                    {item.image_url ? (
-                      <img
-                        src={item.image_url}
-                        alt={item.name}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-slate-300 dark:text-zinc-600">
-                        <span className="material-symbols-outlined text-5xl">
-                          restaurant_menu
-                        </span>
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-
-                    {/* Category & Status Badges */}
-                    <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
-                      <span className="rounded-lg bg-black/60 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-md">
-                        {item.category_type || 'General'}
-                      </span>
-                      {item.requires_prescription && (
-                        <span className="flex items-center gap-0.5 rounded-lg bg-rose-600 px-2 py-1 text-[10px] font-bold text-white shadow-sm">
-                          <span className="material-symbols-outlined text-[11px]">medication</span>
-                          Rx Required
-                        </span>
-                      )}
-                      {item.is_age_restricted && (
-                        <span className="rounded-lg bg-amber-500 px-2 py-1 text-[10px] font-bold text-white shadow-sm">
-                          18+ Restricted
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Availability Switch */}
-                    <div className="absolute right-3 top-3">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleToggleAvailability(item)
-                        }}
-                        className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold shadow-md transition ${
-                          item.is_available
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-zinc-800/80 text-zinc-300 backdrop-blur-md'
-                        }`}
-                        title="Toggle availability"
-                      >
-                        <span
-                          className={`h-2 w-2 rounded-full ${
-                            item.is_available ? 'bg-white animate-pulse' : 'bg-rose-400'
-                          }`}
-                        />
-                        <span>{item.is_available ? 'Available' : 'Paused'}</span>
-                      </button>
-                    </div>
-
-                    {/* Price Tag in Bottom Left */}
-                    <div className="absolute bottom-3 left-3 flex items-baseline gap-1">
-                      <span className="text-lg font-black text-white drop-shadow-md">
-                        ETB {Number(item.price).toLocaleString()}
-                      </span>
-                      {item.unit && (
-                        <span className="text-xs font-semibold text-white/80">
-                          / {item.unit}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Stock pill in bottom right */}
-                    <div className="absolute bottom-3 right-3">
-                      {isOutOfStock ? (
-                        <span className="rounded-md bg-rose-500/90 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
-                          Out of Stock
-                        </span>
-                      ) : hasLowStock ? (
-                        <span className="rounded-md bg-amber-500/90 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
-                          Only {item.stock_quantity} left
-                        </span>
-                      ) : (
-                        <span className="rounded-md bg-black/50 px-2 py-0.5 text-[10px] font-bold text-white/90 backdrop-blur-sm">
-                          Stock: {item.stock_quantity ?? 'In Stock'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Body Content */}
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#FF6B35] transition dark:text-zinc-100">
-                        {item.name}
-                      </h3>
-                      {item.sku && (
-                        <span className="shrink-0 font-mono text-[10px] font-bold text-slate-400">
-                          {item.sku}
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="mt-1.5 text-xs text-slate-500 line-clamp-2 dark:text-zinc-400 leading-relaxed">
-                      {item.description || 'No item description provided.'}
-                    </p>
-
-                    {/* Sizes & Add-on tags preview */}
-                    <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2.5 dark:border-zinc-800">
-                      {item.sizes && item.sizes.length > 0 && (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-zinc-800 dark:text-zinc-300">
-                          <span className="material-symbols-outlined text-[11px]">straighten</span>
-                          {item.sizes.length} Sizes
-                        </span>
-                      )}
-                      {item.extra_groups && item.extra_groups.length > 0 && (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-orange-50 px-2 py-0.5 text-[10px] font-bold text-[#FF6B35] dark:bg-orange-950/40 dark:text-orange-400">
-                          <span className="material-symbols-outlined text-[11px]">layers</span>
-                          {item.extra_groups.length} Add-on Groups
-                        </span>
-                      )}
-                      {item.expiry_date && (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
-                          <span className="material-symbols-outlined text-[11px]">event</span>
-                          Exp: {item.expiry_date}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer Actions */}
-                <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-850/50">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const catId = item.menu_category_id || (item.category_type?.toLowerCase().includes('burger') ? 'mcat-food-001' : 'mcat-food-001')
-                      const bId = branch?.id || ''
-                      const mId = merchant?.id || ''
-                      navigate(`/menu-items/${item.id || catId}?merchantId=${mId}&branchId=${bId}`)
-                    }}
-                    className="inline-flex items-center gap-1 text-xs font-bold text-[#FF6B35] hover:underline"
-                    title="View and configure extra options"
-                  >
-                    <span>View Configuration</span>
-                    <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                  </button>
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const catId = item.menu_category_id || (item.category_type?.toLowerCase().includes('burger') ? 'mcat-food-001' : 'mcat-food-001')
-                        const bId = branch?.id || ''
-                        const mId = merchant?.id || ''
-                        navigate(`/menu-items/${item.id || catId}?merchantId=${mId}&branchId=${bId}`)
-                      }}
-                      className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-200 hover:text-slate-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-                      title="Edit Item"
-                    >
-                      <span className="material-symbols-outlined text-base">edit</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeleteCandidate(item)}
-                      className="rounded-lg p-1.5 text-rose-500 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950/40"
-                      title="Delete Item"
-                    >
-                      <span className="material-symbols-outlined text-base">delete</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+        /* GRID VIEW - COMPACT RESPONSIVE MENU ITEM CARDS */
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+          {filteredItems.map((item) => (
+            <MenuItemCard
+              key={item.id}
+              item={item}
+              onToggleAvailability={handleToggleAvailability}
+              onEdit={(it) => {
+                const catId = it.menu_category_id || 'mcat-food-001'
+                const bId = branch?.id || ''
+                const mId = merchant?.id || ''
+                navigate(`/menu-items/${it.id || catId}?merchantId=${mId}&branchId=${bId}`)
+              }}
+              onAddCustomization={(it) => {
+                const catId = it.menu_category_id || 'mcat-food-001'
+                const bId = branch?.id || ''
+                const mId = merchant?.id || ''
+                navigate(`/menu-items/${it.id || catId}?merchantId=${mId}&branchId=${bId}`)
+              }}
+              onDelete={(it) => setDeleteCandidate(it)}
+              onImagePreview={(url) => setPreviewModalImage(url)}
+            />
+          ))}
         </div>
       ) : (
         /* TABLE VIEW */
@@ -907,6 +903,32 @@ export default function BranchMenuItemsTabContent({
           </div>
         </div>
       )}
+
+      {/* Lightbox Photo Preview Modal */}
+      {previewModalImage && (
+        <div
+          onClick={() => setPreviewModalImage(null)}
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/85 p-4 backdrop-blur-xs animate-fadeIn"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-h-[85vh] max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-zinc-900"
+          >
+            <button
+              type="button"
+              onClick={() => setPreviewModalImage(null)}
+              className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black transition"
+            >
+              <span className="material-symbols-outlined text-lg">close</span>
+            </button>
+            <img
+              src={previewModalImage}
+              alt="Preview"
+              className="max-h-[80vh] w-auto object-contain"
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -928,6 +950,12 @@ function ItemFormModal({
   const defaultCat = availableCategories[0]?.name || 'Drinks'
   const defaultCatId = availableCategories[0]?.id || ''
 
+  const initialImages = item?.images && Array.isArray(item.images) && item.images.length > 0
+    ? item.images
+    : item?.image_url
+    ? [item.image_url]
+    : []
+
   const [formData, setFormData] = useState({
     id: item?.id || '',
     merchant_branch_id: item?.merchant_branch_id || branchId || 'branch-default',
@@ -937,7 +965,8 @@ function ItemFormModal({
     name: item?.name || '',
     description: item?.description || '',
     price: item?.price ?? 180,
-    image_url: item?.image_url || '',
+    images: initialImages,
+    image_url: initialImages[0] || item?.image_url || '',
     is_available: item?.is_available !== undefined ? item.is_available : true,
     stock_quantity: item?.stock_quantity ?? 50,
     unit: item?.unit || 'pcs',
@@ -951,28 +980,47 @@ function ItemFormModal({
     extra_groups: item?.extra_groups ? JSON.parse(JSON.stringify(item.extra_groups)) : [],
   })
 
+  const [isModalDragOver, setIsModalDragOver] = useState(false)
   const fileInputRef = useRef(null)
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (!file.type.startsWith('image/')) {
-      return
-    }
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setFormData((prev) => ({ ...prev, image_url: event.target.result }))
+  const handleProcessModalFiles = (files) => {
+    if (!files || files.length === 0) return
+    const valid = Array.from(files).filter((f) => f.type.startsWith('image/'))
+    if (valid.length === 0) return
+
+    let done = 0
+    const newImages = []
+    valid.forEach((file) => {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          newImages.push(event.target.result)
+        }
+        done++
+        if (done === valid.length) {
+          setFormData((prev) => {
+            const combined = [...prev.images, ...newImages]
+            return {
+              ...prev,
+              images: combined,
+              image_url: combined[0] || '',
+            }
+          })
+        }
       }
-    }
-    reader.readAsDataURL(file)
+      reader.readAsDataURL(file)
+    })
   }
 
-  const handleRemoveImage = () => {
-    setFormData((prev) => ({ ...prev, image_url: '' }))
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
+  const handleRemoveImageIdx = (idxToRemove) => {
+    setFormData((prev) => {
+      const updated = prev.images.filter((_, i) => i !== idxToRemove)
+      return {
+        ...prev,
+        images: updated,
+        image_url: updated[0] || '',
+      }
+    })
   }
 
   const handleChange = (e) => {
@@ -1200,67 +1248,105 @@ function ItemFormModal({
 
           {/* Product Image Upload & Expiry Date (Expiry Date conditional on Pharmacy) */}
           <div className={`grid grid-cols-1 gap-4 ${isPharmacyDomain ? 'sm:grid-cols-2' : ''}`}>
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-zinc-300">
-                Product Image
-              </label>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block font-bold text-slate-700 dark:text-zinc-300">
+                  Product Photos ({formData.images?.length || 0})
+                </label>
+                <span className="text-[10px] text-slate-400">
+                  Drag & Drop enabled
+                </span>
+              </div>
 
               <input
                 ref={fileInputRef}
                 type="file"
+                multiple
                 accept="image/*"
-                onChange={handleImageUpload}
+                onChange={(e) => {
+                  if (e.target.files) handleProcessModalFiles(e.target.files)
+                  if (fileInputRef.current) fileInputRef.current.value = ''
+                }}
                 className="hidden"
               />
 
-              {formData.image_url ? (
-                <div className="mt-1.5 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-2.5 dark:border-zinc-700 dark:bg-zinc-800">
-                  <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
-                    <img
-                      src={formData.image_url}
-                      alt="Uploaded preview"
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-slate-800 dark:text-zinc-200 truncate">
-                      Image attached
-                    </p>
-                    <p className="text-[10px] text-slate-400">
-                      Product image ready
-                    </p>
-                    <div className="mt-1 flex items-center gap-2">
+              {/* Drag and Drop Zone */}
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setIsModalDragOver(true)
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setIsModalDragOver(false)
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setIsModalDragOver(false)
+                  if (e.dataTransfer?.files) handleProcessModalFiles(e.dataTransfer.files)
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                className={`group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-3 text-center transition ${
+                  isModalDragOver
+                    ? 'border-[#FF6B35] bg-orange-50/70 dark:bg-orange-950/40'
+                    : 'border-slate-200 bg-slate-50/70 hover:border-[#FF6B35] hover:bg-orange-50/20 dark:border-zinc-700 dark:bg-zinc-800'
+                }`}
+              >
+                <span className="material-symbols-outlined text-xl text-[#FF6B35]">
+                  {isModalDragOver ? 'file_download' : 'add_photo_alternate'}
+                </span>
+                <p className="mt-1 text-xs font-bold text-slate-700 dark:text-zinc-200">
+                  {isModalDragOver ? 'Drop images to add!' : 'Drag & drop multiple photos or click to select'}
+                </p>
+                <span className="mt-0.5 text-[9px] text-slate-400">
+                  PNG, JPG, WEBP • Select multiple files at once
+                </span>
+              </div>
+
+              {/* Multi-image preview strip with Plus button */}
+              {formData.images && formData.images.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-1.5 pt-1 scroll-smooth">
+                  {formData.images.map((img, i) => (
+                    <div
+                      key={i}
+                      className="group/th relative h-16 w-20 shrink-0 overflow-hidden rounded-lg border border-slate-200 shadow-2xs dark:border-zinc-700"
+                    >
+                      <img
+                        src={img}
+                        alt={`Photo ${i + 1}`}
+                        className="h-full w-full object-cover"
+                      />
+                      {i === 0 && (
+                        <span className="absolute left-1 top-1 rounded bg-[#FF6B35] px-1 py-0.2 text-[8px] font-bold text-white">
+                          Cover
+                        </span>
+                      )}
                       <button
                         type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="text-[11px] font-bold text-[#FF6B35] hover:underline"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleRemoveImageIdx(i)
+                        }}
+                        className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded bg-black/60 text-white opacity-0 transition group-hover/th:opacity-100 hover:bg-rose-600"
                       >
-                        Change Image
-                      </button>
-                      <span className="text-slate-300 dark:text-zinc-600">•</span>
-                      <button
-                        type="button"
-                        onClick={handleRemoveImage}
-                        className="text-[11px] font-bold text-rose-500 hover:underline"
-                      >
-                        Remove
+                        <span className="material-symbols-outlined text-[10px]">close</span>
                       </button>
                     </div>
+                  ))}
+
+                  {/* Plus Tile */}
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex h-16 w-16 shrink-0 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-white text-[#FF6B35] hover:border-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800"
+                    title="Add more photos"
+                  >
+                    <span className="material-symbols-outlined text-lg">add</span>
+                    <span className="text-[9px] font-bold">Add +</span>
                   </div>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="group mt-1.5 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/70 p-3.5 transition hover:border-[#FF6B35] hover:bg-orange-50/30 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-[#FF6B35]"
-                >
-                  <span className="material-symbols-outlined text-lg text-slate-400 group-hover:text-[#FF6B35]">
-                    cloud_upload
-                  </span>
-                  <span className="text-xs font-bold text-slate-700 group-hover:text-[#FF6B35] dark:text-zinc-300">
-                    Upload Product Image
-                  </span>
-                </button>
               )}
             </div>
 

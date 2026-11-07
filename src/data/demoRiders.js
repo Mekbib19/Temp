@@ -39,34 +39,65 @@ export const demoRiders = [
       {
         id: 'DOC-901',
         document_type: 'LICENSE',
+        document_name: "Commercial Driver's License (Category 3)",
         document_number: 'DL-84920194',
+        issuing_authority: 'Federal Transport Authority of Ethiopia (FTA)',
+        issue_date: 'May 16, 2022',
         expiry_date: '2027-05-15',
         status: 'APPROVED',
         verified_at: 'Jan 17, 2023',
+        verified_by: 'Senior Auditor Hanna G. (#402)',
+        file_type: 'PDF / Scanned ID (Color)',
+        file_size: '2.4 MB',
+        restrictions: 'Commercial Light Delivery (Motorcycle / Tricycle)',
+        blood_group: 'O+',
       },
       {
         id: 'DOC-902',
         document_type: 'INSURANCE',
+        document_name: 'Motor Vehicle Comprehensive Fleet Policy',
         document_number: 'INS-492010',
+        issuing_authority: 'Nyala Insurance Company S.C.',
+        issue_date: 'Nov 30, 2023',
         expiry_date: '2025-11-30',
         status: 'APPROVED',
         verified_at: 'Jan 17, 2023',
+        verified_by: 'Logistics Safety Compliance Desk',
+        file_type: 'Digital Certificate PDF',
+        file_size: '1.6 MB',
+        coverage_amount: '1,500,000 ETB',
+        underwriter: 'Nyala Insurance S.C. Bole Branch',
       },
       {
         id: 'DOC-903',
         document_type: 'ID_CARD',
+        document_name: 'National Digital Identity Card (Fayda ID)',
         document_number: 'NID-772910',
+        issuing_authority: 'National ID Program of Ethiopia (NIDP)',
+        issue_date: 'Jan 20, 2022',
         expiry_date: '2029-01-20',
         status: 'APPROVED',
         verified_at: 'Jan 17, 2023',
+        verified_by: 'Biometrics Verification API',
+        file_type: 'Secure Smart Card Scan',
+        file_size: '3.1 MB',
+        nationality: 'Ethiopian',
       },
       {
         id: 'DOC-904',
         document_type: 'VEHICLE_REGISTRATION',
+        document_name: 'Vehicle Title & Registration Ownership Card',
         document_number: 'REG-99104',
+        issuing_authority: 'Addis Ababa City Transport Bureau',
+        issue_date: 'Aug 10, 2023',
         expiry_date: '2026-08-10',
         status: 'APPROVED',
         verified_at: 'Jan 17, 2023',
+        verified_by: 'Vehicle Inspector Yonas M.',
+        file_type: 'Original Certificate Scan',
+        file_size: '1.9 MB',
+        chassis_number: 'TVS4V8920194B',
+        engine_number: 'ENG-160RTR4410',
       },
     ],
   },
@@ -433,4 +464,390 @@ export const demoRiders = [
       },
     ],
   },
+  {
+    id: 'RDR-7209',
+    full_name: 'Abebe Kebede',
+    phone_number: '+251 911 556677',
+    email: 'abebe.kebede@shimadelivery.com',
+    profile_picture:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuDiwbJTH8PJz-0KfOrYaMXqs-vhXJog8J7LtWvfxEVEQBQ1uspvbxwSDetybesHliThOrsLYv0d1BZolvo72z6A9Zi-4CYtd2KBg69LKSTGI_Igvbm150beVX_ggWpRp8YzY1z3rgJJej0ZCZ5Qrmve2H5KqVmHsHyZkF-loBpZ3wqf3eTDWxf9TqX19hlJVPyhsdRtHNerSaW8PK3znv1_XAvjW0YI-BT_HTdG3K_u_bTO5bw4gppt3izOpCFQq-tZ7IP1LTnbRLo',
+    birth_date: '1996-08-22',
+    gender: 'MALE',
+    two_factor_enabled: true,
+    two_factor_email: 'abebe.kebede@shimadelivery.com',
+    two_factor_otp: 'Pending Setup',
+    two_factor_otp_expires_at: null,
+    level: 'REGULAR',
+    wallet_balance: 0.0,
+    status: 'PENDING',
+    onboarding_step: 'REVIEW',
+    verification_status: 'PENDING',
+    can_accept_orders: false,
+    is_online: false,
+    last_online_at: 'Registered 3 hours ago',
+    completed_orders: 0,
+    rating: 5.0,
+    joined_date: 'Oct 28, 2024',
+    verification_notes: 'Newly submitted commercial motorcycle courier application. All 3 identity files uploaded.',
+    vehicle: {
+      id: 'VEH-809',
+      vehicle_type: 'MOTORCYCLE',
+      brand: 'Bajaj',
+      model: 'Boxer 150',
+      plate_number: 'AA 3-11928',
+      color: 'Midnight Black',
+      year: 2023,
+      status: 'PENDING',
+      rejection_reason: null,
+      verified_at: null,
+    },
+    documents: [
+      {
+        id: 'DOC-916',
+        document_type: 'LICENSE',
+        document_name: "Commercial Driver's License (Category 3)",
+        document_number: 'DL-7719208',
+        issuing_authority: 'Federal Transport Authority of Ethiopia (FTA)',
+        issue_date: 'Jun 10, 2023',
+        expiry_date: '2028-06-10',
+        status: 'PENDING',
+        verified_at: null,
+        file_type: 'Original Color Scan',
+        file_size: '2.1 MB',
+      },
+      {
+        id: 'DOC-917',
+        document_type: 'ID_CARD',
+        document_name: 'National Digital Identity Card (Fayda ID)',
+        document_number: 'NID-881920',
+        issuing_authority: 'National ID Program of Ethiopia (NIDP)',
+        issue_date: 'Jan 15, 2023',
+        expiry_date: '2030-01-15',
+        status: 'PENDING',
+        verified_at: null,
+        file_type: 'Smart Card Biometric Scan',
+        file_size: '2.8 MB',
+      },
+      {
+        id: 'DOC-918',
+        document_type: 'INSURANCE',
+        document_name: 'Comprehensive Commercial Fleet Insurance',
+        document_number: 'INS-551029',
+        issuing_authority: 'Ethiopian Insurance Corporation (EIC)',
+        issue_date: 'Sep 01, 2024',
+        expiry_date: '2025-09-01',
+        status: 'PENDING',
+        verified_at: null,
+        file_type: 'Policy Certificate PDF',
+        file_size: '1.7 MB',
+      },
+    ],
+  },
+  {
+    id: 'RDR-7210',
+    full_name: 'Hiwot Hailu',
+    phone_number: '+251 933 778899',
+    email: 'hiwot.hailu@shimadelivery.com',
+    profile_picture:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuCLVT6LJ5SNoe5pqpOfeTC2TX5uOgS67eVnlHBmHq7xfSVfFHfCS7XFQACr7DzdcYfcFBzcLHHTp9HTry1ZMX5DDgkMa0R2rnD6Xh1viCXYtk6ZgvMISUB6ilmHAVYv5ws_mcNGh1ynO4umgY7J3y3KOqrE017wd1ubfPmPiCEMRGoII7JTgl4WvrbcCQ11diaMjiYtWB56HbAQnQY_TBNR8F_wajd8IAzkRUnTRUd47qpMpRfjEQRVaO-eLzEPdrtTNxYxiNCocpM',
+    birth_date: '1998-11-19',
+    gender: 'FEMALE',
+    two_factor_enabled: false,
+    two_factor_email: 'hiwot.hailu@shimadelivery.com',
+    two_factor_otp: 'Pending Setup',
+    two_factor_otp_expires_at: null,
+    level: 'REGULAR',
+    wallet_balance: 0.0,
+    status: 'INACTIVE',
+    onboarding_step: 'DOCUMENTS',
+    verification_status: 'REJECTED',
+    can_accept_orders: false,
+    is_online: false,
+    last_online_at: 'Oct 25, 2024',
+    completed_orders: 0,
+    rating: 5.0,
+    joined_date: 'Oct 21, 2024',
+    rejection_reason: "Driver's license photo is unreadable and insurance policy does not cover commercial delivery operations.",
+    rejected_at: 'Oct 25, 2024',
+    verification_notes: 'Applicant was notified via SMS to re-upload clear high-resolution scans of commercial license and policy endorsement.',
+    vehicle: {
+      id: 'VEH-810',
+      vehicle_type: 'MOTORCYCLE',
+      brand: 'Honda',
+      model: 'CG 125',
+      plate_number: 'AA 2-88192',
+      color: 'Crimson Red',
+      year: 2020,
+      status: 'REJECTED',
+      rejection_reason: 'Commercial endorsement missing from policy schedule',
+      verified_at: null,
+    },
+    documents: [
+      {
+        id: 'DOC-919',
+        document_type: 'LICENSE',
+        document_name: "Commercial Driver's License (Category 3)",
+        document_number: 'DL-552910',
+        issuing_authority: 'Federal Transport Authority (FTA)',
+        issue_date: '2020-04-12',
+        expiry_date: '2024-04-12',
+        status: 'REJECTED',
+        rejection_reason: "Driver's License is expired (Expired Apr 2024). Renewal required.",
+        verified_at: null,
+        file_type: 'Low Resolution Scan',
+        file_size: '480 KB',
+      },
+      {
+        id: 'DOC-920',
+        document_type: 'INSURANCE',
+        document_name: 'Motorcycle Private Policy',
+        document_number: 'INS-992018',
+        issuing_authority: 'United Insurance S.C.',
+        issue_date: '2024-01-10',
+        expiry_date: '2025-01-10',
+        status: 'REJECTED',
+        rejection_reason: 'Policy is for private non-commercial use only. Commercial courier endorsement required.',
+        verified_at: null,
+        file_type: 'Certificate Scan',
+        file_size: '1.2 MB',
+      },
+    ],
+  },
 ]
+
+export const RIDERS_STORAGE_KEY = 'deliver_app_riders_data'
+
+export function loadStoredRiders() {
+  if (typeof window === 'undefined') return [...demoRiders]
+  try {
+    const raw = localStorage.getItem(RIDERS_STORAGE_KEY)
+    if (!raw) {
+      localStorage.setItem(RIDERS_STORAGE_KEY, JSON.stringify(demoRiders))
+      return [...demoRiders]
+    }
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed) || parsed.length === 0) return [...demoRiders]
+
+    // Merge enriched document mockup fields if stored records have older minimal docs
+    return parsed.map((storedRider) => {
+      const canonical = demoRiders.find((d) => d.id === storedRider.id)
+      if (!canonical) return storedRider
+
+      const enrichedDocs = (storedRider.documents || []).map((doc) => {
+        const canonicalDoc = canonical.documents?.find((cd) => cd.id === doc.id)
+        return canonicalDoc ? { ...canonicalDoc, ...doc } : doc
+      })
+
+      return {
+        ...storedRider,
+        documents: enrichedDocs.length ? enrichedDocs : canonical.documents || [],
+      }
+    })
+  } catch (e) {
+    console.error('Failed to parse stored riders', e)
+    return [...demoRiders]
+  }
+}
+
+export function saveStoredRiders(riders) {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(RIDERS_STORAGE_KEY, JSON.stringify(riders))
+    window.dispatchEvent(new Event('riders-data-updated'))
+  } catch (e) {
+    console.error('Failed to save riders', e)
+  }
+}
+
+export function getRiderById(id) {
+  const riders = loadStoredRiders()
+  return riders.find((r) => r.id === id || String(r.id).toLowerCase() === String(id).toLowerCase()) || null
+}
+
+export function addRider(riderData) {
+  const riders = loadStoredRiders()
+  const newRider = {
+    id: `RDR-${Math.floor(1000 + Math.random() * 9000)}`,
+    joined_date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+    completed_orders: 0,
+    rating: 5.0,
+    wallet_balance: 0,
+    is_online: false,
+    last_online_at: 'Just registered',
+    status: 'ACTIVE',
+    verification_status: 'PENDING',
+    onboarding_step: 'APPROVED',
+    can_accept_orders: true,
+    documents: [],
+    ...riderData,
+  }
+  const updated = [newRider, ...riders]
+  saveStoredRiders(updated)
+  return newRider
+}
+
+export function updateRider(id, updates) {
+  const riders = loadStoredRiders()
+  const updated = riders.map((r) => {
+    if (r.id === id || String(r.id).toLowerCase() === String(id).toLowerCase()) {
+      return { ...r, ...updates }
+    }
+    return r
+  })
+  saveStoredRiders(updated)
+  return updated.find((r) => r.id === id)
+}
+
+export function blockRider(id, banReason, banDetails = {}) {
+  return updateRider(id, {
+    status: 'BLOCKED',
+    can_accept_orders: false,
+    is_online: false,
+    ban_reason: banReason,
+    ban_details: {
+      blocked_at: new Date().toISOString(),
+      ...banDetails,
+    },
+  })
+}
+
+export function unblockRider(id) {
+  return updateRider(id, {
+    status: 'ACTIVE',
+    ban_reason: null,
+    ban_details: null,
+  })
+}
+
+export function approveRiderVerification(id, reviewNotes = '') {
+  const riders = loadStoredRiders()
+  const rider = riders.find((r) => r.id === id)
+  if (!rider) return null
+
+  const nowFormatted = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+  const updatedDocs = (rider.documents || []).map((doc) => ({
+    ...doc,
+    status: 'APPROVED',
+    verified_at: nowFormatted,
+    verified_by: 'Super Admin Operations',
+    rejection_reason: null,
+  }))
+
+  const updatedVehicle = rider.vehicle
+    ? {
+        ...rider.vehicle,
+        status: 'APPROVED',
+        verified_at: nowFormatted,
+        rejection_reason: null,
+      }
+    : rider.vehicle
+
+  return updateRider(id, {
+    verification_status: 'APPROVED',
+    status: 'ACTIVE',
+    onboarding_step: 'APPROVED',
+    can_accept_orders: true,
+    rejection_reason: null,
+    verification_notes: reviewNotes || 'All compliance documentation verified and approved by operations dispatch.',
+    verified_at: nowFormatted,
+    documents: updatedDocs,
+    vehicle: updatedVehicle,
+  })
+}
+
+export function rejectRiderVerification(id, rejectionReason, reviewNotes = '') {
+  const riders = loadStoredRiders()
+  const rider = riders.find((r) => r.id === id)
+  if (!rider) return null
+
+  const updatedDocs = (rider.documents || []).map((doc) => ({
+    ...doc,
+    status: 'REJECTED',
+    rejection_reason: rejectionReason,
+  }))
+
+  return updateRider(id, {
+    verification_status: 'REJECTED',
+    status: 'INACTIVE',
+    can_accept_orders: false,
+    is_online: false,
+    rejection_reason: rejectionReason,
+    verification_notes: reviewNotes,
+    rejected_at: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+    documents: updatedDocs,
+  })
+}
+
+export function resetRiderVerificationToPending(id, notes = '') {
+  return updateRider(id, {
+    verification_status: 'PENDING',
+    status: 'PENDING',
+    onboarding_step: 'DOCUMENTS',
+    can_accept_orders: false,
+    is_online: false,
+    rejection_reason: null,
+    verification_notes: notes || 'Returned to pending review queue for courier document reassessment.',
+  })
+}
+
+export function updateRiderDocumentVerification(riderId, docId, { status, rejection_reason = null, notes = '', verified_by = 'Super Admin Operations' }) {
+  const riders = loadStoredRiders()
+  const rider = riders.find((r) => r.id === riderId || String(r.id).toLowerCase() === String(riderId).toLowerCase())
+  if (!rider) return null
+
+  const nowFormatted = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+
+  const updatedDocs = (rider.documents || []).map((doc) => {
+    if (doc.id === docId) {
+      return {
+        ...doc,
+        status, // 'APPROVED', 'REJECTED', 'PENDING'
+        rejection_reason: status === 'REJECTED' ? rejection_reason : null,
+        review_notes: notes || doc.review_notes || null,
+        verified_at: status === 'APPROVED' ? nowFormatted : (status === 'REJECTED' ? nowFormatted : null),
+        verified_by: status === 'APPROVED' ? verified_by : null,
+      }
+    }
+    return doc
+  })
+
+  // Calculate overall rider verification status from documents
+  const hasRejected = updatedDocs.some((d) => d.status === 'REJECTED')
+  const allApproved = updatedDocs.length > 0 && updatedDocs.every((d) => d.status === 'APPROVED')
+
+  let newVerificationStatus
+  let newStatus
+  let newCanAcceptOrders
+  let overallRejectionReason
+
+  if (allApproved) {
+    newVerificationStatus = 'APPROVED'
+    newStatus = 'ACTIVE'
+    newCanAcceptOrders = true
+    overallRejectionReason = null
+  } else if (hasRejected) {
+    newVerificationStatus = 'REJECTED'
+    newStatus = 'INACTIVE'
+    newCanAcceptOrders = false
+    const rejectedDoc = updatedDocs.find((d) => d.status === 'REJECTED' && d.rejection_reason)
+    overallRejectionReason = rejectedDoc
+      ? `${rejectedDoc.document_name || rejectedDoc.document_type}: ${rejectedDoc.rejection_reason}`
+      : 'One or more required documents were rejected during audit.'
+  } else {
+    newVerificationStatus = 'PENDING'
+    newStatus = 'PENDING'
+    newCanAcceptOrders = false
+    overallRejectionReason = null
+  }
+
+  return updateRider(rider.id, {
+    documents: updatedDocs,
+    verification_status: newVerificationStatus,
+    status: newStatus,
+    can_accept_orders: newCanAcceptOrders,
+    rejection_reason: overallRejectionReason,
+  })
+}
+
+
+

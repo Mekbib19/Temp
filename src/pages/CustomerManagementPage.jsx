@@ -58,13 +58,6 @@ const CustomerManagementPage = () => {
               <span className="material-symbols-outlined text-base">download</span>
               Export Data
             </button>
-            <Link
-              to="/customers/new"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#e0531f]"
-            >
-              <span className="material-symbols-outlined text-base">person_add</span>
-              Add Customer
-            </Link>
           </div>
         </section>
 
@@ -339,27 +332,18 @@ const CustomerManagementPage = () => {
               No customer records match your query or filters. Try adjusting your search query or reset your filters.
             </p>
             <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
-              {(searchQuery || statusFilter !== 'all') && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery('')
-                    setStatusFilter('all')
-                    setCurrentPage(1)
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                >
-                  <span className="material-symbols-outlined text-sm">refresh</span>
-                  Clear Filters
-                </button>
-              )}
-              <Link
-                to="/customers/new"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#e0531f]"
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('')
+                  setStatusFilter('all')
+                  setCurrentPage(1)
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
               >
-                <span className="material-symbols-outlined text-sm">person_add</span>
-                Add Customer
-              </Link>
+                <span className="material-symbols-outlined text-sm">refresh</span>
+                Reset Filters
+              </button>
             </div>
           </div>
         )}
