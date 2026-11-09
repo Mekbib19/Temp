@@ -2,22 +2,21 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import ShimaLogo from '../components/Logo'
 import { useAppTheme } from '../providers/theme-context'
+import { completeFirstTimeSetup } from '../services/authService'
 
 export default function FirstTimeLoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { isDark, toggleTheme } = useAppTheme()
 
-  // Initial account data if navigated from auth or fallback to demo
-  const [email, setEmail] = useState(() => {
-    return location.state?.email || 'newstaff@shimadelivery.com'
-  })
-  const [userRole, setUserRole] = useState(() => {
-    return location.state?.role || 'Fleet Operations Specialist'
-  })
+  // Initial account data if navigated from auth or fallback to default
+  const email = location.state?.email || 'firsttime@shimadelivery.com'
+  const userRole = location.state?.role || 'Fleet Dispatch Coordinator'
 
-  // Form states
-  const [currentTempPassword, setCurrentTempPassword] = useState('')
+  // Form states - pre-fill currentTempPassword if passed from login
+  const [currentTempPassword, setCurrentTempPassword] = useState(() => {
+    return location.state?.tempPassword || ''
+  })
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showTempPassword, setShowTempPassword] = useState(false)
@@ -29,6 +28,7 @@ export default function FirstTimeLoginPage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [successToast, setSuccessToast] = useState('')
   const [isCompleted, setIsCompleted] = useState(false)
+  const [countdown, setCountdown] = useState(4)
 
   // Carousel slide for left showcase panel
   const [activeSlide, setActiveSlide] = useState(0)
@@ -75,6 +75,22 @@ export default function FirstTimeLoginPage() {
     return () => clearInterval(timer)
   }, [slides.length])
 
+  // Countdown effect on completion
+  useEffect(() => {
+    if (!isCompleted) return
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          navigate('/dashboard')
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [isCompleted, navigate])
+
   // Password rules validation
   const hasMinLength = newPassword.length >= 8
   const hasNumber = /\d/.test(newPassword)
@@ -101,18 +117,6 @@ export default function FirstTimeLoginPage() {
     passwordsMatch &&
     isDifferentFromTemp &&
     agreeSecurityPolicy
-
-  // 1-Click quick fill demo initial credentials
-  const fillDemoTemporaryAccount = () => {
-    setEmail('abebe.bikila@shimadelivery.com')
-    setUserRole('Fleet Dispatch Coordinator')
-    setCurrentTempPassword('ShimaTemp#2026')
-    setNewPassword('ShimaSecure@2026!')
-    setConfirmPassword('ShimaSecure@2026!')
-    setErrorMessage('')
-    setSuccessToast('Pre-loaded sample first-time credentials')
-    setTimeout(() => setSuccessToast(''), 3000)
-  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -158,23 +162,12 @@ export default function FirstTimeLoginPage() {
     setTimeout(() => {
       setIsLoading(false)
 
-      // Store authenticated user with completed setup
-      const user = {
-        name: 'Abebe Bikila',
-        email,
-        role: userRole,
-        firstTimeSetupCompleted: true,
-        token: `shima_session_${Date.now()}`,
-      }
-      localStorage.setItem('shima_auth_user', JSON.stringify(user))
+      // Complete first-time password setup in auth.json registry (localStorage)
+      completeFirstTimeSetup(email, newPassword)
 
       setIsCompleted(true)
-      setSuccessToast('Permanent password verified! Loading dashboard...')
-
-      setTimeout(() => {
-        navigate('/dashboard')
-      }, 1200)
-    }, 850)
+      setSuccessToast('Permanent password verified! Account active.')
+    }, 600)
   }
 
   return (
@@ -344,27 +337,82 @@ export default function FirstTimeLoginPage() {
           {/* Form Container */}
           <div className="my-auto py-6 max-w-md w-full mx-auto">
             {isCompleted ? (
-              <div className="text-center animate-in zoom-in-95 duration-300 py-6">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 mb-4 border border-emerald-200 dark:border-emerald-800 shadow-lg shadow-emerald-500/20">
-                  <span className="material-symbols-outlined text-4xl">task_alt</span>
+              <div className="text-center animate-in zoom-in-95 duration-300 py-4 sm:py-6">
+                {/* Status Hero Icon with subtle ambient glow */}
+                <div className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mb-4 border border-emerald-500/20 shadow-xl shadow-emerald-500/15">
+                  <div className="absolute inset-0 rounded-3xl bg-emerald-500/15 blur-xl animate-pulse pointer-events-none" />
+                  <span className="material-symbols-outlined text-4xl relative z-10">verified_user</span>
                 </div>
 
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold mb-3 border border-emerald-200/60 dark:border-emerald-800/60">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+                  <span>Permanent Password Active</span>
+                </div>
+
+                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
                   Security Setup Complete!
                 </h2>
 
-                <p className="mt-3 text-xs sm:text-sm text-slate-600 dark:text-zinc-400 leading-relaxed max-w-sm mx-auto">
-                  Your permanent password has been encrypted and saved. Entering Shima Delivery operations console...
+                <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-zinc-400 leading-relaxed max-w-sm mx-auto">
+                  Your account is fully activated. Next time you sign in, use your permanent password for direct console access.
                 </p>
 
-                <div className="mt-6 flex justify-center">
+                {/* Account Details Card */}
+                <div className="mt-5 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-800/50 p-4 text-left space-y-2.5">
+                  <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-200/60 dark:border-zinc-700/60">
+                    <span className="text-slate-500 dark:text-zinc-400 font-medium">Account Email</span>
+                    <span className="font-bold text-slate-900 dark:text-white truncate max-w-[200px]">{email}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-200/60 dark:border-zinc-700/60">
+                    <span className="text-slate-500 dark:text-zinc-400 font-medium">Assigned Role</span>
+                    <span className="font-semibold text-slate-800 dark:text-zinc-200">{userRole}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500 dark:text-zinc-400 font-medium">Access Status</span>
+                    <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+                      <span className="material-symbols-outlined text-sm">check_circle</span>
+                      <span>Authorized &amp; Verified</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Progress bar toward automatic redirect */}
+                <div className="mt-5 space-y-1.5 text-left">
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400">
+                    <span>Redirecting to Console</span>
+                    <span className="font-bold text-[#FF6B35]">{countdown}s</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-slate-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#FF6B35] to-[#F25A24] transition-all duration-1000 ease-linear rounded-full"
+                      style={{ width: `${((4 - countdown) / 4) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Selected Element: Action Buttons Container */}
+                <div className="mt-5 flex flex-col gap-2.5">
                   <button
                     type="button"
                     onClick={() => navigate('/dashboard')}
-                    className="w-full rounded-xl bg-[#FF6B35] hover:bg-[#E85B24] py-3.5 px-4 text-sm font-bold text-white shadow-lg shadow-[#FF6B35]/25 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full group relative overflow-hidden rounded-xl bg-gradient-to-r from-[#FF6B35] via-[#F25A24] to-[#E85B24] p-3.5 text-sm font-bold text-white shadow-xl shadow-orange-500/25 hover:shadow-2xl hover:shadow-orange-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <span>Enter Console Now</span>
-                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                    <span>Enter Console Dashboard Now</span>
+                    <span className="material-symbols-outlined text-base transition-transform duration-200 group-hover:translate-x-1">
+                      arrow_forward
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.removeItem('shima_auth_user')
+                      navigate('/login')
+                    }}
+                    className="w-full rounded-xl border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 p-2.5 text-xs font-semibold text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span className="material-symbols-outlined text-sm">logout</span>
+                    <span>Sign Out to Test Next Login Flow</span>
                   </button>
                 </div>
               </div>
@@ -386,14 +434,14 @@ export default function FirstTimeLoginPage() {
                   </p>
                 </div>
 
-            {/* User Account Info Chip with 1-click Demo Fill */}
+            {/* User Account Info Chip */}
             <div className="mb-5 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/80 p-3.5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 dark:bg-orange-950/60 text-[#FF6B35] font-black text-sm">
                   {email[0]?.toUpperCase() || 'U'}
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[180px] sm:max-w-[220px]">
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[200px] sm:max-w-[260px]">
                     {email}
                   </p>
                   <p className="text-[10px] text-slate-500 dark:text-zinc-400">
@@ -402,14 +450,10 @@ export default function FirstTimeLoginPage() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={fillDemoTemporaryAccount}
-                className="text-[11px] font-bold text-[#FF6B35] hover:text-[#E85B24] bg-white dark:bg-zinc-700/80 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-600 shadow-xs hover:shadow transition-all cursor-pointer"
-                title="Preload sample initial credentials for quick testing"
-              >
-                Auto-Fill Demo
-              </button>
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-950/60 px-2.5 py-1 text-[10px] font-bold text-amber-700 dark:text-amber-300">
+                <span className="material-symbols-outlined text-xs">pending</span>
+                <span>Setup Required</span>
+              </span>
             </div>
 
             {/* Error Message Box */}

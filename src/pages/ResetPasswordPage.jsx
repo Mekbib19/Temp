@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import ShimaLogo from '../components/Logo'
 import { useAppTheme } from '../providers/theme-context'
+import { updateUserPassword } from '../services/authService'
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate()
@@ -122,6 +123,17 @@ export default function ResetPasswordPage() {
     setTimeout(() => setToastMessage(''), 3000)
   }
 
+  // UI Bypass: Skip the email step entirely and jump straight to setting new password
+  const handleBypassLink = () => {
+    const targetEmail = email.trim() || 'operator@shimadelivery.com'
+    setEmail(targetEmail)
+    setGeneratedToken(`tok_bypass_${Date.now()}`)
+    setErrorMessage('')
+    setStep('reset')
+    setToastMessage('Email link bypassed! Set your new password below.')
+    setTimeout(() => setToastMessage(''), 3500)
+  }
+
   // Step 3: Handle New Password Reset Submission
   const handleResetPassword = (e) => {
     e.preventDefault()
@@ -148,7 +160,8 @@ export default function ResetPasswordPage() {
 
     setTimeout(() => {
       setIsLoading(false)
-      // Save password update in localStorage for demo simulation
+      // Save password update in authService and localStorage
+      updateUserPassword(email, newPassword)
       const usersData = JSON.parse(localStorage.getItem('shima_users_db') || '{}')
       usersData[email] = { password: newPassword, updatedAt: Date.now() }
       localStorage.setItem('shima_users_db', JSON.stringify(usersData))
@@ -372,7 +385,7 @@ export default function ResetPasswordPage() {
                     </div>
                   </div>
 
-                  <div className="pt-2">
+                  <div className="pt-2 space-y-2.5">
                     <button
                       type="submit"
                       disabled={isLoading}
@@ -390,9 +403,19 @@ export default function ResetPasswordPage() {
                         </>
                       )}
                     </button>
+
+                    {/* UI Direct Bypass Button */}
+                    <button
+                      type="button"
+                      onClick={handleBypassLink}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 dark:border-orange-800/80 bg-orange-50/70 dark:bg-orange-950/20 hover:bg-orange-100/70 dark:hover:bg-orange-950/40 p-2.5 text-xs font-bold text-[#FF6B35] dark:text-orange-400 hover:border-orange-400 transition-all cursor-pointer group shadow-xs active:scale-[0.99]"
+                    >
+                      <span className="material-symbols-outlined text-base transition-transform group-hover:rotate-12">bolt</span>
+                      <span>Bypass Email &bull; Set New Password Directly (UI Preview)</span>
+                    </button>
                   </div>
 
-                  <div className="text-center pt-3">
+                  <div className="text-center pt-2">
                     <button
                       type="button"
                       onClick={() => navigate('/login')}
@@ -426,46 +449,74 @@ export default function ResetPasswordPage() {
                   </p>
                 </div>
 
-                {/* Simulated Interactive Email Card */}
-                <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/80 p-5 shadow-sm mb-5">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-zinc-700/80 text-[11px] text-slate-500 dark:text-zinc-400">
-                    <span className="flex items-center gap-1 font-semibold text-slate-700 dark:text-zinc-300">
-                      <span className="material-symbols-outlined text-sm text-[#FF6B35]">incoming</span>
-                      <span>Simulated Incoming Email Message</span>
-                    </span>
-                    <span className="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full">
-                      Just Now
-                    </span>
-                  </div>
-
-                  <div className="pt-3 text-xs text-slate-600 dark:text-zinc-300 space-y-2 leading-relaxed">
-                    <p className="text-[11px] text-slate-400 dark:text-zinc-400">
-                      <strong>From:</strong> security@shimadelivery.com &bull; <strong>Subject:</strong> Password reset authorization
-                    </p>
-                    <p>
-                      Hello Shima Operator,
-                    </p>
-                    <p>
-                      A request was received to reset the login credentials for your Shima Delivery account. To set your new password, click the secure link below:
-                    </p>
-
-                    {/* The loop link requested by user */}
-                    <div className="pt-2">
-                      <button
-                        type="button"
-                        onClick={handleFollowEmailLink}
-                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#FF6B35] hover:bg-[#E85B24] p-3 text-xs font-bold text-white shadow-md shadow-orange-500/20 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-base">lock_reset</span>
-                        <span>Click Link to Reset Password (Loop to Reset Page)</span>
-                      </button>
-                    </div>
-
-                    <p className="text-[10px] text-slate-400 dark:text-zinc-500 pt-1">
-                      Token: <code className="font-mono">{generatedToken}</code> (expires in 15 minutes)
-                    </p>
-                  </div>
+                {/* Direct Bypass Button for UI Testing */}
+                <div className="mb-4">
+                  <button
+                    type="button"
+                    onClick={handleBypassLink}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FF6B35] to-[#F25A24] hover:from-[#E85B24] hover:to-[#D94814] py-3 px-4 text-xs font-bold text-white shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30 transition-all cursor-pointer group active:scale-[0.99]"
+                  >
+                    <span className="material-symbols-outlined text-base transition-transform group-hover:rotate-12">bolt</span>
+                    <span>Bypass Email Link &bull; Jump Directly to Password Reset</span>
+                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                  </button>
                 </div>
+
+                {/* Simulated Interactive Email Card */}
+                <div className="rounded-2xl border border-slate-200/85 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-5 shadow-lg shadow-slate-100/50 dark:shadow-none mb-5">
+  {/* Header banner */}
+  <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800 text-[11px] text-slate-500 dark:text-zinc-400">
+    <span className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-zinc-300">
+      <span className="material-symbols-outlined text-[15px] text-[#FF6B35] animate-pulse">mail</span>
+      <span>Simulated Incoming Email Message</span>
+    </span>
+    <span className="text-[10px] bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-100/40 dark:border-emerald-900/20">
+      Just Now
+    </span>
+  </div>
+  
+  {/* Email Body Content */}
+  <div className="pt-3.5 text-xs text-slate-600 dark:text-zinc-300 space-y-3 leading-relaxed">
+    {/* Email Metadata Box */}
+    <div className="bg-slate-50/80 dark:bg-zinc-800/40 rounded-xl p-2.5 border border-slate-100 dark:border-zinc-800/50 text-[11px] text-slate-500 dark:text-zinc-400">
+      <p><strong className="text-slate-400 dark:text-zinc-500 font-medium">From:</strong> security@shimadelivery.com</p>
+      <p className="mt-0.5"><strong className="text-slate-400 dark:text-zinc-500 font-medium">Subject:</strong> Password reset authorization</p>
+    </div>
+
+    <p className="font-semibold text-slate-700 dark:text-zinc-200">Hello Shima Operator,</p>
+    <p>
+      A request was received to reset the login credentials for your Shima Delivery account. 
+      To set your new password, click the secure link below:
+    </p>
+    
+    {/* The action button link */}
+    <div className="pt-1">
+      <button
+        type="button"
+        onClick={handleFollowEmailLink}
+        className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#FF6B35] hover:bg-[#E85B24] p-3 text-xs font-bold text-white shadow-md shadow-orange-500/10 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer group"
+      >
+        <span className="material-symbols-outlined text-base transition-transform group-hover:rotate-12">lock_reset</span>
+        <span>Click Link to Reset Password (Loop to Reset Page)</span>
+      </button>
+    </div>
+    
+    {/* Clean Footer Info */}
+    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800/50 text-[10px] text-slate-400 dark:text-zinc-500">
+      <div className="flex items-center gap-1.5 min-w-0">
+        <span>Token:</span>
+        <code className="font-mono bg-slate-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-rose-500 dark:text-rose-400 truncate max-w-[180px]" title={generatedToken}>
+          {generatedToken}
+        </code>
+      </div>
+      <span className="flex items-center gap-0.5 font-medium text-amber-600 dark:text-amber-500">
+        <span className="material-symbols-outlined text-[12px]">schedule</span>
+        expires in 15 minutes
+      </span>
+    </div>
+  </div>
+</div>
+
 
                 <div className="flex items-center justify-between text-xs pt-1">
                   <button

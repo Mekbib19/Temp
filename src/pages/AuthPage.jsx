@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import ShimaLogo from '../components/Logo'
 import { useAppTheme } from '../providers/theme-context'
+import { authenticateUser } from '../services/authService'
 
 export default function AuthPage() {
   const navigate = useNavigate()
@@ -112,23 +113,39 @@ export default function AuthPage() {
 
     setIsLoading(true)
 
-    // Simulate authenticating and setting user session
+    // Authenticate credentials against auth.json registry
     setTimeout(() => {
       setIsLoading(false)
-      const user = {
-        name: email.includes('admin') ? 'Julian Casablancas' : 'Demo Staff',
-        email,
-        role: email.includes('admin') ? 'Platform Super Admin' : 'Staff Member',
-        token: `shima_session_${Date.now()}`,
+      const authResult = authenticateUser(email, password)
+
+      if (!authResult.success) {
+        setErrorMessage(authResult.error)
+        return
       }
-      localStorage.setItem('shima_auth_user', JSON.stringify(user))
 
-      setSuccessToast('Welcome back! Signing you in...')
+      // If user is logging in for the first time, route them logically to first-time login
+      if (authResult.isFirstTimeLogin) {
+        setSuccessToast('First-time login detected! Redirecting to password setup...')
+        setTimeout(() => {
+          navigate('/first-time-login', {
+            state: {
+              email: authResult.user.email,
+              name: authResult.user.name,
+              role: authResult.user.role,
+              tempPassword: password,
+              isFirstTimeLogin: true,
+            },
+          })
+        }, 600)
+        return
+      }
 
+      // Standard user login: authenticated and route to console dashboard
+      setSuccessToast(`Welcome back, ${authResult.user.name}! Signing you in...`)
       setTimeout(() => {
         navigate('/dashboard')
-      }, 700)
-    }, 600)
+      }, 600)
+    }, 500)
   }
 
   return (
@@ -430,20 +447,6 @@ export default function AuthPage() {
                 </button>
               </div>
 
-              {/* First-time login password change prompt */}
-              {!isForgotMode && (
-                <div className="pt-2 text-center">
-                  <button
-                    type="button"
-                    onClick={() => navigate('/first-time-login', { state: { email } })}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#FF6B35] dark:text-zinc-400 dark:hover:text-orange-400 transition-colors cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-sm text-[#FF6B35]">vpn_key_alert</span>
-                    <span>First-time login with temporary password? Click here</span>
-                  </button>
-                </div>
-              )}
-
               {/* Back to sign in if in forgot mode */}
               {isForgotMode && (
                 <div className="text-center pt-2">
@@ -459,19 +462,6 @@ export default function AuthPage() {
                   </button>
                 </div>
               )}
-
-              {/* SSO Divider */}
-              {!isForgotMode && (
-                <>
-                  <div className="relative py-3 text-center">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-slate-200 dark:border-zinc-800" />
-                    </div>
-                    
-                  </div>
-                </>
-              )}
-
             </form>
           </div>
 
