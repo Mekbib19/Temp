@@ -689,60 +689,94 @@ export default function BranchOpsPage() {
           </div>
         )}
 
-        {/* TAB 4: RATINGS & REVIEWS */}
+       {/* TAB 4: RATINGS & REVIEWS */}
         {activeTab === 'ratings' && (
           <div className="animate-in fade-in duration-200">
             <CustomerRatingReviews
-              entityType="branch"
-              entityName={branch.branch_name}
-              initialReviews={branchReviews}
+              reviews={branchReviews}
               onSaveReviews={(updated) => {
                 setBranchReviews(updated)
-                saveBranchReviews(updated)
-                showToast('Review responses saved')
+                saveBranchReviews(branch?.id || 'b-wh-01', updated)
+                showToast('Branch reviews updated successfully')
               }}
-              aspectCriteria={[
-                { label: 'Food Quality', score: '4.9 ★', sub: '98% Positive' },
-                { label: 'Packaging Integrity', score: '4.8 ★', sub: '96% Positive' },
-                { label: 'Dispatch Speed', score: '4.7 ★', sub: '14.8m Avg SLA' },
-              ]}
-              baseRatingsCount={184}
+              branchName={branch.branch_name}
+              showToast={showToast}
             />
           </div>
         )}
 
-        {/* TAB 5: STAFF & SHIFT ROSTER */}
+        {/* TAB 5: MANAGER & STAFF */}
         {activeTab === 'staff' && (
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between mb-4">
+          <div className="space-y-4 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
               <div>
-                <h2 className="text-base font-extrabold text-slate-900 dark:text-white">Branch Staff & Shift Roster</h2>
-                <p className="text-xs text-slate-500">Active personnel handling food preparation and courier dispatch</p>
+                <h2 className="text-base font-extrabold text-slate-900 dark:text-white">Branch Staff & Roster</h2>
+                <p className="text-xs text-slate-500">Active team members assigned to {branch.branch_name}</p>
               </div>
+              <button
+                type="button"
+                onClick={() => showToast('Staff invitation feature is active')}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-orange-50 px-3 py-1.5 text-xs font-bold text-[#FF6B35] hover:bg-orange-100 dark:bg-orange-950/60 dark:text-orange-400 transition cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">person_add</span>
+                <span>Add Staff Member</span>
+              </button>
             </div>
-            <div className="divide-y divide-slate-100 dark:divide-zinc-800">
-              {staffList.map((s) => (
-                <div key={s.id} className="py-3 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 font-bold text-[#FF6B35] dark:bg-orange-950/40">
-                      {s.name.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-bold text-xs text-slate-900 dark:text-white">{s.name}</p>
-                        {s.isManager && (
-                          <span className="rounded bg-orange-100 dark:bg-orange-950/60 px-1.5 py-0.2 text-[9px] font-bold text-[#FF6B35]">
-                            Lead Manager
-                          </span>
-                        )}
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {staffList.map((st) => (
+                <div key={st.id} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] font-bold text-sm dark:bg-orange-950/40">
+                          {st.name.split(' ').map((n) => n[0]).join('')}
+                        </div>
+                        <div>
+                          <h3 className="font-extrabold text-slate-900 dark:text-white text-sm">{st.name}</h3>
+                          <p className="text-xs text-[#FF6B35] font-semibold">{st.role}</p>
+                        </div>
                       </div>
-                      <p className="text-[11px] text-slate-500">{s.role} &bull; {s.shift}</p>
+                      <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                        st.status === 'On Duty'
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                          : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
+                      }`}>
+                        {st.status}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 space-y-1.5 text-xs text-slate-500 dark:text-zinc-400">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm text-slate-400">call</span>
+                        <span>{st.phone}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm text-slate-400">mail</span>
+                        <span>{st.email}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm text-slate-400">schedule</span>
+                        <span>Shift: {st.shift}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                      {s.status}
-                    </span>
+
+                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => showToast(`Contacting ${st.name}...`)}
+                      className="rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800 cursor-pointer"
+                    >
+                      Message
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => showToast(`Opening schedule details for ${st.name}`)}
+                      className="rounded-lg bg-orange-50 px-2.5 py-1 text-[11px] font-bold text-[#FF6B35] hover:bg-orange-100 dark:bg-orange-950/40 cursor-pointer"
+                    >
+                      Schedule
+                    </button>
                   </div>
                 </div>
               ))}
@@ -750,118 +784,145 @@ export default function BranchOpsPage() {
           </div>
         )}
 
-        {/* TAB 6: OPERATIONAL SETTINGS */}
+        {/* TAB 6: SETTINGS */}
         {activeTab === 'settings' && (
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900 space-y-6 animate-in fade-in duration-200">
-            <div>
-              <h2 className="text-base font-extrabold text-slate-900 dark:text-white">Operating Hours & SLA Controls</h2>
-              <p className="text-xs text-slate-500">Kitchen operating schedule and fulfillment buffers</p>
-            </div>
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
+              <h2 className="text-base font-extrabold text-slate-900 dark:text-white mb-1">Branch Operating Controls</h2>
+              <p className="text-xs text-slate-500 mb-6">Configure availability, operating schedules, and dispatch parameters for {branch.branch_name}</p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="rounded-xl border border-slate-100 p-4 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-850/40">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Opening Hours</span>
-                <p className="text-base font-bold text-slate-900 dark:text-white mt-1">
-                  {branch.opening_hours || '07:30 AM'} - {branch.closing_hours || '09:30 PM'}
-                </p>
-              </div>
-              <div className="rounded-xl border border-slate-100 p-4 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-850/40">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Kitchen Prep Buffer</span>
-                <p className="text-base font-bold text-slate-900 dark:text-white mt-1">15 - 20 mins</p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-800 dark:text-zinc-200">Weekly Schedule</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {DAYS_OF_WEEK.map((d) => (
-                  <div
-                    key={d.key}
-                    className="rounded-xl border border-slate-200/80 p-2.5 text-center dark:border-zinc-800 bg-white dark:bg-zinc-900"
-                  >
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">{d.label}</span>
-                    <p className="text-xs font-bold text-slate-800 dark:text-zinc-200 mt-1">07:30 - 21:30</p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between py-3 border-b border-slate-100 dark:border-zinc-800">
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-800 dark:text-zinc-200">Live Order Acceptance</h3>
+                    <p className="text-[11px] text-slate-500">Temporarily pause or resume customer ordering on Shima delivery</p>
                   </div>
-                ))}
+                  <button
+                    type="button"
+                    onClick={handleToggleBranchStatus}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                      isBranchOpen ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-zinc-700'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      isBranchOpen ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 pt-2">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">Opening Time</label>
+                    <input
+                      type="text"
+                      defaultValue={branch.opening_hours || '07:30 AM'}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium dark:border-zinc-700 dark:bg-zinc-850 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">Closing Time</label>
+                    <input
+                      type="text"
+                      defaultValue={branch.closing_hours || '09:30 PM'}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium dark:border-zinc-700 dark:bg-zinc-850 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => showToast('Branch settings saved successfully')}
+                    className="rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#e0531f] transition cursor-pointer"
+                  >
+                    Save Changes
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Selected Order Inspection Ticket Modal */}
+      {/* Order Inspection Slide-Over / Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-zinc-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100 dark:border-zinc-800">
               <div>
-                <span className="font-mono text-xs font-bold text-[#FF6B35]">{selectedOrder.id}</span>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">Order Dispatch Details</h3>
+                <span className="font-mono font-black text-sm text-[#FF6B35]">{selectedOrder.id}</span>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Order Details & Kitchen Dispatch</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedOrder(null)}
-                className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-zinc-800 cursor-pointer"
+                className="rounded-full p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-lg">close</span>
+                <span className="material-symbols-outlined text-xl">close</span>
               </button>
             </div>
 
-            <div className="py-4 space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-zinc-850/60">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400">Customer</span>
-                  <p className="font-bold text-slate-900 dark:text-white mt-0.5">{selectedOrder.customer.name}</p>
-                  <p className="text-[11px] text-slate-400">{selectedOrder.customer.phone}</p>
+            <div className="space-y-4 text-xs">
+              <div className="rounded-2xl bg-slate-50 p-3 dark:bg-zinc-850 space-y-1.5">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Customer:</span>
+                  <span className="font-bold text-slate-800 dark:text-zinc-200">{selectedOrder.customer.name} ({selectedOrder.customer.phone})</span>
                 </div>
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400">Total Amount</span>
-                  <p className="font-mono font-black text-slate-900 dark:text-white mt-0.5">{selectedOrder.amount}</p>
-                  <p className="text-[11px] text-emerald-600 font-semibold">{selectedOrder.paymentMethod || 'Telebirr (Paid)'}</p>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Type:</span>
+                  <span className="font-bold text-slate-800 dark:text-zinc-200">{selectedOrder.type}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Payment:</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">{selectedOrder.paymentMethod}</span>
                 </div>
               </div>
 
               <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Items in Ticket</span>
-                <p className="p-3 rounded-xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 font-medium text-slate-800 dark:text-zinc-200 leading-relaxed">
+                <span className="font-bold text-slate-700 dark:text-zinc-300 block mb-1">Ordered Items:</span>
+                <p className="rounded-xl border border-slate-200 p-3 bg-white dark:border-zinc-700 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 font-medium">
                   {selectedOrder.items}
                 </p>
               </div>
 
               <div className="flex items-center justify-between pt-2">
-                <span className="text-[10px] uppercase font-bold text-slate-400">Dispatch Status</span>
-                <span className="rounded-lg bg-orange-50 px-2.5 py-1 text-xs font-bold text-[#FF6B35] dark:bg-orange-950/40">
-                  {selectedOrder.status}
-                </span>
+                <span className="font-extrabold text-sm text-slate-900 dark:text-white">Total Amount:</span>
+                <span className="font-mono font-black text-base text-[#FF6B35]">{selectedOrder.amount}</span>
               </div>
-            </div>
 
-            <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setSelectedOrder(null)}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 cursor-pointer"
-              >
-                Close Ticket
-              </button>
-              {selectedOrder.statusVariant === 'kitchen' && (
-                <button
-                  type="button"
-                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'ready')}
-                  className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 cursor-pointer"
-                >
-                  Mark Order Ready
-                </button>
-              )}
-              {selectedOrder.statusVariant === 'ready' && (
-                <button
-                  type="button"
-                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'delivery')}
-                  className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700 cursor-pointer"
-                >
-                  Hand to Courier
-                </button>
-              )}
+              <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-500">Status:</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{selectedOrder.status}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {selectedOrder.statusVariant === 'kitchen' && (
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'ready')}
+                      className="rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition cursor-pointer"
+                    >
+                      Mark Ready for Pickup
+                    </button>
+                  )}
+                  {selectedOrder.statusVariant === 'ready' && (
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'delivery')}
+                      className="rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-700 transition cursor-pointer"
+                    >
+                      Hand to Courier
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOrder(null)}
+                    className="rounded-xl border border-slate-200 px-3 py-2 font-bold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
