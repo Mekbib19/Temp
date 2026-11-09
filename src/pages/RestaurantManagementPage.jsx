@@ -10,9 +10,10 @@ import {
   getCategoryMeta,
 } from '../data/demoMerchants'
 
-const RestaurantManagementPage = () => {
+const RestaurantManagementPage = ({ noSidebar = false }) => {
   const navigate = useNavigate()
   const location = useLocation()
+  const merchantDetailBase = noSidebar ? '/portal/merchants' : '/restaurants'
   const [brands, setBrands] = useState(() => loadStoredMerchants())
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -176,8 +177,9 @@ const RestaurantManagementPage = () => {
   return (
     <MainLayout
       activeMenuKey="restaurantManagement"
-      breadcrumbParent="Dashboard"
+      breadcrumbParent={noSidebar ? 'Portal' : 'Dashboard'}
       breadcrumbCurrent="Merchants"
+      noSidebar={noSidebar}
     >
       <div className="space-y-6 pb-12">
         {/* Toast Alert */}
@@ -455,7 +457,7 @@ const RestaurantManagementPage = () => {
                           <div className="flex items-center gap-3">
                             <button
                               type="button"
-                              onClick={() => navigate(`/restaurants/${brand.id}`)}
+                              onClick={() => navigate(`${merchantDetailBase}/${brand.id}`)}
                               className="h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-slate-200/60 bg-slate-100 shadow-xs transition-transform duration-200 hover:scale-105 hover:ring-2 hover:ring-[#FF6B35]/40 dark:border-zinc-800"
                               title="Click to view full merchant information"
                             >
@@ -468,7 +470,7 @@ const RestaurantManagementPage = () => {
                             <div>
                               <button
                                 type="button"
-                                onClick={() => navigate(`/restaurants/${brand.id}`)}
+                                onClick={() => navigate(`${merchantDetailBase}/${brand.id}`)}
                                 className="text-left font-['Plus_Jakarta_Sans'] font-bold text-slate-900 transition hover:text-[#FF6B35] dark:text-zinc-100 dark:hover:text-orange-400"
                                 title="Click to view full merchant information"
                               >
@@ -617,7 +619,7 @@ const RestaurantManagementPage = () => {
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               type="button"
-                              onClick={() => navigate(`/restaurants/${brand.id}`)}
+                              onClick={() => navigate(`${merchantDetailBase}/${brand.id}`)}
                               className="flex h-9 w-9 min-h-[32px] min-w-[32px] items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                               title="View Full Merchant Information"
                               aria-label={`View full information for ${brand.name}`}
@@ -626,7 +628,7 @@ const RestaurantManagementPage = () => {
                             </button>
                             <button
                               type="button"
-                              onClick={() => navigate(`/restaurants/${brand.id}/edit`)}
+                              onClick={() => navigate(`${merchantDetailBase}/${brand.id}/edit`)}
                               className="flex h-9 w-9 min-h-[32px] min-w-[32px] items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                               title="Edit Merchant details"
                               aria-label={`Edit ${brand.name}`}
@@ -1134,7 +1136,7 @@ const RestaurantManagementPage = () => {
                   onClick={() => {
                     const id = selectedBrandForView.id
                     setSelectedBrandForView(null)
-                    navigate(`/restaurants/${id}/edit`)
+                    navigate(`${merchantDetailBase}/${id}/edit`)
                   }}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#e0531f]"
                 >

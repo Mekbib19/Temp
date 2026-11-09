@@ -18,9 +18,10 @@ import {
 } from '../data/demoCuisines'
 import { generateOrdersForMerchant } from '../data/demoOrders'
 
-export default function MerchantDetailsPage() {
+export default function MerchantDetailsPage({ noSidebar = false }) {
   const { merchantId } = useParams()
   const navigate = useNavigate()
+  const merchantsListUrl = noSidebar ? '/portal/merchants' : '/restaurants'
 
   const [merchantsList, setMerchantsList] = useState(() => loadStoredMerchants())
   const [activeTab, setActiveTab] = useState('overview')
@@ -44,6 +45,14 @@ export default function MerchantDetailsPage() {
       null
     )
   }, [merchantId, merchantsList])
+
+  const getBranchUrl = useCallback(
+    (targetId) =>
+      noSidebar
+        ? `/portal/merchants/${merchant?.id || merchantId}/branches/${targetId}`
+        : `/merchants/${merchant?.id || merchantId}/branches/${targetId}`,
+    [noSidebar, merchant?.id, merchantId]
+  )
 
   const [categoriesList] = useState(() => loadStoredCategories())
   const [cuisinesList, setCuisinesList] = useState(() => loadStoredCuisines())
@@ -221,7 +230,7 @@ export default function MerchantDetailsPage() {
       setCuisineFormErrors({})
       setIsCuisineEditorModalOpen(true)
     },
-    [categoryObj?.id, merchant?.category_id, categoriesList]
+    [categoryObj?.id, merchant, categoriesList]
   )
 
   const processUploadedFile = (file) => {
@@ -467,7 +476,7 @@ export default function MerchantDetailsPage() {
         (merchant?.name || 'Restaurant') + ' Addis Ababa'
       )}`,
     }
-  }, [branches, merchant?.name])
+  }, [branches, merchant])
 
   const handleToggleStatus = () => {
     if (!merchant) return
@@ -601,9 +610,10 @@ export default function MerchantDetailsPage() {
     return (
       <MainLayout
         activeMenuKey="merchantManagement"
-        breadcrumbParent="Dashboard"
+        breadcrumbParent={noSidebar ? 'Portal' : 'Dashboard'}
         breadcrumbMiddle="Merchants"
         breadcrumbCurrent="Merchant Not Found"
+        noSidebar={noSidebar}
       >
         <div className="mx-auto max-w-2xl py-16 text-center">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40">
@@ -618,7 +628,7 @@ export default function MerchantDetailsPage() {
           </p>
           <div className="mt-6 flex justify-center gap-3">
             <Link
-              to="/restaurants"
+              to={merchantsListUrl}
               className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-5 py-2.5 text-xs font-bold text-white transition hover:bg-[#e0531f]"
             >
               <span className="material-symbols-outlined text-base">arrow_back</span>
@@ -636,9 +646,10 @@ export default function MerchantDetailsPage() {
   return (
     <MainLayout
       activeMenuKey="merchantManagement"
-      breadcrumbParent="Dashboard"
+      breadcrumbParent={noSidebar ? 'Portal' : 'Dashboard'}
       breadcrumbMiddle="Merchants"
       breadcrumbCurrent={merchant.name}
+      noSidebar={noSidebar}
     >
       <div className="space-y-6 pb-16">
         {/* Toast Alert */}
@@ -944,13 +955,13 @@ export default function MerchantDetailsPage() {
                       <div
                         key={branchKey}
                         onClick={() =>
-                          navigate(`/merchants/${merchant.id}/branches/${b.id || idx}`)
+                          navigate(getBranchUrl(b.id || idx))
                         }
                         role="button"
                         tabIndex={0}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
-                            navigate(`/merchants/${merchant.id}/branches/${b.id || idx}`)
+                            navigate(getBranchUrl(b.id || idx))
                           }
                         }}
                         className="group flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-200/90 bg-slate-50/50 p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-red-400 hover:bg-white hover:shadow-sm dark:border-zinc-800 dark:bg-zinc-850/50 dark:hover:border-red-500 dark:hover:bg-zinc-850 cursor-pointer"
@@ -1026,7 +1037,7 @@ export default function MerchantDetailsPage() {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation()
-                              navigate(`/merchants/${merchant.id}/branches/${b.id || idx}`)
+                              navigate(getBranchUrl(b.id || idx))
                             }}
                             className="inline-flex items-center gap-1.5 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-500 hover:text-white dark:bg-red-950/50 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white"
                             title={`Open ${b.branch_name} details`}
@@ -1409,7 +1420,7 @@ export default function MerchantDetailsPage() {
                         <button
                           type="button"
                           onClick={() =>
-                            navigate(`/merchants/${merchant.id}/branches/${b.id || idx}`)
+                            navigate(getBranchUrl(b.id || idx))
                           }
                           className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-orange-50 px-2.5 py-1.5 text-xs font-bold text-[#FF6B35] ring-1 ring-orange-200/80 hover:bg-[#FF6B35] hover:text-white transition dark:bg-orange-950/40 dark:ring-orange-900/60 dark:text-orange-400"
                         >

@@ -21,6 +21,86 @@ import { loadStoredMenuCategories } from './demoMenuCategories'
 
 export const MENU_ITEMS_STORAGE_KEY = 'deliver_app_branch_menu_items_v3'
 
+// Supplementary multi-image gallery pool for rich multi-photo experiences
+export function getSupplementaryPhotos(category = '', primaryUrl = '') {
+  const cat = (category || '').toLowerCase()
+  const pool = {
+    burger: [
+      'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1550547660-d9450f859349?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?w=600&auto=format&fit=crop&q=80',
+    ],
+    drink: [
+      'https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop&q=80',
+    ],
+    coffee: [
+      'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop&q=80',
+    ],
+    bakery: [
+      'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1608198093002-ad4e005484ec?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=600&auto=format&fit=crop&q=80',
+    ],
+    dessert: [
+      'https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=600&auto=format&fit=crop&q=80',
+    ],
+    sandwich: [
+      'https://images.unsplash.com/photo-1509722747041-616f39b57569?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1553909489-cd47e0907980?w=600&auto=format&fit=crop&q=80',
+    ],
+    appetizer: [
+      'https://images.unsplash.com/photo-1576107232684-1279f3908594?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1541592727228-3e2840506eb3?w=600&auto=format&fit=crop&q=80',
+    ],
+    fruit: [
+      'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop&q=80',
+    ],
+    vegetable: [
+      'https://images.unsplash.com/photo-1597362925123-77861d3fbac7?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1566385101042-1a0aa0c1268c?w=600&auto=format&fit=crop&q=80',
+    ],
+    pharmacy: [
+      'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=600&auto=format&fit=crop&q=80',
+    ],
+    default: [
+      'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop&q=80',
+    ],
+  }
+
+  for (const [k, urls] of Object.entries(pool)) {
+    if (k !== 'default' && cat.includes(k)) {
+      return urls.filter((u) => u !== primaryUrl).slice(0, 3)
+    }
+  }
+  return pool.default.filter((u) => u !== primaryUrl).slice(0, 3)
+}
+
+/**
+ * Returns an array of valid image URLs for any menu item, guaranteeing multiple pictures
+ */
+export function getItemImages(item) {
+  if (!item) return []
+  if (Array.isArray(item.images) && item.images.length > 0) {
+    return item.images
+  }
+  const primary = item.image_url || ''
+  const extras = getSupplementaryPhotos(item.category_type, primary)
+  return primary ? [primary, ...extras] : extras
+}
+
 // Icon resolver for category names
 export function getCategoryIcon(name, code = '') {
   const n = (name || '').toLowerCase()

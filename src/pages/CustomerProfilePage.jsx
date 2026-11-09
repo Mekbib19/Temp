@@ -315,47 +315,9 @@ const CustomerProfilePage = () => {
     return () => document.removeEventListener('mousedown', handleOutsideClick)
   }, [])
 
-  // Edit User state with per-customer override
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [userProfileOverrides, setUserProfileOverrides] = useState({})
-
-  const currentProfile = userProfileOverrides[customerSlugKey] || {
-    name: demoCustomer?.name || 'Alex Curator',
-    email: demoCustomer?.email || 'alex.curator@example.com',
-    phone: demoCustomer?.phone || '0911223344',
-  }
-
-  const [editFormData, setEditFormData] = useState({
-    name: currentProfile.name,
-    email: currentProfile.email,
-    phone: currentProfile.phone,
-  })
-
-  const handleOpenEditModal = () => {
-    setEditFormData({
-      name: currentProfile.name,
-      email: currentProfile.email,
-      phone: currentProfile.phone,
-    })
-    setIsEditModalOpen(true)
-  }
-
-  const handleSaveEditUser = (e) => {
-    e.preventDefault()
-    setUserProfileOverrides((prev) => ({
-      ...prev,
-      [customerSlugKey]: {
-        name: editFormData.name.trim() || currentProfile.name,
-        email: editFormData.email.trim() || currentProfile.email,
-        phone: editFormData.phone.trim() || currentProfile.phone,
-      },
-    }))
-    setIsEditModalOpen(false)
-  }
-
-  const customerName = currentProfile.name
-  const customerEmail = currentProfile.email
-  const customerPhone = currentProfile.phone
+  const customerName = demoCustomer?.name || 'Alex Curator'
+  const customerEmail = demoCustomer?.email || 'alex.curator@example.com'
+  const customerPhone = demoCustomer?.phone || '0911223344'
   const customerIdFormatted = customerId || demoCustomer?.slug || 'CUST-9821'
   const customerAvatar = demoCustomer?.avatar || '/assets/alex_curator.png'
 
@@ -500,11 +462,9 @@ const CustomerProfilePage = () => {
             <div>
               <div className="flex flex-wrap items-center gap-2.5">
                 <h1 className="font-['Plus_Jakarta_Sans'] text-2xl font-extrabold tracking-tight text-slate-900 dark:text-zinc-100 sm:text-3xl">
-                  {customerName}
+                  Customer Information
                 </h1>
-                <span className="font-mono text-xs font-bold text-slate-400 dark:text-zinc-500">
-                  {customerIdFormatted}
-                </span>
+                
               </div>
               <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-zinc-400">
                 Customer Profile & Order History Console
@@ -514,14 +474,17 @@ const CustomerProfilePage = () => {
         </section>
 
         {/* Profile Card Header (Clean Modern Admin Dashboard User Profile Card) */}
-        <section className="relative rounded-3xl border border-slate-200/90 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-7">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-6">
+        <section className="relative rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
             {/* On the top left, a square profile picture of a businessman with rounded corners */}
             <div className="relative shrink-0">
               <img
                 alt={customerName}
-                className="h-24 w-24 rounded-2xl border border-slate-200/90 object-cover shadow-sm dark:border-zinc-700 sm:h-28 sm:w-28"
+                className="h-24 w-24 rounded-2xl border border-slate-200/90 object-cover shadow-md dark:border-zinc-700 sm:h-28 sm:w-28"
                 src={customerAvatar}
+                onError={(e) => {
+                  e.currentTarget.src = `https://ui-avatars.com/api/?background=FED7AA&color=C2410C&bold=true&name=${encodeURIComponent(customerName)}`
+                }}
               />
             </div>
 
@@ -529,8 +492,8 @@ const CustomerProfilePage = () => {
             <div className="min-w-0 flex-1">
               {/* Top row: Name + status badge on left, three-dot menu icon on the top right */}
               <div className="flex items-start justify-between gap-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="font-['Plus_Jakarta_Sans'] text-2xl font-extrabold tracking-tight text-slate-900 dark:text-zinc-100 sm:text-3xl">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h1 className="font-['Plus_Jakarta_Sans'] text-xl font-extrabold tracking-tight text-slate-900 dark:text-zinc-100 sm:text-2xl">
                     {customerName}
                   </h1>
                   {isBanned ? (
@@ -558,23 +521,9 @@ const CustomerProfilePage = () => {
                     <span className="material-symbols-outlined text-[20px]">more_vert</span>
                   </button>
 
-                  {/* Dropdown Menu (Edit User & Block Customer in Red) */}
+                  {/* Dropdown Menu (Block Customer in Red / Unblock Customer) */}
                   {isMenuOpen && (
                     <div className="absolute right-0 top-11 z-30 w-48 overflow-hidden rounded-xl border border-slate-200/90 bg-white py-1 shadow-xl dark:border-zinc-700 dark:bg-zinc-800">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsMenuOpen(false)
-                          handleOpenEditModal()
-                        }}
-                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-800 transition hover:bg-slate-50 dark:text-zinc-200 dark:hover:bg-zinc-700/60"
-                      >
-                        <span className="material-symbols-outlined text-[17px] text-slate-600 dark:text-zinc-400">
-                          edit
-                        </span>
-                        <span>Edit User</span>
-                      </button>
-                      <div className="border-t border-slate-100 dark:border-zinc-700/70" />
                       <button
                         type="button"
                         onClick={() => {
@@ -597,31 +546,33 @@ const CustomerProfilePage = () => {
                 </div>
               </div>
 
-              {/* Below the name, contact details are arranged horizontally in a single row */}
-              <div className="mt-2.5 flex flex-wrap items-center gap-5 sm:gap-7 text-xs text-slate-600 dark:text-zinc-400">
+              {/* Below the name, contact details arranged horizontally */}
+              <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-600 dark:text-zinc-400">
                 <div className="flex items-center gap-2 font-medium">
-                  <span className="material-symbols-outlined text-[17px] text-slate-500 dark:text-zinc-400">
+                  <span className="material-symbols-outlined text-[18px] text-slate-400 dark:text-zinc-400">
                     mail
                   </span>
-                  <span>{customerEmail}</span>
+                  <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200">{customerEmail}</span>
                 </div>
+                <span className="hidden text-base text-slate-300 sm:inline dark:text-zinc-700" aria-hidden="true">•</span>
                 <div className="flex items-center gap-2 font-medium">
-                  <span className="material-symbols-outlined text-[17px] text-slate-500 dark:text-zinc-400">
+                  <span className="material-symbols-outlined text-[18px] text-slate-400 dark:text-zinc-400">
                     call
                   </span>
-                  <span>{customerPhone}</span>
+                  <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200">{customerPhone}</span>
                 </div>
+                <span className="hidden text-base text-slate-300 sm:inline dark:text-zinc-700" aria-hidden="true">•</span>
                 <div className="flex items-center gap-2 font-medium">
-                  <span className="material-symbols-outlined text-[17px] text-slate-500 dark:text-zinc-400">
+                  <span className="material-symbols-outlined text-[18px] text-slate-400 dark:text-zinc-400">
                     badge
                   </span>
-                  <span>{customerIdFormatted}</span>
+                  <span className="font-mono text-xs font-bold text-slate-800 dark:text-zinc-200">{customerIdFormatted}</span>
                 </div>
               </div>
 
               {/* Suspended alert banner if customer is blocked */}
               {isBanned && (
-                <div className="mt-3.5 rounded-xl border border-rose-200/90 bg-rose-50/70 p-3 text-xs text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
+                <div className="mt-3 rounded-xl border border-rose-200/90 bg-rose-50/70 p-3 text-xs text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
                   <div className="flex items-center gap-2 font-bold text-rose-900 dark:text-rose-100">
                     <span className="material-symbols-outlined text-base text-rose-600 dark:text-rose-400">error</span>
                     <span>Account Access Suspended</span>
@@ -637,7 +588,7 @@ const CustomerProfilePage = () => {
           </div>
 
           {/* Below this row, four compact horizontal metric cards are displayed side by side with soft tinted backgrounds and icons */}
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             {/* Balance (12,450.00 ETB) */}
             <div className="flex items-center gap-3.5 rounded-2xl border border-orange-100/90 bg-orange-50/70 p-3.5 transition dark:border-orange-950/40 dark:bg-orange-950/20">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-[#FF6B35] dark:bg-orange-900/40 dark:text-orange-400">
@@ -1353,98 +1304,6 @@ const CustomerProfilePage = () => {
         </div>
       )}
 
-      {/* Edit User Modal */}
-      {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
-            onClick={() => setIsEditModalOpen(false)}
-          />
-
-          <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-zinc-800">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
-                  <span className="material-symbols-outlined text-xl">edit</span>
-                </div>
-                <div>
-                  <h3 className="font-['Plus_Jakarta_Sans'] text-sm font-bold text-slate-900 dark:text-zinc-100">
-                    Edit User Profile
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-zinc-400">
-                    Update customer profile contact information
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsEditModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
-              >
-                <span className="material-symbols-outlined text-xl">close</span>
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveEditUser} className="mt-4 space-y-3.5">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-zinc-300 uppercase tracking-wider mb-1">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={editFormData.name}
-                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                  required
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-zinc-300 uppercase tracking-wider mb-1">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={editFormData.email}
-                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                  required
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-zinc-300 uppercase tracking-wider mb-1">
-                  Phone Number
-                </label>
-                <input
-                  type="text"
-                  value={editFormData.phone}
-                  onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                  required
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-                />
-              </div>
-
-              <div className="mt-5 flex items-center justify-end gap-2.5 border-t border-slate-100 pt-4 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition"
-                >
-                  <span className="material-symbols-outlined text-base">save</span>
-                  Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </MainLayout>
   )
 }

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import { useTranslation } from 'react-i18next'
 import Pagination from '../components/Pagination'
@@ -67,6 +68,14 @@ const DashboardPage = () => {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2.5">
+            <Link
+              to="/delivery"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200/80 shadow-xs transition hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900/40"
+            >
+              <span className="material-symbols-outlined text-base">local_shipping</span>
+              <span>Delivery Live</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            </Link>
             <button
               type="button"
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"

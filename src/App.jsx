@@ -1,7 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import DashboardPage from './pages/DashboardPage'
 import CustomerManagementPage from './pages/CustomerManagementPage'
-import CustomerFormPage from './pages/CustomerFormPage'
 import CustomerProfilePage from './pages/CustomerProfilePage'
 import RestaurantManagementPage from './pages/RestaurantManagementPage'
 import AddMerchantPage from './pages/AddMerchantPage'
@@ -14,23 +13,74 @@ import MenuCategoryManagementPage from './pages/MenuCategoryManagementPage'
 import MenuCategoryDetailsPage from './pages/MenuCategoryDetailsPage'
 import DeliveryManagementPage from './pages/DeliveryManagementPage'
 import RiderManagementPage from './pages/RiderManagementPage'
+import AddRiderPage from './pages/AddRiderPage'
+import RiderDetailPage from './pages/RiderDetailPage'
+import BlockRiderPage from './pages/BlockRiderPage'
+import RiderVerificationPage from './pages/RiderVerificationPage'
+import RiderVerificationDetailPage from './pages/RiderVerificationDetailPage'
 import StaffManagementPage from './pages/StaffManagementPage'
+import StaffDetailPage from './pages/StaffDetailPage'
 import OrderManagementPage from './pages/OrderManagementPage'
+import OrderDetailPage from './pages/OrderDetailPage'
+import ReassignRiderPage from './pages/ReassignRiderPage'
 import FinanceManagementPage from './pages/FinanceManagementPage'
 import SecurityManagementPage from './pages/SecurityManagementPage'
+import SettingsPage from './pages/SettingsPage'
 import InsightsManagementPage from './pages/InsightsManagementPage'
-
+import AuthPage from './pages/AuthPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
+import FirstTimeLoginPage from './pages/FirstTimeLoginPage'
+import PortalPage from './pages/PortalPage'
+import MerchantDetailPage from './merchant-portal/pages/MerchantDetailPage'
+import BranchOpsPage from './merchant-portal/pages/BranchOpsPage'
+import MerchantSelectorPage from './merchant-portal/pages/MerchantSelectorPage'
+import AddBranchPage from './merchant-portal/pages/AddBranchPage'
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/customers" replace />} />
+        {/* Gateway Portal Page with 3 direct navigation buttons */}
+        <Route path="/" element={<PortalPage />} />
+        <Route path="/portal" element={<PortalPage />} />
+
+        {/* Merchant & Branch Operations Portal - Dedicated Directory & Custom UI Style */}
+        <Route path="/portal/merchants" element={<MerchantSelectorPage />} />
+        <Route path="/portal/select-merchant" element={<MerchantSelectorPage />} />
+        <Route path="/portal/merchant-selector" element={<MerchantSelectorPage />} />
+        <Route path="/portal/merchant" element={<MerchantDetailPage />} />
+        <Route path="/portal/merchants/:merchantId" element={<MerchantDetailPage />} />
+        <Route path="/portal/merchants/:merchantId/branches/new" element={<AddBranchPage />} />
+        <Route path="/portal/merchants/:merchantId/branches/:branchId" element={<BranchOpsPage />} />
+        <Route path="/portal/branches" element={<BranchOpsPage />} />
+        <Route path="/portal/branches/new" element={<AddBranchPage />} />
+        <Route path="/portal/branch" element={<BranchOpsPage />} />
+        <Route path="/portal/branches/:branchId" element={<BranchOpsPage />} />
+
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/riders" element={<RiderManagementPage />} />
         <Route path="/delivery" element={<DeliveryManagementPage />} />
+        <Route path="/deliveries" element={<DeliveryManagementPage />} />
+        <Route path="/delivery/live" element={<DeliveryManagementPage />} />
+        <Route path="/delivery-live" element={<DeliveryManagementPage />} />
+        <Route path="/live-delivery" element={<DeliveryManagementPage />} />
+        <Route path="/live-tracking" element={<DeliveryManagementPage />} />
         <Route path="/staff" element={<StaffManagementPage />} />
+        <Route path="/staff/:id" element={<StaffDetailPage />} />
         <Route path="/order" element={<OrderManagementPage />} />
+        <Route path="/orders" element={<OrderManagementPage />} />
+        <Route path="/order/:orderId/reassign-rider" element={<ReassignRiderPage />} />
+        <Route path="/orders/:orderId/reassign-rider" element={<ReassignRiderPage />} />
+        <Route path="/order/:id/reassign-rider" element={<ReassignRiderPage />} />
+        <Route path="/orders/:id/reassign-rider" element={<ReassignRiderPage />} />
+        <Route path="/order/:orderId/reassign-courier" element={<ReassignRiderPage />} />
+        <Route path="/orders/:orderId/reassign-courier" element={<ReassignRiderPage />} />
+        <Route path="/order/:id/reassign-courier" element={<ReassignRiderPage />} />
+        <Route path="/orders/:id/reassign-courier" element={<ReassignRiderPage />} />
+        <Route path="/order/:orderId" element={<OrderDetailPage />} />
+        <Route path="/orders/:orderId" element={<OrderDetailPage />} />
+        <Route path="/order/:id" element={<OrderDetailPage />} />
+        <Route path="/orders/:id" element={<OrderDetailPage />} />
         <Route path="/finance" element={<FinanceManagementPage />} />
         <Route path="/security" element={<SecurityManagementPage />} />
         <Route path="/insights" element={<InsightsManagementPage />} />
@@ -56,8 +106,7 @@ function App() {
         <Route path="/menu-items" element={<MenuCategoryDetailsPage />} />
         <Route path="/menu-category" element={<Navigate to="/menu-categories" replace />} />
         <Route path="/customers" element={<CustomerManagementPage />} />
-        <Route path="/customers/new" element={<CustomerFormPage />} />
-        <Route path="/customers/:customerId/edit" element={<CustomerFormPage />} />
+        <Route path="/customers/new" element={<Navigate to="/customers" replace />} />
         <Route path="/customers/:customerId" element={<CustomerProfilePage />} />
 
         {/* URL Aliases and case insensitivity */}
@@ -68,7 +117,31 @@ function App() {
         <Route path="/Customer/:customerId" element={<CustomerProfilePage />} />
         <Route path="/rider" element={<Navigate to="/riders" replace />} />
         <Route path="/Rider" element={<Navigate to="/riders" replace />} />
-        <Route path="/Riders" element={<Navigate to="/riders" replace />} />
+        <Route path="/riders/verification" element={<RiderVerificationPage />} />
+        <Route path="/riders/verification/:id" element={<RiderVerificationDetailPage />} />
+        <Route path="/rider/verification/:id" element={<RiderVerificationDetailPage />} />
+        <Route path="/riders/verifications" element={<Navigate to="/riders/verification" replace />} />
+        <Route path="/rider/verification" element={<Navigate to="/riders/verification" replace />} />
+        <Route path="/rider-verification" element={<Navigate to="/riders/verification" replace />} />
+        <Route path="/riders/new" element={<AddRiderPage />} />
+        <Route path="/riders/:id/block" element={<BlockRiderPage />} />
+        <Route path="/riders/:id" element={<RiderDetailPage />} />
+
+        {/* System Settings & Support */}
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/system/settings" element={<SettingsPage />} />
+        <Route path="/system-settings" element={<SettingsPage />} />
+        {/* Authentication & Onboarding */}
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/login" element={<AuthPage />} />
+        <Route path="/signin" element={<Navigate to="/login" replace />} />
+        <Route path="/register" element={<Navigate to="/login" replace />} />
+        <Route path="/signup" element={<Navigate to="/login" replace />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/forgot-password" element={<ResetPasswordPage />} />
+        <Route path="/first-time-login" element={<FirstTimeLoginPage />} />
+        <Route path="/setup-password" element={<FirstTimeLoginPage />} />
+        <Route path="/force-password-change" element={<FirstTimeLoginPage />} />
 
         {/* Global Fallback */}
         <Route path="*" element={<Navigate to="/customers" replace />} />

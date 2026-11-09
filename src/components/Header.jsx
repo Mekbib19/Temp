@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { useAppTheme } from '../providers/theme-context'
 import ShimaLogo from './Logo'
 import usFlag from '../assets/flags/us.svg'
@@ -37,20 +38,37 @@ const Header = ({
   breadcrumbParent,
   breadcrumbMiddle,
   breadcrumbCurrent,
+  noSidebar = false,
 }) => {
   const { t, i18n } = useTranslation()
   const { isDark, toggleTheme } = useAppTheme()
   const langCode = i18n.language?.split('-')[0] || 'en'
   const currentLanguage = ['en', 'am', 'om', 'ti'].includes(langCode) ? langCode : 'en'
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false)
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const navigate = useNavigate()
 
   const languageMenuRef = useRef(null)
+  const userMenuRef = useRef(null)
   const activeLanguage = languageOptions.find((lang) => lang.code === currentLanguage) || languageOptions[0]
+
+  const [authUser] = useState(() => {
+    try {
+      const raw = localStorage.getItem('shima_auth_user')
+      if (raw) return JSON.parse(raw)
+    } catch {
+      // fallback
+    }
+    return { name: 'Julian Casablancas', role: 'Platform Super Admin', email: 'admin@shimadelivery.com' }
+  })
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
       if (languageMenuRef.current && !languageMenuRef.current.contains(event.target)) {
         setIsLanguageMenuOpen(false)
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsUserMenuOpen(false)
       }
     }
 
@@ -60,37 +78,84 @@ const Header = ({
 
   return (
     <header
-      className={`fixed left-0 right-0 top-0 z-40 flex h-16 w-full items-center justify-between bg-white/90 px-4 shadow-[0_4px_20px_rgba(28,27,27,0.04)] backdrop-blur-xl transition-all duration-300 dark:bg-zinc-950/90 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] sm:px-6 lg:px-6 ${
-        isSidebarCollapsed ? 'lg:left-20 lg:w-[calc(100%-5rem)]' : 'lg:left-64 lg:w-[calc(100%-16rem)]'
+      className={`fixed left-0 right-0 top-0 z-40 flex h-16 w-full items-center justify-between bg-white/90 px-4 shadow-[0_4px_20px_rgba(28,27,27,0.04)] backdrop-blur-xl transition-all duration-300 dark:bg-zinc-950/90 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] sm:px-6 lg:px-8 ${
+        noSidebar
+          ? 'w-full'
+          : isSidebarCollapsed
+          ? 'lg:left-20 lg:w-[calc(100%-5rem)]'
+          : 'lg:left-64 lg:w-[calc(100%-16rem)]'
       }`}
     >
       {/* Left: Navigation toggles & Clear Breadcrumb trail */}
       <div className="ml-1 flex min-w-0 items-center gap-2 font-['Plus_Jakarta_Sans'] text-sm sm:gap-3">
-        <button
-          type="button"
-          onClick={onOpenMobileSidebar}
-          className="shrink-0 rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 lg:hidden"
-          aria-label="Open sidebar"
-        >
-          <span className="material-symbols-outlined text-xl">menu</span>
-        </button>
-        <div className="flex shrink-0 items-center gap-1.5 lg:hidden">
-          <ShimaLogo className="h-8 w-8 drop-shadow-xs" />
-        </div>
-        <button
-          type="button"
-          onClick={onToggleSidebar}
-          className="hidden shrink-0 rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 lg:block"
-          aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          <span className="material-symbols-outlined text-xl">
-            {isSidebarCollapsed ? 'menu_open' : 'menu'}
-          </span>
-        </button>
+        {noSidebar ? (
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 hover:text-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 cursor-pointer"
+              title="Return to Portal Gateway"
+            >
+              <span className="material-symbols-outlined text-base">apps</span>
+              <span className="hidden sm:inline">Portal Hub</span>
+            </button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <ShimaLogo className="h-8 w-8 drop-shadow-xs" />
+            </div>
+            <div className="hidden sm:flex items-center gap-1 text-xs font-semibold bg-slate-100 dark:bg-zinc-800/80 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => navigate('/portal/merchants')}
+                className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                  breadcrumbCurrent?.toLowerCase().includes('branch')
+                    ? 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'bg-white dark:bg-zinc-700 text-[#FF6B35] shadow-xs font-bold'
+                }`}
+              >
+                Merchants
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/portal/branches')}
+                className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                  breadcrumbCurrent?.toLowerCase().includes('branch')
+                    ? 'bg-white dark:bg-zinc-700 text-[#FF6B35] shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Branch Ops
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={onOpenMobileSidebar}
+              className="shrink-0 rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 lg:hidden cursor-pointer"
+              aria-label="Open sidebar"
+            >
+              <span className="material-symbols-outlined text-xl">menu</span>
+            </button>
+            <div className="flex shrink-0 items-center gap-1.5 lg:hidden">
+              <ShimaLogo className="h-8 w-8 drop-shadow-xs" />
+            </div>
+            <button
+              type="button"
+              onClick={onToggleSidebar}
+              className="hidden shrink-0 rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 lg:block cursor-pointer"
+              aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <span className="material-symbols-outlined text-xl">
+                {isSidebarCollapsed ? 'menu_open' : 'menu'}
+              </span>
+            </button>
+          </>
+        )}
 
-        <nav aria-label="Breadcrumb" className="flex items-center gap-2 truncate text-xs sm:text-sm">
+        <nav aria-label="Breadcrumb" className="hidden lg:flex items-center gap-2 truncate text-xs sm:text-sm">
           <span className="font-semibold text-slate-600 dark:text-zinc-300">
-            {breadcrumbParent || t('menu.dashboard')}
+            {breadcrumbParent || (noSidebar ? 'Portal' : t('menu.dashboard'))}
           </span>
           <span className="material-symbols-outlined text-base text-slate-400 dark:text-zinc-500">
             chevron_right
@@ -174,22 +239,66 @@ const Header = ({
 
         <div className="hidden h-7 w-px bg-slate-200 dark:bg-zinc-800 sm:block" />
 
-        {/* User Identity - Clearly marked Platform Super Admin */}
-        <div className="hidden text-right sm:block">
-          <p className="text-sm font-bold leading-none text-slate-900 dark:text-zinc-100">
-            Julian Casablancas
-          </p>
-          <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-            Platform Super Admin
-          </p>
-        </div>
-        <div className="relative">
-          <img
-            alt="Admin Profile"
-            className="h-9 w-9 rounded-xl border-2 border-white object-cover shadow-sm dark:border-zinc-800"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAE2WSlXNx0I8-sDdt3xU_aVn4xCf7ibQ_4DTdbgkF2ggS_2pDws3PrLTPMcrCdGaqcAjPcvjNNeNGJvKgTzHaN_AobrPBkdjGLTcCBrK2U_DT559NyWM8pTRMdHIYxiqspXbI8fxHYgzCc1hlEG8IK7IpdrqNnXYxZKKP_coV60WEWbb1oEwf8_cbOsobIzm47uxG_jCmwaQOz3AJNNGeOgeWZ63T6YDCFy7qD7U9-WLQGo3_3AbcDre09GMI0bDBo_Hvef-KwkFo"
-          />
-          <div className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-emerald-500 dark:border-zinc-950" />
+        {/* User Identity & Dropdown */}
+        <div className="relative" ref={userMenuRef}>
+          <button
+            type="button"
+            onClick={() => setIsUserMenuOpen((prev) => !prev)}
+            className="flex items-center gap-2.5 rounded-xl p-1 text-left transition hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer"
+            aria-label="User menu"
+            aria-expanded={isUserMenuOpen}
+          >
+            <div className="hidden text-right sm:block">
+              <p className="text-sm font-bold leading-none text-slate-900 dark:text-zinc-100">
+                {authUser?.name || 'Julian Casablancas'}
+              </p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                {authUser?.role || 'Platform Super Admin'}
+              </p>
+            </div>
+            <div className="relative">
+              <img
+                alt="Admin Profile"
+                className="h-9 w-9 rounded-xl border-2 border-white object-cover shadow-sm dark:border-zinc-800"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAE2WSlXNx0I8-sDdt3xU_aVn4xCf7ibQ_4DTdbgkF2ggS_2pDws3PrLTPMcrCdGaqcAjPcvjNNeNGJvKgTzHaN_AobrPBkdjGLTcCBrK2U_DT559NyWM8pTRMdHIYxiqspXbI8fxHYgzCc1hlEG8IK7IpdrqNnXYxZKKP_coV60WEWbb1oEwf8_cbOsobIzm47uxG_jCmwaQOz3AJNNGeOgeWZ63T6YDCFy7qD7U9-WLQGo3_3AbcDre09GMI0bDBo_Hvef-KwkFo"
+              />
+              <div className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-emerald-500 dark:border-zinc-950" />
+            </div>
+            <span className="material-symbols-outlined text-base text-slate-400 dark:text-zinc-500">
+              expand_more
+            </span>
+          </button>
+
+          {isUserMenuOpen && (
+            <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 animate-in fade-in duration-150">
+              <div className="px-3 py-2 border-b border-slate-100 dark:border-zinc-800 mb-1">
+                <p className="text-xs font-extrabold text-slate-900 dark:text-white">
+                  {authUser?.name || 'Julian Casablancas'}
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-zinc-400 truncate">
+                  {authUser?.email || 'admin@shimadelivery.com'}
+                </p>
+                <span className="mt-1 inline-flex items-center gap-1 rounded bg-orange-50 px-1.5 py-0.5 text-[9px] font-bold text-[#FF6B35] dark:bg-orange-950/40">
+                  {authUser?.role || 'Platform Super Admin'}
+                </span>
+              </div>
+
+              <div className="my-1 border-t border-slate-100 dark:border-zinc-800" />
+
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.removeItem('shima_auth_user')
+                  setIsUserMenuOpen(false)
+                  navigate('/login')
+                }}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30 transition cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-base">logout</span>
+                <span>Log Out</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

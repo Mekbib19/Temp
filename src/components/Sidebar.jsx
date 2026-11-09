@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import ShimaLogo from './Logo'
 
 const menuSections = [
@@ -12,9 +12,10 @@ const menuSections = [
   {
     categoryKey: 'management',
     items: [
-      { key: 'orderManagement', icon: 'receipt_long', path: '/order' },
+      { key: 'orderManagement', icon: 'receipt_long', path: '/orders' },
       { key: 'customerManagement', icon: 'group', path: '/customers' },
       { key: 'riderManagement', icon: 'two_wheeler', path: '/riders' },
+      { key: 'riderVerification', icon: 'verified_user', path: '/riders/verification' },
       { key: 'merchantManagement', icon: 'storefront', path: '/restaurants' },
       { key: 'categoryManagement', icon: 'category', path: '/categories' },
       { key: 'cuisineManagement', icon: 'dinner_dining', path: '/cuisines' },
@@ -23,19 +24,10 @@ const menuSections = [
       { key: 'staffManagement', icon: 'badge', path: '/staff' },
     ],
   },
-  {
-    categoryKey: 'analytics',
-    items: [
-      { key: 'finance', icon: 'payments', path: '/finance' },
-      { key: 'insights', icon: 'monitoring', path: '/insights' },
-      { key: 'security', icon: 'security', path: '/security' },
-    ],
-  },
 ]
 
 const secondaryMenu = [
   { key: 'settings', icon: 'settings', path: '/settings' },
-  { key: 'support', icon: 'help_center', path: '/support' },
 ]
 
 const Sidebar = ({
@@ -45,7 +37,9 @@ const Sidebar = ({
   activeMenuKey = 'dashboard',
 }) => {
   const { t } = useTranslation()
+  const location = useLocation()
   const isCompact = isCollapsed && !isMobileOpen
+  const isOrderPath = location.pathname.startsWith('/order') || location.pathname.startsWith('/orders')
 
   return (
     <aside
@@ -99,20 +93,36 @@ const Sidebar = ({
             )}
 
             {section.items.map((item) => {
-              const isActive =
-                item.key === activeMenuKey ||
-                (item.key === 'merchantManagement' && activeMenuKey === 'restaurantManagement') ||
-                (item.key === 'restaurantManagement' && activeMenuKey === 'merchantManagement')
-              const itemClasses = `flex w-full items-center ${isCompact ? 'justify-center' : 'gap-3'} px-4 py-2.5 text-left transition-all duration-200 ${
-                isActive
-                  ? 'rounded-xl border-r-4 border-[#FF6B35] bg-orange-50/50 font-bold text-[#FF6B35] dark:bg-orange-900/10'
-                  : 'font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'
-              }`
+              const checkActive = (navActive) => {
+                if (isOrderPath) {
+                  if (item.key === 'orderManagement') return true
+                  if (item.key === 'dashboard') return false
+                }
+                if (item.key === activeMenuKey) return true
+                if (navActive && (item.path !== '/dashboard' || location.pathname === '/dashboard')) return true
+                if (
+                  (item.key === 'merchantManagement' && activeMenuKey === 'restaurantManagement') ||
+                  (item.key === 'restaurantManagement' && activeMenuKey === 'merchantManagement')
+                ) {
+                  return true
+                }
+                return false
+              }
 
               if (!item.path) {
+                const isActive = item.key === activeMenuKey
                 return (
-                  <button key={item.key} type="button" className={itemClasses} title={t(`menu.${item.key}`)}>
-                    <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
+                  <button
+                    key={item.key}
+                    type="button"
+                    className={`group flex w-full items-center ${isCompact ? 'justify-center' : 'gap-3'} px-4 py-2.5 text-left transition-all duration-200 cursor-pointer ${
+                      isActive
+                        ? 'rounded-xl border-r-4 border-[#FF6B35] bg-orange-50 font-bold text-[#FF6B35] dark:bg-orange-950/30'
+                        : 'font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'
+                    }`}
+                    title={t(`menu.${item.key}`)}
+                  >
+                    <span className="material-symbols-outlined text-[22px] transition-transform group-hover:scale-105">{item.icon}</span>
                     {!isCompact && (
                       <span className="font-['Plus_Jakarta_Sans'] text-sm tracking-wide">{t(`menu.${item.key}`)}</span>
                     )}
@@ -124,13 +134,31 @@ const Sidebar = ({
                 <NavLink
                   key={item.key}
                   to={item.path}
+                  end={item.path === '/riders' || item.path === '/dashboard'}
                   onClick={onCloseMobile}
-                  className={itemClasses}
+                  className={({ isActive: isNavActive }) => {
+                    const active = checkActive(isNavActive)
+                    return `group flex w-full items-center ${isCompact ? 'justify-center' : 'gap-3'} px-4 py-2.5 text-left transition-all duration-200 cursor-pointer ${
+                      active
+                        ? 'rounded-xl border-r-4 border-[#FF6B35] bg-orange-50 font-bold text-[#FF6B35] dark:bg-orange-950/30'
+                        : 'font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'
+                    }`
+                  }}
                   title={t(`menu.${item.key}`)}
                 >
-                  <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
+                  <span className="material-symbols-outlined text-[22px] transition-transform group-hover:scale-105">{item.icon}</span>
                   {!isCompact && (
-                    <span className="font-['Plus_Jakarta_Sans'] text-sm tracking-wide">{t(`menu.${item.key}`)}</span>
+                    <div className="flex flex-1 items-center justify-between">
+                      <span className="font-['Plus_Jakarta_Sans'] text-sm tracking-wide">
+                        {item.key === 'deliveryManagement' ? 'Delivery Live' : t(`menu.${item.key}`)}
+                      </span>
+                      {item.key === 'deliveryManagement' && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-700 shadow-2xs dark:bg-emerald-950/60 dark:text-emerald-400">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          LIVE
+                        </span>
+                      )}
+                    </div>
                   )}
                 </NavLink>
               )
@@ -140,17 +168,25 @@ const Sidebar = ({
 
         <div className="mt-4 border-t border-slate-100 pt-3 dark:border-zinc-800">
           {secondaryMenu.map((item) => (
-            <button
+            <NavLink
               key={item.key}
-              type="button"
-              className={`flex w-full items-center ${isCompact ? 'justify-center' : 'gap-3'} px-4 py-2.5 text-left font-medium text-slate-500 transition-all duration-200 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100`}
+              to={item.path}
+              onClick={onCloseMobile}
+              className={({ isActive }) => {
+                const active = isActive || activeMenuKey === item.key
+                return `group flex w-full items-center ${isCompact ? 'justify-center' : 'gap-3'} px-4 py-2.5 text-left transition-all duration-200 cursor-pointer ${
+                  active
+                    ? 'rounded-xl border-r-4 border-[#FF6B35] bg-orange-50 font-bold text-[#FF6B35] dark:bg-orange-950/30'
+                    : 'font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'
+                }`
+              }}
               title={t(`menu.${item.key}`)}
             >
-              <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
+              <span className="material-symbols-outlined text-[22px] transition-transform group-hover:scale-105">{item.icon}</span>
               {!isCompact && (
                 <span className="font-['Plus_Jakarta_Sans'] text-sm tracking-wide">{t(`menu.${item.key}`)}</span>
               )}
-            </button>
+            </NavLink>
           ))}
         </div>
       </nav>
