@@ -541,8 +541,8 @@ function BranchOrdersTabContent({
   )
 }
 
-export default function BranchDetailPage() {
-  const { merchantId, branchId } = useParams()
+export default function BranchDetailPage({ noSidebar = false, defaultMerchantId, defaultBranchId }) {
+  const params = useParams()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -567,6 +567,17 @@ export default function BranchDetailPage() {
   }
 
   const merchantsList = useMemo(() => loadStoredMerchants(), [])
+
+  // Resolve merchantId: if params.merchantId is missing, pick defaultMerchantId or first merchant with branches or 'm-002'
+  const merchantId = useMemo(() => {
+    if (params.merchantId) return params.merchantId
+    if (defaultMerchantId) return defaultMerchantId
+    const withBranches = merchantsList.find((m) => Array.isArray(m.branches) && m.branches.length > 0)
+    return withBranches?.id || 'm-002'
+  }, [params.merchantId, defaultMerchantId, merchantsList])
+
+  const branchId = params.branchId || defaultBranchId
+
   const merchant = useMemo(() => {
     if (!merchantId) return null
     return (
@@ -620,6 +631,8 @@ export default function BranchDetailPage() {
   const [menuItems, setMenuItems] = useState(() => getMenuItemsForBranch(branch?.id, merchant?.id, merchant))
   const [initialMenuCategory, setInitialMenuCategory] = useState('all')
   const [branchReviews, setBranchReviews] = useState(() => getBranchReviews(branch?.id || branchId))
+  const [isSlideBarOpen, setIsSlideBarOpen] = useState(true)
+  const [branchOpenState, setBranchOpenState] = useState(true)
 
   const merchantCategories = useMemo(() => {
     return getCategoriesForBranch(merchant, menuItems)
@@ -870,9 +883,10 @@ export default function BranchDetailPage() {
     return (
       <MainLayout
         activeMenuKey="merchantManagement"
-        breadcrumbParent="Dashboard"
+        breadcrumbParent={noSidebar ? 'Portal' : 'Dashboard'}
         breadcrumbMiddle="Merchants"
         breadcrumbCurrent="Branch Not Found"
+        noSidebar={noSidebar}
       >
         <div className="mx-auto max-w-xl py-16 text-center">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40">
@@ -887,8 +901,8 @@ export default function BranchDetailPage() {
           <div className="mt-6">
             <button
               type="button"
-              onClick={() => navigate(`/merchants/${merchantId || ''}`)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-5 py-2.5 text-xs font-bold text-white transition hover:bg-[#e0531f]"
+              onClick={() => navigate(noSidebar ? `/portal/merchants/${merchantId || ''}` : `/merchants/${merchantId || ''}`)}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-5 py-2.5 text-xs font-bold text-white transition hover:bg-[#e0531f] cursor-pointer"
             >
               <span className="material-symbols-outlined text-base">arrow_back</span>
               Back to Merchant Profile
@@ -899,14 +913,22 @@ export default function BranchDetailPage() {
     )
   }
 
-  const isBranchOpen = branch.is_open !== false
+  const isBranchOpen = branch ? (branchOpenState && branch.is_open !== false) : false
+  const handleToggleBranchStatus = () => {
+    setBranchOpenState((prev) => {
+      const next = !prev
+      showToast(`Branch ${branch?.branch_name || 'Branch'} status updated to ${next ? 'Open' : 'Closed'}`)
+      return next
+    })
+  }
 
   return (
     <MainLayout
       activeMenuKey="merchantManagement"
-      breadcrumbParent="Dashboard"
+      breadcrumbParent={noSidebar ? 'Portal' : 'Dashboard'}
       breadcrumbMiddle={merchant.name}
       breadcrumbCurrent={branch.branch_name}
+      noSidebar={noSidebar}
     >
       <div className="space-y-6 pb-20">
         {/* Toast Notification */}
@@ -922,8 +944,8 @@ export default function BranchDetailPage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => navigate(`/merchants/${merchant.id}`)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-2xs transition hover:bg-slate-50 hover:text-slate-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              onClick={() => navigate(noSidebar ? `/portal/merchants/${merchant.id}` : `/merchants/${merchant.id}`)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-2xs transition hover:bg-slate-50 hover:text-slate-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 cursor-pointer"
               title="Back to Merchant Branches"
             >
               <span className="material-symbols-outlined text-lg">arrow_back</span>
@@ -976,7 +998,13 @@ export default function BranchDetailPage() {
                           return (
                             <DropdownMenuItem
                               key={b.id || idx}
-                              onClick={() => navigate(`/merchants/${merchant.id}/branches/${b.id || idx}`)}
+                              onClick={() =>
+                                navigate(
+                                  noSidebar
+                                    ? `/portal/merchants/${merchant.id}/branches/${b.id || idx}`
+                                    : `/merchants/${merchant.id}/branches/${b.id || idx}`
+                                )
+                              }
                               className={`flex items-center justify-between rounded-lg px-2.5 py-2 text-xs cursor-pointer ${
                                 isCurrent
                                   ? 'bg-orange-50 font-bold text-[#FF6B35] dark:bg-orange-950/40 dark:text-orange-400'
@@ -999,11 +1027,182 @@ export default function BranchDetailPage() {
                 )}
               </div>
               <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-zinc-400">
-                Part of <Link to={`/merchants/${merchant.id}`} className="font-bold text-slate-700 hover:text-[#FF6B35] dark:text-zinc-300">{merchant.name}</Link> • Operations, Geolocation & Order Dispatch Console
+                Part of <Link to={noSidebar ? `/portal/merchants/${merchant.id}` : `/merchants/${merchant.id}`} className="font-bold text-slate-700 hover:text-[#FF6B35] dark:text-zinc-300">{merchant.name}</Link> • Operations, Geolocation & Order Dispatch Console
               </p>
             </div>
           </div>
+
+          {noSidebar && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsSlideBarOpen((prev) => !prev)}
+                className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition-all shadow-xs cursor-pointer ${
+                  isSlideBarOpen
+                    ? 'border-orange-200 bg-orange-50 text-[#FF6B35] dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-400'
+                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'
+                }`}
+                title={isSlideBarOpen ? 'Slide Menu (Visible)' : 'Open Slide Menu'}
+              >
+                <span className="material-symbols-outlined text-base">
+                  {isSlideBarOpen ? 'left_panel_close' : 'left_panel_open'}
+                </span>
+                <span>{isSlideBarOpen ? 'Slide Menu Active' : 'Open Slide Menu'}</span>
+                <span className="inline-flex items-center justify-center rounded-full bg-[#FF6B35] px-1.5 py-0.2 text-[10px] font-extrabold text-white">
+                  6
+                </span>
+              </button>
+            </div>
+          )}
         </section>
+
+        {/* Workspace Layout: Incorporates Slide Bar when in portal mode */}
+        <div className="relative">
+          {/* Mobile Overlay Backdrop for Slide Menu */}
+          {noSidebar && isSlideBarOpen && (
+            <div
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs lg:hidden"
+              onClick={() => setIsSlideBarOpen(false)}
+            />
+          )}
+
+          <div className="flex items-start gap-6">
+            {/* Dedicated Branch Operations Slide Bar (Only in Branch Portal, separated from Super Admin) */}
+            {noSidebar && (
+              <aside
+                className={`transition-all duration-300 ease-in-out shrink-0 ${
+                  isSlideBarOpen
+                    ? 'fixed inset-y-0 left-0 z-50 w-72 lg:static lg:z-10 lg:w-64 lg:sticky lg:top-20'
+                    : 'fixed -translate-x-full lg:static lg:w-0 lg:overflow-hidden lg:opacity-0 lg:pointer-events-none'
+                }`}
+              >
+                <div className="relative h-full lg:h-[calc(100vh-6.5rem)] rounded-2xl border border-slate-200/90 bg-white/95 dark:border-zinc-800 dark:bg-zinc-900/95 backdrop-blur-xl shadow-lg lg:shadow-xs flex flex-col overflow-hidden">
+                  {/* Desktop Collapse Arrow */}
+                  <button
+                    type="button"
+                    onClick={() => setIsSlideBarOpen(false)}
+                    className="hidden lg:flex absolute -right-3 top-5 z-20 h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white shadow-xs text-slate-500 hover:text-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 cursor-pointer"
+                    title="Collapse Slide Menu"
+                  >
+                    <span className="material-symbols-outlined text-xs">chevron_left</span>
+                  </button>
+
+                  {/* Slide Bar Header */}
+                  <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] dark:bg-orange-950/60 border border-orange-200/60 dark:border-orange-900/40">
+                        <span className="material-symbols-outlined text-xl">store</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-extrabold text-slate-900 dark:text-white leading-tight">
+                          {branch.branch_name}
+                        </p>
+                        <p className="truncate text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">
+                          Branch Slide Menu
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsSlideBarOpen(false)}
+                      className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 lg:hidden cursor-pointer"
+                      title="Close Slide Menu"
+                    >
+                      <span className="material-symbols-outlined text-lg">close</span>
+                    </button>
+                  </div>
+
+                  {/* Operating Status Strip */}
+                  <div className="px-4 py-2.5 bg-slate-50/70 dark:bg-zinc-850/50 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between text-xs">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Status</span>
+                    <button
+                      type="button"
+                      onClick={handleToggleBranchStatus}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold cursor-pointer transition ${
+                        isBranchOpen
+                          ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-950/40 dark:text-emerald-400'
+                          : 'bg-rose-50 text-rose-700 ring-1 ring-rose-600/20 dark:bg-rose-950/40 dark:text-rose-400'
+                      }`}
+                      title="Click to toggle status"
+                    >
+                      <span className={`h-1.5 w-1.5 rounded-full ${isBranchOpen ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                      <span>{isBranchOpen ? 'Open Now' : 'Closed'}</span>
+                    </button>
+                  </div>
+
+                  {/* Slide Menu Navigation (The 6 Elements requested) */}
+                  <nav className="flex-1 overflow-y-auto p-3 space-y-1.5">
+                    <div className="px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      Operations Menu
+                    </div>
+                    {[
+                      { id: 'overview', label: 'Overview & Statistics', icon: 'analytics', badge: null },
+                      { id: 'orders', label: 'Recent Orders', icon: 'receipt_long', badge: orders.length },
+                      { id: 'menu_items', label: 'Menu Items', icon: 'restaurant_menu', badge: menuItems.length },
+                      { id: 'ratings', label: 'Ratings & Reviews', icon: 'hotel_class', badge: branchReviews.length },
+                      { id: 'staff', label: 'Manager & Staff', icon: 'badge', badge: staffList.length },
+                      { id: 'settings', label: 'Settings', icon: 'settings', badge: null },
+                    ].map((tab) => {
+                      const isActive = activeTab === tab.id
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => {
+                            setActiveTab(tab.id)
+                            if (window.innerWidth < 1024) {
+                              setIsSlideBarOpen(false)
+                            }
+                          }}
+                          className={`flex w-full items-center justify-between rounded-xl px-3 py-3 text-xs font-bold transition-all cursor-pointer ${
+                            isActive
+                              ? 'bg-gradient-to-r from-orange-500/15 to-orange-500/5 text-[#FF6B35] border-l-4 border-[#FF6B35] font-extrabold shadow-2xs dark:from-orange-500/25 dark:to-transparent dark:text-orange-400'
+                              : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-100'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className={`material-symbols-outlined text-lg ${isActive ? 'text-[#FF6B35] dark:text-orange-400 font-bold' : 'text-slate-400 dark:text-zinc-500'}`}>
+                              {tab.icon}
+                            </span>
+                            <span className="truncate">{tab.label}</span>
+                          </div>
+                          {tab.badge !== null && (
+                            <span
+                              className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                isActive
+                                  ? 'bg-[#FF6B35] text-white shadow-xs'
+                                  : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
+                              }`}
+                            >
+                              {tab.badge}
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </nav>
+
+                  {/* Slide Bar Footer */}
+                  <div className="p-3 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-850/40">
+                    <div className="rounded-xl border border-slate-200/70 bg-white p-2.5 text-[11px] dark:border-zinc-800 dark:bg-zinc-900 shadow-2xs">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Lead Manager</span>
+                        <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                      </div>
+                      <p className="font-bold text-slate-900 dark:text-zinc-100 truncate">
+                        {managerData.name}
+                      </p>
+                      <p className="text-[10px] text-slate-400 dark:text-zinc-500 truncate mt-0.5">
+                        {branch.opening_hours || '08:00 AM'} - {branch.closing_hours || '10:00 PM'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+            )}
+
+            {/* Main Content Pane */}
+            <div className="flex-1 min-w-0 space-y-6">
 
         {/* Hero Card (Matching MerchantDetailsPage style) */}
         <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
@@ -1204,33 +1403,72 @@ export default function BranchDetailPage() {
           </div>
         </section>
 
-        {/* Tab Navigation */}
-        <div className="border-b border-slate-200 dark:border-zinc-800">
-          <nav className="flex space-x-6 overflow-x-auto">
-            {[
-              { id: 'overview', label: 'Overview & Statistics', icon: 'analytics' },
-              { id: 'orders', label: `Recent Orders (${orders.length})`, icon: 'receipt_long' },
-              { id: 'menu_items', label: `Menu Items (${menuItems.length})`, icon: 'restaurant_menu' },
-              { id: 'ratings', label: `Ratings & Reviews (${branchReviews.length})`, icon: 'hotel_class' },
-              { id: 'staff', label: 'Manager & Staff', icon: 'badge' },
-              { id: 'settings', label: 'Settings', icon: 'settings' },
-            ].map((tab) => (
+        {/* Tab Navigation - Shown only in Super Admin (hidden when moved to Slide Menu) */}
+        {!noSidebar ? (
+          <div className="border-b border-slate-200 dark:border-zinc-800">
+            <nav className="flex space-x-6 overflow-x-auto">
+              {[
+                { id: 'overview', label: 'Overview & Statistics', icon: 'analytics' },
+                { id: 'orders', label: `Recent Orders (${orders.length})`, icon: 'receipt_long' },
+                { id: 'menu_items', label: `Menu Items (${menuItems.length})`, icon: 'restaurant_menu' },
+                { id: 'ratings', label: `Ratings & Reviews (${branchReviews.length})`, icon: 'hotel_class' },
+                { id: 'staff', label: 'Manager & Staff', icon: 'badge' },
+                { id: 'settings', label: 'Settings', icon: 'settings' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex shrink-0 items-center gap-2 border-b-2 py-3.5 text-xs font-bold transition ${
+                    activeTab === tab.id
+                      ? 'border-[#FF6B35] text-[#FF6B35]'
+                      : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-base">{tab.icon}</span>
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex items-center gap-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                Active Section:
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-orange-50 px-3 py-1.5 text-xs font-extrabold text-[#FF6B35] dark:bg-orange-950/50 dark:text-orange-400">
+                <span className="material-symbols-outlined text-base">
+                  {activeTab === 'overview' && 'analytics'}
+                  {activeTab === 'orders' && 'receipt_long'}
+                  {activeTab === 'menu_items' && 'restaurant_menu'}
+                  {activeTab === 'ratings' && 'hotel_class'}
+                  {activeTab === 'staff' && 'badge'}
+                  {activeTab === 'settings' && 'settings'}
+                </span>
+                <span>
+                  {activeTab === 'overview' && 'Overview & Statistics'}
+                  {activeTab === 'orders' && `Recent Orders (${orders.length})`}
+                  {activeTab === 'menu_items' && `Menu Items (${menuItems.length})`}
+                  {activeTab === 'ratings' && `Ratings & Reviews (${branchReviews.length})`}
+                  {activeTab === 'staff' && `Manager & Staff (${staffList.length})`}
+                  {activeTab === 'settings' && 'Settings & Controls'}
+                </span>
+              </span>
+            </div>
+
+            {!isSlideBarOpen && (
               <button
-                key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex shrink-0 items-center gap-2 border-b-2 py-3.5 text-xs font-bold transition ${
-                  activeTab === tab.id
-                    ? 'border-[#FF6B35] text-[#FF6B35]'
-                    : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200'
-                }`}
+                onClick={() => setIsSlideBarOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-white hover:text-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-base">{tab.icon}</span>
-                {tab.label}
+                <span className="material-symbols-outlined text-base">left_panel_open</span>
+                <span>Open Slide Menu</span>
               </button>
-            ))}
-          </nav>
-        </div>
+            )}
+          </div>
+        )}
 
         {/* TAB 1: OVERVIEW & ADMIN STATISTICS DASHBOARD */}
         {activeTab === 'overview' && (
@@ -2504,6 +2742,9 @@ export default function BranchDetailPage() {
             />
           </div>
         )}
+            </div>
+          </div>
+        </div>
       </div>
     </MainLayout>
   )

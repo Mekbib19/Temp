@@ -38,6 +38,7 @@ const Header = ({
   breadcrumbParent,
   breadcrumbMiddle,
   breadcrumbCurrent,
+  noSidebar = false,
 }) => {
   const { t, i18n } = useTranslation()
   const { isDark, toggleTheme } = useAppTheme()
@@ -77,37 +78,84 @@ const Header = ({
 
   return (
     <header
-      className={`fixed left-0 right-0 top-0 z-40 flex h-16 w-full items-center justify-between bg-white/90 px-4 shadow-[0_4px_20px_rgba(28,27,27,0.04)] backdrop-blur-xl transition-all duration-300 dark:bg-zinc-950/90 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] sm:px-6 lg:px-6 ${
-        isSidebarCollapsed ? 'lg:left-20 lg:w-[calc(100%-5rem)]' : 'lg:left-64 lg:w-[calc(100%-16rem)]'
+      className={`fixed left-0 right-0 top-0 z-40 flex h-16 w-full items-center justify-between bg-white/90 px-4 shadow-[0_4px_20px_rgba(28,27,27,0.04)] backdrop-blur-xl transition-all duration-300 dark:bg-zinc-950/90 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] sm:px-6 lg:px-8 ${
+        noSidebar
+          ? 'w-full'
+          : isSidebarCollapsed
+          ? 'lg:left-20 lg:w-[calc(100%-5rem)]'
+          : 'lg:left-64 lg:w-[calc(100%-16rem)]'
       }`}
     >
       {/* Left: Navigation toggles & Clear Breadcrumb trail */}
       <div className="ml-1 flex min-w-0 items-center gap-2 font-['Plus_Jakarta_Sans'] text-sm sm:gap-3">
-        <button
-          type="button"
-          onClick={onOpenMobileSidebar}
-          className="shrink-0 rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 lg:hidden"
-          aria-label="Open sidebar"
-        >
-          <span className="material-symbols-outlined text-xl">menu</span>
-        </button>
-        <div className="flex shrink-0 items-center gap-1.5 lg:hidden">
-          <ShimaLogo className="h-8 w-8 drop-shadow-xs" />
-        </div>
-        <button
-          type="button"
-          onClick={onToggleSidebar}
-          className="hidden shrink-0 rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 lg:block"
-          aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          <span className="material-symbols-outlined text-xl">
-            {isSidebarCollapsed ? 'menu_open' : 'menu'}
-          </span>
-        </button>
+        {noSidebar ? (
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 hover:text-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 cursor-pointer"
+              title="Return to Portal Gateway"
+            >
+              <span className="material-symbols-outlined text-base">apps</span>
+              <span className="hidden sm:inline">Portal Hub</span>
+            </button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <ShimaLogo className="h-8 w-8 drop-shadow-xs" />
+            </div>
+            <div className="hidden sm:flex items-center gap-1 text-xs font-semibold bg-slate-100 dark:bg-zinc-800/80 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => navigate('/portal/merchants')}
+                className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                  breadcrumbCurrent?.toLowerCase().includes('branch')
+                    ? 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'bg-white dark:bg-zinc-700 text-[#FF6B35] shadow-xs font-bold'
+                }`}
+              >
+                Merchants
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/portal/branches')}
+                className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                  breadcrumbCurrent?.toLowerCase().includes('branch')
+                    ? 'bg-white dark:bg-zinc-700 text-[#FF6B35] shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Branch Ops
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={onOpenMobileSidebar}
+              className="shrink-0 rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 lg:hidden cursor-pointer"
+              aria-label="Open sidebar"
+            >
+              <span className="material-symbols-outlined text-xl">menu</span>
+            </button>
+            <div className="flex shrink-0 items-center gap-1.5 lg:hidden">
+              <ShimaLogo className="h-8 w-8 drop-shadow-xs" />
+            </div>
+            <button
+              type="button"
+              onClick={onToggleSidebar}
+              className="hidden shrink-0 rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 lg:block cursor-pointer"
+              aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <span className="material-symbols-outlined text-xl">
+                {isSidebarCollapsed ? 'menu_open' : 'menu'}
+              </span>
+            </button>
+          </>
+        )}
 
-        <nav aria-label="Breadcrumb" className="flex items-center gap-2 truncate text-xs sm:text-sm">
+        <nav aria-label="Breadcrumb" className="hidden lg:flex items-center gap-2 truncate text-xs sm:text-sm">
           <span className="font-semibold text-slate-600 dark:text-zinc-300">
-            {breadcrumbParent || t('menu.dashboard')}
+            {breadcrumbParent || (noSidebar ? 'Portal' : t('menu.dashboard'))}
           </span>
           <span className="material-symbols-outlined text-base text-slate-400 dark:text-zinc-500">
             chevron_right

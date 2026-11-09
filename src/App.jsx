@@ -30,12 +30,33 @@ import InsightsManagementPage from './pages/InsightsManagementPage'
 import AuthPage from './pages/AuthPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import FirstTimeLoginPage from './pages/FirstTimeLoginPage'
+import PortalPage from './pages/PortalPage'
+import MerchantDetailPage from './merchant-portal/pages/MerchantDetailPage'
+import BranchOpsPage from './merchant-portal/pages/BranchOpsPage'
+import MerchantSelectorPage from './merchant-portal/pages/MerchantSelectorPage'
+import AddBranchPage from './merchant-portal/pages/AddBranchPage'
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<AuthPage />} />
+        {/* Gateway Portal Page with 3 direct navigation buttons */}
+        <Route path="/" element={<PortalPage />} />
+        <Route path="/portal" element={<PortalPage />} />
+
+        {/* Merchant & Branch Operations Portal - Dedicated Directory & Custom UI Style */}
+        <Route path="/portal/merchants" element={<MerchantSelectorPage />} />
+        <Route path="/portal/select-merchant" element={<MerchantSelectorPage />} />
+        <Route path="/portal/merchant-selector" element={<MerchantSelectorPage />} />
+        <Route path="/portal/merchant" element={<MerchantDetailPage />} />
+        <Route path="/portal/merchants/:merchantId" element={<MerchantDetailPage />} />
+        <Route path="/portal/merchants/:merchantId/branches/new" element={<AddBranchPage />} />
+        <Route path="/portal/merchants/:merchantId/branches/:branchId" element={<BranchOpsPage />} />
+        <Route path="/portal/branches" element={<BranchOpsPage />} />
+        <Route path="/portal/branches/new" element={<AddBranchPage />} />
+        <Route path="/portal/branch" element={<BranchOpsPage />} />
+        <Route path="/portal/branches/:branchId" element={<BranchOpsPage />} />
+
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/riders" element={<RiderManagementPage />} />
         <Route path="/delivery" element={<DeliveryManagementPage />} />

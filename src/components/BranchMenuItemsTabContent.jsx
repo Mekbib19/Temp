@@ -1,10 +1,11 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   saveMenuItem,
   deleteMenuItem,
   getCategoriesForBranch,
   getItemImages,
+  getMenuItemsForBranch,
 } from '../data/demoMenuItems'
 
 /**
@@ -168,14 +169,30 @@ function MenuItemCard({
 }
 
 export default function BranchMenuItemsTabContent({
-  menuItems,
-  setMenuItems,
+  menuItems: propMenuItems,
+  setMenuItems: propSetMenuItems,
   branch,
   merchant,
   showToast,
   initialCategory = 'all',
 }) {
   const navigate = useNavigate()
+  const [internalItems, setInternalItems] = useState(() => {
+    if (Array.isArray(propMenuItems) && propMenuItems.length > 0) return propMenuItems
+    return getMenuItemsForBranch(branch?.id, merchant?.id, merchant) || []
+  })
+
+  const menuItems = Array.isArray(propMenuItems) ? propMenuItems : internalItems
+  const setMenuItems = useCallback(
+    (updater) => {
+      if (typeof propSetMenuItems === 'function') {
+        propSetMenuItems(updater)
+      }
+      setInternalItems((prev) => (typeof updater === 'function' ? updater(prev) : updater))
+    },
+    [propSetMenuItems]
+  )
+
   const [selectedCategory, setSelectedCategory] = useState(initialCategory || 'all')
   const [searchQuery, setSearchQuery] = useState('')
   const [stockFilter, setStockFilter] = useState('all') // 'all' | 'in_stock' | 'low_stock' | 'out_of_stock'
@@ -200,9 +217,6 @@ export default function BranchMenuItemsTabContent({
     )
   }, [merchant])
 
-
-
-
   // Modal states
   const [inspectItem, setInspectItem] = useState(null)
   const [editingItem, setEditingItem] = useState(null)
@@ -211,7 +225,7 @@ export default function BranchMenuItemsTabContent({
 
   // Filter items
   const filteredItems = useMemo(() => {
-    return menuItems.filter((item) => {
+    return (menuItems || []).filter((item) => {
       // Category filter
       if (selectedCategory !== 'all') {
         const itemCat = (item.category_type || item.category_name || '').toLowerCase()
