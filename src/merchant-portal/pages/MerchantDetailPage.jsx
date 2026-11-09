@@ -21,7 +21,7 @@ export default function MerchantDetailPage() {
     return withBranches || getMerchantById('m-002') || merchantsList[0]
   }, [merchantId, merchantsList])
 
-  const [activeTab, setActiveTab] = useState('branches')
+  const [activeTab, setActiveTab] = useState('overview')
   const [toastMessage, setToastMessage] = useState(() => location.state?.toast || null)
 
   useEffect(() => {
@@ -58,24 +58,45 @@ export default function MerchantDetailPage() {
   // Merchant orders across branches
   const [orders] = useState(() => generateOrdersForMerchant(merchant))
 
+  const currentBranch = useMemo(
+    () => branches.find((b) => b.is_main_branch) || branches[0] || {},
+    [branches]
+  )
+
   const catMeta = getCategoryMeta(merchant?.category_name || merchant?.type)
+
+  const merchantStats = useMemo(() => {
+    const computedRevenue = orders.reduce((acc, order) => {
+      const amount =
+        typeof order.totalNum === 'number'
+          ? order.totalNum
+          : parseFloat(String(order.total || order.amount || '').replace(/[^0-9.]/g, '')) || 0
+      return acc + amount
+    }, 0)
+    const baseRevenue = computedRevenue > 0 ? computedRevenue : 68400
+
+    return {
+      todayRevenueFormatted: `ETB ${Math.round(baseRevenue).toLocaleString()}`,
+      totalOrders: orders.length,
+      fulfillmentRate: '98.2%',
+      avgPrepTime: '16.5 min',
+      customerRating: merchant?.average_rating || merchant?.rating || 4.8,
+      reviewCount: merchant?.total_reviews || 532,
+    }
+  }, [orders, merchant])
 
   // Root sidebar navigation items for the Merchant Page
   const sidebarItems = useMemo(
     () => [
-      { id: 'branches', label: 'Operating Branches', icon: 'store', badge: branches.length },
-      { id: 'add_branch', label: 'Add Branch', icon: 'add_business', badge: null },
-      { id: 'details', label: 'Brand & Compliance', icon: 'verified', badge: null },
-      { id: 'orders', label: 'Consolidated Orders', icon: 'receipt_long', badge: orders.length },
+      { id: 'overview', label: 'Overview', icon: 'dashboard', badge: null, section: 'Overview' },
+      { id: 'branches', label: 'Branches', icon: 'store', badge: branches.length, section: 'Branches' },
+      { id: 'details', label: 'Brand & Compliance', icon: 'verified', badge: null, section: 'Branding' },
+      { id: 'orders', label: 'Consolidated Orders', icon: 'receipt_long', badge: orders.length, section: 'Order Management' },
     ],
     [branches.length, orders.length]
   )
 
   const handleTabChange = (tabId) => {
-    if (tabId === 'add_branch') {
-      navigate(`/portal/merchants/${merchant?.id || ''}/branches/new`)
-      return
-    }
     setActiveTab(tabId)
   }
 
@@ -216,27 +237,6 @@ export default function MerchantDetailPage() {
               Merchant Partner Command Console &bull; Manage your brand profile, operating branches, and regulatory compliance.
             </p>
           </div>
-
-          <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => navigate(`/portal/merchants/${merchant.id}/branches/new`)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#e0531f] transition cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-base">add_business</span>
-              <span>Add Branch</span>
-            </button>
-            {branches[0] && (
-              <button
-                type="button"
-                onClick={() => navigate(`/portal/branches/${branches[0].id}`)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 cursor-pointer transition"
-              >
-                <span className="material-symbols-outlined text-sm">storefront</span>
-                <span>Open Primary Branch</span>
-              </button>
-            )}
-          </div>
         </section>
 
         {/* Merchant Profile Card - Clean Super Admin Styled (No Giant Banner) */}
@@ -295,23 +295,8 @@ export default function MerchantDetailPage() {
           )}
         </div>
 
-        {/* 4 Metric Stats Cards - 100% Super Admin Styled */}
+        {/* 4 Metric Stats Cards - Super Admin Overview Style */}
         <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                Operating Outlets
-              </span>
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40">
-                <span className="material-symbols-outlined text-base">store</span>
-              </span>
-            </div>
-            <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">{branches.length}</p>
-            <p className="mt-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-              100% Active in Addis Ababa
-            </p>
-          </div>
-
           <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
@@ -321,51 +306,395 @@ export default function MerchantDetailPage() {
                 <span className="material-symbols-outlined text-base">payments</span>
               </span>
             </div>
-            <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">ETB 68,400</p>
+            <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">{merchantStats.todayRevenueFormatted}</p>
             <p className="mt-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-              +12.4% vs yesterday
+              +14.2% vs yesterday
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                Active Orders
+                Orders Dispatched
               </span>
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40">
-                <span className="material-symbols-outlined text-base">receipt_long</span>
+                <span className="material-symbols-outlined text-base">local_shipping</span>
               </span>
             </div>
-            <p className="mt-2 text-2xl font-black text-[#FF6B35] dark:text-orange-400">{orders.length}</p>
+            <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">
+              {merchantStats.totalOrders > 0 ? `${merchantStats.totalOrders} Orders` : '64 Orders'}
+            </p>
             <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
-              Across all branches
+              {merchantStats.fulfillmentRate} fulfillment rate
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                Partner SLA
+                Avg Prep SLA
               </span>
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-600 dark:bg-purple-950/40">
-                <span className="material-symbols-outlined text-base">speed</span>
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40">
+                <span className="material-symbols-outlined text-base">timer</span>
               </span>
             </div>
-            <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">98.2%</p>
+            <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">{merchantStats.avgPrepTime}</p>
             <p className="mt-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-              Prime Tier Fulfillment
+              On-time SLA compliant
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                Satisfaction
+              </span>
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-500 dark:bg-amber-950/40">
+                <span className="material-symbols-outlined text-base">star</span>
+              </span>
+            </div>
+            <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">
+              {merchantStats.customerRating} / 5.0
+            </p>
+            <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+              From {merchantStats.reviewCount} ratings
             </p>
           </div>
         </section>
 
         {/* Content Tabs (driven by root side menu) */}
+        {/* TAB 0: OVERVIEW DASHBOARD */}
+        {activeTab === 'overview' && (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 animate-in fade-in duration-200">
+            <div className="space-y-6 lg:col-span-8">
+              {/* All Branches & Locations */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base text-[#FF6B35]">store</span>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
+                      All Branches &amp; Locations ({branches.length})
+                    </h3>
+                    <span className="hidden sm:inline-block text-[11px] text-slate-400 dark:text-zinc-500 font-normal">
+                      • Direct access to branch roster &amp; live status
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {branches.map((b, idx) => {
+                    const branchKey = b.id || idx
+                    const branchOrdersCount =
+                      orders.filter(
+                        (o) =>
+                          (o.branchName || '').toLowerCase() ===
+                          (b.branch_name || '').toLowerCase()
+                      ).length || Math.max(4, 18 - idx * 4)
+                    const isOpen = b.is_open !== false
+
+                    return (
+                      <div
+                        key={branchKey}
+                        onClick={() => navigate(`/portal/branches/${b.id}`)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            navigate(`/portal/branches/${b.id}`)
+                          }
+                        }}
+                        className="group flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-200/90 bg-slate-50/50 p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#FF6B35] hover:bg-white hover:shadow-sm dark:border-zinc-800 dark:bg-zinc-850/50 dark:hover:border-orange-500 dark:hover:bg-zinc-850 cursor-pointer"
+                      >
+                        <div className="flex items-start sm:items-center gap-3">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] transition group-hover:bg-[#FF6B35] group-hover:text-white dark:bg-orange-950/40 dark:text-orange-400">
+                            <span className="material-symbols-outlined text-xl">storefront</span>
+                          </span>
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="text-xs font-bold text-slate-900 transition group-hover:text-[#FF6B35] dark:text-zinc-100">
+                                {b.branch_name}
+                              </h4>
+                              {b.is_main_branch && (
+                                <span className="rounded-md bg-orange-100 px-1.5 py-0.5 text-[9px] font-bold text-[#FF6B35] dark:bg-orange-950/60 dark:text-orange-300">
+                                  HQ / Main
+                                </span>
+                              )}
+                              <span
+                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                  isOpen
+                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                    : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
+                                }`}
+                              >
+                                <span className={`h-1.5 w-1.5 rounded-full ${isOpen ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                {isOpen ? 'Open' : 'Closed'}
+                              </span>
+                            </div>
+
+                            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500 dark:text-zinc-400">
+                              <span className="flex items-center gap-1">
+                                <span className="material-symbols-outlined text-xs text-slate-400">location_on</span>
+                                <span>{b.address || 'Central District, Addis Ababa'}</span>
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <span className="material-symbols-outlined text-xs text-slate-400">schedule</span>
+                                <span className="font-mono text-[10px]">
+                                  {b.opening_hours || '08:00 AM'} - {b.closing_hours || '10:00 PM'}
+                                </span>
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <span className="material-symbols-outlined text-xs text-slate-400">person</span>
+                                <span>{b.manager_name || 'Designated Manager'}</span>
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <span className="material-symbols-outlined text-xs text-slate-400">receipt_long</span>
+                                <span className="font-bold text-slate-700 dark:text-zinc-300">
+                                  {branchOrdersCount} orders today
+                                </span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end sm:self-center">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              navigate(`/portal/branches/${b.id}`)
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-orange-50 px-3 py-2 text-xs font-bold text-[#FF6B35] transition hover:bg-[#FF6B35] hover:text-white dark:bg-orange-950/50 dark:text-orange-400"
+                            title={`Open ${b.branch_name} details`}
+                          >
+                            <span>Branch Details</span>
+                            <span className="material-symbols-outlined text-sm font-bold">arrow_forward</span>
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  {branches.length === 0 && (
+                    <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-xs text-slate-500 dark:border-zinc-800 dark:text-zinc-400">
+                      <p>No branches registered yet for {merchant.name}.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Branch Network Performance Comparison */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base text-blue-600 dark:text-blue-400">store</span>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
+                      Branch Network Performance Comparison ({branches.length} Locations)
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('branches')}
+                    className="text-xs font-bold text-[#FF6B35] hover:underline cursor-pointer"
+                  >
+                    Manage Locations &amp; GPS →
+                  </button>
+                </div>
+
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:border-zinc-800 dark:text-zinc-500">
+                        <th className="pb-2.5">Branch Location</th>
+                        <th className="pb-2.5">Manager</th>
+                        <th className="pb-2.5 text-center">Live Status</th>
+                        <th className="pb-2.5 text-right">Orders Today</th>
+                        <th className="pb-2.5 text-right">Fulfillment</th>
+                        <th className="pb-2.5 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-zinc-800 font-medium text-slate-700 dark:text-zinc-300">
+                      {branches.map((b, idx) => {
+                        const branchOrdersCount =
+                          orders.filter(
+                            (o) =>
+                              (o.branchName || '').toLowerCase() ===
+                              (b.branch_name || '').toLowerCase()
+                          ).length || Math.max(8, 24 - idx * 5)
+                        return (
+                          <tr key={b.id || idx} className="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40">
+                            <td className="py-2.5 font-bold text-slate-900 dark:text-zinc-100">
+                              <div className="flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-sm text-[#FF6B35]">pin_drop</span>
+                                <span>{b.branch_name}</span>
+                                {b.is_main_branch && (
+                                  <span className="rounded-md bg-orange-100 px-1.5 py-0.2 text-[9px] font-bold text-[#FF6B35] dark:bg-orange-950/60">
+                                    HQ
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-slate-400 font-normal pl-5 block">
+                                {b.address || 'Addis Ababa'}
+                              </span>
+                            </td>
+                            <td className="py-2.5 text-slate-600 dark:text-zinc-400">
+                              {b.manager_name || 'Designated Staff'}
+                            </td>
+                            <td className="py-2.5 text-center">
+                              <span
+                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                  b.is_open !== false
+                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                    : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
+                                }`}
+                              >
+                                <span className={`h-1.5 w-1.5 rounded-full ${b.is_open !== false ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                {b.is_open !== false ? 'Open' : 'Closed'}
+                              </span>
+                            </td>
+                            <td className="py-2.5 text-right font-bold text-slate-900 dark:text-zinc-100">
+                              {branchOrdersCount}
+                            </td>
+                            <td className="py-2.5 text-right text-emerald-600 dark:text-emerald-400 font-bold">98.8%</td>
+                            <td className="py-2.5 text-right">
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/portal/branches/${b.id}`)}
+                                className="inline-flex items-center gap-1 rounded-lg bg-orange-50 px-2 py-1 text-[11px] font-bold text-[#FF6B35] hover:bg-orange-100 dark:bg-orange-950/40 cursor-pointer"
+                              >
+                                <span>Stats</span>
+                                <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Daily Peak Volume Heatmap */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-zinc-800">
+                  <span className="material-symbols-outlined text-base text-amber-500">schedule</span>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
+                    Daily Peak Volume Heatmap &amp; Order Rush Hours
+                  </h3>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-850">
+                    <span className="text-slate-400 block text-[11px]">Breakfast Rush</span>
+                    <span className="font-bold text-slate-800 dark:text-zinc-200 mt-1 block">08:00 AM - 10:30 AM</span>
+                    <span className="mt-1 inline-block text-[10px] text-slate-500">18% of daily volume</span>
+                  </div>
+                  <div className="rounded-xl border border-orange-100 bg-orange-50/50 p-3 dark:border-orange-900/40 dark:bg-orange-950/20">
+                    <span className="text-[#FF6B35] font-bold block text-[11px]">Lunch Surge (Peak)</span>
+                    <span className="font-bold text-slate-900 dark:text-zinc-100 mt-1 block">12:00 PM - 02:30 PM</span>
+                    <span className="mt-1 inline-block text-[10px] font-bold text-[#FF6B35]">44% of daily volume</span>
+                  </div>
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-850">
+                    <span className="text-slate-400 block text-[11px]">Afternoon Snack</span>
+                    <span className="font-bold text-slate-800 dark:text-zinc-200 mt-1 block">03:30 PM - 05:30 PM</span>
+                    <span className="mt-1 inline-block text-[10px] text-slate-500">12% of daily volume</span>
+                  </div>
+                  <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3 dark:border-blue-900/40 dark:bg-blue-950/20">
+                    <span className="text-blue-700 dark:text-blue-300 font-bold block text-[11px]">Dinner Rush</span>
+                    <span className="font-bold text-slate-900 dark:text-zinc-100 mt-1 block">07:00 PM - 09:30 PM</span>
+                    <span className="mt-1 inline-block text-[10px] font-bold text-blue-600 dark:text-blue-400">26% of daily volume</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Merchant Bio */}
+              {merchant.description && (
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-zinc-800">
+                    <span className="material-symbols-outlined text-base text-[#FF6B35]">description</span>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
+                      Merchant Bio &amp; Culinary Concept
+                    </h3>
+                  </div>
+                  <p className="mt-3 text-xs leading-relaxed text-slate-700 dark:text-zinc-300">
+                    {merchant.description}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-6 lg:col-span-4">
+              {/* Partner Overview */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-zinc-800">
+                  <span className="material-symbols-outlined text-base text-indigo-500">storefront</span>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">Partner Overview</h3>
+                </div>
+                <div className="mt-4 space-y-3 text-xs">
+                  <div>
+                    <span className="text-[11px] font-semibold text-slate-400">Brand Email</span>
+                    <p className="mt-0.5 font-mono text-slate-800 dark:text-zinc-200">
+                      {merchant.email || 'partner@delivery.et'}
+                    </p>
+                  </div>
+                  <div className="border-t border-slate-100 pt-2.5 dark:border-zinc-800">
+                    <span className="text-[11px] font-semibold text-slate-400">Customer Support Phone</span>
+                    <p className="mt-0.5 font-semibold text-slate-800 dark:text-zinc-200">
+                      {merchant.phone || '+251 91 123 4567'}
+                    </p>
+                  </div>
+                  <div className="border-t border-slate-100 pt-2.5 dark:border-zinc-800">
+                    <span className="text-[11px] font-semibold text-slate-400">Total Operating Branches</span>
+                    <p className="mt-0.5 font-bold text-slate-800 dark:text-zinc-200">
+                      {branches.length} {branches.length === 1 ? 'location' : 'locations'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('branches')}
+                  className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 cursor-pointer"
+                >
+                  <span>Explore All Branches</span>
+                  <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                </button>
+              </div>
+
+              {/* Main Location */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base text-[#FF6B35]">store</span>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">Main Location</h3>
+                  </div>
+                  <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                    {currentBranch.is_open !== false ? 'Open' : 'Closed'}
+                  </span>
+                </div>
+                <div className="mt-3 space-y-2 text-xs">
+                  <div>
+                    <span className="text-slate-400 text-[11px]">Address:</span>
+                    <p className="font-semibold text-slate-800 dark:text-zinc-200">
+                      {currentBranch.address || merchant.address || 'Central Commercial District, Addis Ababa'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[11px]">Hours:</span>
+                    <p className="font-mono text-slate-800 dark:text-zinc-200">
+                      {currentBranch.opening_hours || '08:00 AM'} - {currentBranch.closing_hours || '10:00 PM'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* TAB 1: OPERATING BRANCHES DIRECTORY */}
         {activeTab === 'branches' && (
           <div className="space-y-4 animate-in fade-in duration-200">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Operating Branches</h3>
-                <p className="text-xs text-slate-500">Active restaurant and store outlets managed by your brand</p>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Branches</h3>
+                <p className="text-xs text-slate-500">View your branch outlets and add a new branch to your brand</p>
               </div>
               <div className="flex items-center gap-2.5">
                 <span className="text-xs font-bold text-[#FF6B35] mr-2">{branches.length} Outlets</span>

@@ -164,10 +164,9 @@ export default function AddBranchPage() {
 
   const sidebarItems = useMemo(
     () => [
-      { id: 'branches', label: 'Operating Branches', icon: 'store', badge: existingBranches.length },
-      { id: 'add_branch', label: 'Add Branch', icon: 'add_business', badge: null },
-      { id: 'details', label: 'Brand & Compliance', icon: 'verified', badge: null },
-      { id: 'orders', label: 'Consolidated Orders', icon: 'receipt_long', badge: null },
+      { id: 'branches', label: 'Branches', icon: 'store', badge: existingBranches.length, section: 'Branches' },
+      { id: 'details', label: 'Brand & Compliance', icon: 'verified', badge: null, section: 'Branding' },
+      { id: 'orders', label: 'Consolidated Orders', icon: 'receipt_long', badge: null, section: 'Order Management' },
     ],
     [existingBranches.length]
   )
@@ -181,11 +180,11 @@ export default function AddBranchPage() {
   return (
     <MerchantPortalLayout
       portalType="merchant"
-      activeTab="add_branch"
+      activeTab="branches"
       setActiveTab={handleSidebarTabChange}
       sidebarItems={sidebarItems}
       merchant={merchant}
-      breadcrumbMiddle="Operating Branches"
+      breadcrumbMiddle="Branches"
       breadcrumbCurrent="Add New Branch"
       operatorName="Selamawit Haile"
       operatorRole="Merchant Partner (Owner)"

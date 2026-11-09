@@ -148,7 +148,7 @@ export const defaultMerchants = [
   },
   {
     id: 'm-013',
-    name: 'CurePoint 24/7 Compound Pharmacy',
+    name: 'Compound Pharmacy',
     category_name: 'Pharmacy',
     category_code: 'PHARMACY',
     type: 'Pharmacy & Health',

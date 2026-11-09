@@ -84,8 +84,28 @@ export default function BranchOpsPage() {
   const [orders, setOrders] = useState(() => generateOrdersForBranch(merchant, branch))
   const [menuItems, setMenuItems] = useState(() => getMenuItemsForBranch(branch?.id, merchant?.id, merchant))
   const [branchReviews, setBranchReviews] = useState(() => getBranchReviews(branch?.id || 'b-wh-01'))
+  const [initialMenuCategory, setInitialMenuCategory] = useState('all')
 
   const isBranchOpen = branch?.is_open !== false
+
+  const branchStats = useMemo(() => {
+    const revenue = orders.reduce((acc, order) => {
+      const amount =
+        typeof order.totalNum === 'number'
+          ? order.totalNum
+          : parseFloat(String(order.amount || order.total || '').replace(/[^0-9.]/g, '')) || 0
+      return acc + amount
+    }, 0)
+
+    return {
+      todayRevenue: `ETB ${Math.round(revenue > 0 ? revenue : 48250).toLocaleString()}`,
+      dispatched: orders.length > 0 ? orders.length : 64,
+      fulfillmentRate: '98.4%',
+      avgPrepTime: '16.5 min',
+      rating: branch?.average_rating || 4.9,
+      reviewCount: branchReviews.length || 328,
+    }
+  }, [orders, branch, branchReviews.length])
 
   // Staff list for that branch manager
   const [staffList] = useState(() => [
@@ -131,12 +151,12 @@ export default function BranchOpsPage() {
   // Root side menu navigation items (The 6 operational sections)
   const sidebarItems = useMemo(
     () => [
-      { id: 'overview', label: 'Overview & Statistics', icon: 'analytics', badge: null },
-      { id: 'orders', label: 'Recent Orders', icon: 'receipt_long', badge: orders.length },
-      { id: 'menu_items', label: 'Menu Items', icon: 'restaurant_menu', badge: menuItems.length },
-      { id: 'ratings', label: 'Ratings & Reviews', icon: 'hotel_class', badge: branchReviews.length },
-      { id: 'staff', label: 'Manager & Staff', icon: 'badge', badge: staffList.length },
-      { id: 'settings', label: 'Settings', icon: 'settings', badge: null },
+      { id: 'overview', label: 'Overview & Statistics', icon: 'analytics', badge: null, section: 'Overview' },
+      { id: 'orders', label: 'Recent Orders', icon: 'receipt_long', badge: orders.length, section: 'Order Management' },
+      { id: 'menu_items', label: 'Menu Items', icon: 'restaurant_menu', badge: menuItems.length, section: 'Menu Catalog' },
+      { id: 'ratings', label: 'Ratings & Reviews', icon: 'hotel_class', badge: branchReviews.length, section: 'Reviews' },
+      { id: 'staff', label: 'Manager & Staff', icon: 'badge', badge: staffList.length, section: 'Team' },
+      { id: 'settings', label: 'Settings', icon: 'settings', badge: null, section: 'Settings' },
     ],
     [orders.length, menuItems.length, branchReviews.length, staffList.length]
   )
@@ -492,77 +512,409 @@ export default function BranchOpsPage() {
       <div className="space-y-6">
         {/* TAB 1: OVERVIEW & REAL-TIME STATS */}
         {activeTab === 'overview' && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            {/* 4 Metric Cards */}
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                  Today&apos;s Revenue
-                </span>
-                <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">ETB 48,250</p>
-                <p className="mt-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                  +14.2% vs yesterday
-                </p>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 animate-in fade-in duration-200">
+            {/* Left: Admin Dashboard & Statistics */}
+            <div className="space-y-6 lg:col-span-8">
+              {/* Top 4 Real-time Branch Metric Cards */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      Today&apos;s Revenue
+                    </span>
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40">
+                      <span className="material-symbols-outlined text-base">payments</span>
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xl font-extrabold text-slate-900 dark:text-zinc-100">
+                    {branchStats.todayRevenue}
+                  </p>
+                  <p className="mt-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                    <span className="material-symbols-outlined text-xs">trending_up</span>
+                    +14.2% vs yesterday
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      Orders Dispatched
+                    </span>
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40">
+                      <span className="material-symbols-outlined text-base">local_shipping</span>
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xl font-extrabold text-slate-900 dark:text-zinc-100">
+                    {branchStats.dispatched} Orders
+                  </p>
+                  <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+                    {branchStats.fulfillmentRate} fulfillment rate
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      Avg Prep Time
+                    </span>
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40">
+                      <span className="material-symbols-outlined text-base">timer</span>
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xl font-extrabold text-slate-900 dark:text-zinc-100">
+                    {branchStats.avgPrepTime}
+                  </p>
+                  <p className="mt-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    On-time SLA compliant
+                  </p>
+                </div>
+
+                <div
+                  onClick={() => setActiveTab('ratings')}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') setActiveTab('ratings')
+                  }}
+                  className="cursor-pointer rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs transition hover:border-amber-400 hover:shadow-xs dark:border-zinc-800 dark:bg-zinc-900"
+                  title="Click to view all customer reviews and ratings"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      Satisfaction
+                    </span>
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-500 dark:bg-amber-950/40">
+                      <span className="material-symbols-outlined text-base">star</span>
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xl font-extrabold text-slate-900 dark:text-zinc-100 flex items-center gap-1.5">
+                    <span>{branchStats.rating} / 5.0</span>
+                    <span className="material-symbols-outlined text-xs text-amber-500">arrow_forward</span>
+                  </p>
+                  <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+                    From {branchStats.reviewCount} ratings • View reviews →
+                  </p>
+                </div>
               </div>
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                  Active Kitchen Orders
-                </span>
-                <p className="mt-2 text-2xl font-black text-[#FF6B35]">{orders.length}</p>
-                <p className="mt-0.5 text-[11px] font-medium text-slate-500">Avg ticket: ETB 420</p>
+
+              {/* Order Fulfillment Pipeline Status */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base text-[#FF6B35]">alt_route</span>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
+                      Live Kitchen &amp; Ticket Dispatch Pipeline
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('orders')}
+                    className="text-xs font-bold text-[#FF6B35] hover:underline cursor-pointer"
+                  >
+                    View All Orders ({orders.length}) →
+                  </button>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5 text-xs">
+                  <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3 text-center dark:border-blue-900/40 dark:bg-blue-950/20">
+                    <span className="text-[11px] font-semibold text-blue-700 dark:text-blue-300">New Incoming</span>
+                    <p className="mt-1 text-lg font-black text-blue-800 dark:text-blue-200">
+                      {orders.filter((o) => o.statusVariant === 'new' || !o.statusVariant).length || 4}
+                    </p>
+                    <span className="text-[10px] text-blue-600 dark:text-blue-400">Instant Alert</span>
+                  </div>
+
+                  <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-3 text-center dark:border-amber-900/40 dark:bg-amber-950/20">
+                    <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">In Prep / Kitchen</span>
+                    <p className="mt-1 text-lg font-black text-amber-800 dark:text-amber-200">
+                      {orders.filter((o) => o.statusVariant === 'kitchen' || o.statusVariant === 'preparing').length || 3}
+                    </p>
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400">Cooking</span>
+                  </div>
+
+                  <div className="rounded-xl border border-purple-100 bg-purple-50/50 p-3 text-center dark:border-purple-900/40 dark:bg-purple-950/20">
+                    <span className="text-[11px] font-semibold text-purple-700 dark:text-purple-300">Ready for Pickup</span>
+                    <p className="mt-1 text-lg font-black text-purple-800 dark:text-purple-200">
+                      {orders.filter((o) => o.statusVariant === 'ready' || o.statusVariant === 'ready_for_pickup').length || 2}
+                    </p>
+                    <span className="text-[10px] text-purple-600 dark:text-purple-400">Packaged</span>
+                  </div>
+
+                  <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 text-center dark:border-indigo-900/40 dark:bg-indigo-950/20">
+                    <span className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">Out for Delivery</span>
+                    <p className="mt-1 text-lg font-black text-indigo-800 dark:text-indigo-200">
+                      {orders.filter((o) => o.statusVariant === 'delivery' || o.statusVariant === 'out_for_delivery').length || 5}
+                    </p>
+                    <span className="text-[10px] text-indigo-600 dark:text-indigo-400">On the Road</span>
+                  </div>
+
+                  <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 text-center dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                    <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">Delivered Today</span>
+                    <p className="mt-1 text-lg font-black text-emerald-800 dark:text-emerald-200">
+                      {orders.filter((o) => o.statusVariant === 'delivered').length || 50}
+                    </p>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400">Completed</span>
+                  </div>
+                </div>
+
+                {/* Progress bar visual */}
+                <div className="mt-4">
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400 mb-1.5">
+                    <span>Active Pipeline Completion</span>
+                    <span className="font-bold text-slate-800 dark:text-zinc-200">92% on target</span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-zinc-800 flex">
+                    <div className="h-full bg-emerald-500" style={{ width: '70%' }} title="Delivered (70%)" />
+                    <div className="h-full bg-indigo-500" style={{ width: '12%' }} title="Delivery (12%)" />
+                    <div className="h-full bg-purple-500" style={{ width: '8%' }} title="Ready (8%)" />
+                    <div className="h-full bg-amber-500" style={{ width: '6%' }} title="Kitchen (6%)" />
+                    <div className="h-full bg-blue-500" style={{ width: '4%' }} title="New (4%)" />
+                  </div>
+                </div>
               </div>
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                  Kitchen Prep SLA
-                </span>
-                <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">14.8 min</p>
-                <p className="mt-0.5 text-[11px] font-semibold text-emerald-600">Within target (18m)</p>
+
+              {/* Multi-Category Products Breakdown */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base text-purple-600 dark:text-purple-400">category</span>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
+                      Catalog Categories &amp; Stock Health ({menuItems.length} Products)
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('menu_items')}
+                    className="text-xs font-bold text-[#FF6B35] hover:underline cursor-pointer"
+                  >
+                    Manage Menu Items Catalog →
+                  </button>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 text-xs">
+                  {merchantCategories.map((cat) => {
+                    const count = menuItems.filter(
+                      (i) =>
+                        (i.category_type || '').toLowerCase() === cat.name.toLowerCase() ||
+                        i.menu_category_id === cat.id
+                    ).length
+                    const availableCount = menuItems.filter(
+                      (i) =>
+                        ((i.category_type || '').toLowerCase() === cat.name.toLowerCase() ||
+                          i.menu_category_id === cat.id) &&
+                        i.is_available
+                    ).length
+                    return (
+                      <div
+                        key={cat.id || cat.name}
+                        onClick={() => {
+                          setInitialMenuCategory(cat.name)
+                          setActiveTab('menu_items')
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            setInitialMenuCategory(cat.name)
+                            setActiveTab('menu_items')
+                          }
+                        }}
+                        className="group cursor-pointer rounded-xl border border-slate-100 bg-slate-50/70 p-3 transition hover:border-[#FF6B35]/50 hover:bg-orange-50/20 dark:border-zinc-800 dark:bg-zinc-850"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="material-symbols-outlined text-base text-[#FF6B35]">
+                              {cat.icon || 'category'}
+                            </span>
+                            <span className="truncate font-bold text-slate-800 dark:text-zinc-200">{cat.name}</span>
+                          </div>
+                          <span className="shrink-0 rounded-md bg-white px-2 py-0.5 text-[10px] font-bold text-slate-700 shadow-2xs dark:bg-zinc-700 dark:text-zinc-200">
+                            {count} {count === 1 ? 'item' : 'items'}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400">
+                          <span>{availableCount} Active</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold group-hover:underline">View →</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                  Rating Index
-                </span>
-                <p className="mt-2 text-2xl font-black text-amber-500">4.8 ★</p>
-                <p className="mt-0.5 text-[11px] font-medium text-slate-500">{branchReviews.length} Verified Reviews</p>
+
+              {/* Peak Operating Hours Breakdown */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-zinc-800">
+                  <span className="material-symbols-outlined text-base text-amber-500">schedule</span>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
+                    Daily Peak Volume Heatmap &amp; Rush Hours
+                  </h3>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-850">
+                    <span className="text-slate-400 block text-[11px]">Breakfast Rush</span>
+                    <span className="font-bold text-slate-800 dark:text-zinc-200 mt-1 block">08:00 AM - 10:30 AM</span>
+                    <span className="mt-1 inline-block text-[10px] text-slate-500">18% of daily volume</span>
+                  </div>
+
+                  <div className="rounded-xl border border-orange-100 bg-orange-50/50 p-3 dark:border-orange-900/40 dark:bg-orange-950/20">
+                    <span className="text-[#FF6B35] font-bold block text-[11px]">Lunch Surge (Peak)</span>
+                    <span className="font-bold text-slate-900 dark:text-zinc-100 mt-1 block">12:00 PM - 02:30 PM</span>
+                    <span className="mt-1 inline-block text-[10px] font-bold text-[#FF6B35]">44% of daily volume</span>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-850">
+                    <span className="text-slate-400 block text-[11px]">Afternoon Snack</span>
+                    <span className="font-bold text-slate-800 dark:text-zinc-200 mt-1 block">03:30 PM - 05:30 PM</span>
+                    <span className="mt-1 inline-block text-[10px] text-slate-500">12% of daily volume</span>
+                  </div>
+
+                  <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3 dark:border-blue-900/40 dark:bg-blue-950/20">
+                    <span className="text-blue-700 dark:text-blue-300 font-bold block text-[11px]">Dinner Rush</span>
+                    <span className="font-bold text-slate-900 dark:text-zinc-100 mt-1 block">07:00 PM - 09:30 PM</span>
+                    <span className="mt-1 inline-block text-[10px] font-bold text-blue-600 dark:text-blue-400">26% of daily volume</span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Quick Actions & Recent Orders Preview */}
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-base font-extrabold text-slate-900 dark:text-white">Live Kitchen Queue</h2>
-                  <p className="text-xs text-slate-500">Incoming pickup & courier deliveries</p>
+            {/* Right Column: Quick Action Cards */}
+            <div className="space-y-6 lg:col-span-4">
+              {/* Branch Manager Quick Card */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-zinc-800">
+                  <span className="material-symbols-outlined text-base text-indigo-500">badge</span>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">Branch Store Manager</h3>
+                </div>
+                <div className="mt-4 space-y-3 text-xs">
+                  <div>
+                    <span className="text-[11px] font-semibold text-slate-400">Manager Name</span>
+                    <p className="mt-0.5 font-bold text-slate-800 dark:text-zinc-200">
+                      {branch.manager_name || 'Designated Store Manager'}
+                    </p>
+                  </div>
+                  <div className="border-t border-slate-100 pt-2.5 dark:border-zinc-800">
+                    <span className="text-[11px] font-semibold text-slate-400">Contact Number</span>
+                    <p className="mt-0.5 font-semibold text-slate-800 dark:text-zinc-200">
+                      {branch.phone_number || branch.phone || branch.manager_phone || '+251 91 123 4567'}
+                    </p>
+                  </div>
+                  <div className="border-t border-slate-100 pt-2.5 dark:border-zinc-800">
+                    <span className="text-[11px] font-semibold text-slate-400">Staff Email</span>
+                    <p className="mt-0.5 font-mono text-slate-800 dark:text-zinc-200">
+                      {branch.email || 'staff.branch@merchant.et'}
+                    </p>
+                  </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('orders')}
-                  className="inline-flex items-center gap-1 rounded-xl bg-orange-50 px-3 py-1.5 text-xs font-bold text-[#FF6B35] hover:bg-orange-100 dark:bg-orange-950/60 dark:text-orange-400 transition cursor-pointer"
+                  onClick={() => setActiveTab('staff')}
+                  className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 cursor-pointer"
                 >
-                  <span>Full Orders View</span>
-                  <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                  <span>View All Staff Details</span>
+                  <span className="material-symbols-outlined text-xs">arrow_forward</span>
                 </button>
               </div>
 
-              <div className="divide-y divide-slate-100 dark:divide-zinc-800">
-                {orders.slice(0, 4).map((o) => (
-                  <div key={o.id} className="py-3 flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-xs text-slate-900 dark:text-white">{o.id}</span>
-                        <span className="text-xs text-slate-600 dark:text-zinc-300 font-medium">{o.customer.name}</span>
-                        <span className="text-[10px] text-slate-400">&bull; {o.time}</span>
-                      </div>
-                      <p className="text-xs text-slate-500 truncate mt-0.5">{o.items}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono font-bold text-xs">{o.amount}</span>
-                      <span className="rounded-md bg-orange-50 dark:bg-orange-950/40 px-2 py-0.5 text-[10px] font-bold text-[#FF6B35]">
-                        {o.status}
-                      </span>
+              {/* Menu Items Jump Teaser */}
+              <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-purple-50/70 to-indigo-50/40 p-5 shadow-xs dark:border-zinc-800 dark:from-zinc-900 dark:to-zinc-900">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300">
+                      <span className="material-symbols-outlined text-base">restaurant_menu</span>
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-zinc-100">Menu Catalog</h4>
+                      <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                        {menuItems.length} Products configured
+                      </p>
                     </div>
                   </div>
-                ))}
+                  <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700 dark:bg-purple-950/60 dark:text-purple-300">
+                    Active
+                  </span>
+                </div>
+
+                <p className="mt-3 text-xs text-slate-600 dark:text-zinc-300 leading-relaxed">
+                  {merchant?.name || 'Branch'} catalog across {merchantCategories.map((c) => c.name).join(', ')} with sizes and add-on customization.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('menu_items')}
+                  className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl bg-purple-600 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-purple-700 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">restaurant_menu</span>
+                  <span>Open Menu Items ({menuItems.length})</span>
+                </button>
+              </div>
+
+              {/* Recent Orders Jump Teaser */}
+              <div className="rounded-2xl border border-orange-200/80 bg-gradient-to-br from-orange-50/70 to-amber-50/40 p-5 shadow-xs dark:border-zinc-800 dark:from-zinc-900 dark:to-zinc-900">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-[#FF6B35] dark:bg-orange-950/60">
+                      <span className="material-symbols-outlined text-base">receipt_long</span>
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-zinc-100">Branch Orders Queue</h4>
+                      <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                        {orders.length} orders queued today
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                    Live
+                  </span>
+                </div>
+
+                <p className="mt-3 text-xs text-slate-600 dark:text-zinc-300 leading-relaxed">
+                  Real-time ticket dispatch, kitchen status tracking, and delivery fulfillment for {branch.branch_name}.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('orders')}
+                  className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#FF6B35] py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f] cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">receipt_long</span>
+                  <span>Open Branch Recent Orders ({orders.length})</span>
+                </button>
+              </div>
+
+              {/* Settings & Working Hours Summary */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base text-slate-600 dark:text-zinc-300">settings</span>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">Branch Settings</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('settings')}
+                    className="text-xs font-bold text-[#FF6B35] hover:underline cursor-pointer"
+                  >
+                    Configure →
+                  </button>
+                </div>
+                <div className="mt-3 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 dark:text-zinc-400">Working Hours:</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-zinc-100">
+                      {branch.opening_hours || '08:00 AM'} - {branch.closing_hours || '10:00 PM'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 dark:text-zinc-400">Accepting Orders:</span>
+                    <span className={`font-bold ${isBranchOpen ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                      {isBranchOpen ? 'Live Online' : 'Paused'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 dark:text-zinc-400">Fulfillment Mode:</span>
+                    <span className="font-semibold text-slate-700 dark:text-zinc-300">Delivery &amp; Pickup</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -615,13 +967,13 @@ export default function BranchOpsPage() {
         {activeTab === 'menu_items' && (
           <div className="animate-in fade-in duration-200">
             <BranchMenuItemsTabContent
-              key={branch?.id || 'branch-menu'}
+              key={`${branch?.id || 'branch-menu'}-${initialMenuCategory}`}
               menuItems={menuItems}
               setMenuItems={setMenuItems}
               branch={branch}
               merchant={merchant}
               categories={merchantCategories}
-              initialCategory="all"
+              initialCategory={initialMenuCategory}
               showToast={showToast}
             />
           </div>

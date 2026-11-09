@@ -87,10 +87,6 @@ export default function MerchantSelectorPage() {
           </div>
 
           <nav aria-label="Breadcrumb" className="hidden sm:flex items-center gap-2 truncate text-xs sm:text-sm">
-            <span className="font-semibold text-slate-500 dark:text-zinc-400">Portal</span>
-            <span className="material-symbols-outlined text-base text-slate-400 dark:text-zinc-500">
-              chevron_right
-            </span>
             <span className="truncate font-bold text-slate-900 dark:text-zinc-100">
               Merchant Selector
             </span>
@@ -235,7 +231,6 @@ export default function MerchantSelectorPage() {
             const catMeta = getCategoryMeta(brand.category_name || brand.type)
             const branchesList = Array.isArray(brand.branches) ? brand.branches : []
             const branchCount = branchesList.length || brand.locations || 1
-            const firstBranch = branchesList[0]
 
             return (
               <div
@@ -317,18 +312,6 @@ export default function MerchantSelectorPage() {
                     <span>Launch Merchant</span>
                     <span className="material-symbols-outlined text-sm">arrow_forward</span>
                   </button>
-
-                  {firstBranch && (
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/portal/merchants/${brand.id}/branches/${firstBranch.id}`)}
-                      className="rounded-xl border border-slate-200 bg-white py-2.5 px-3 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-850 dark:text-zinc-200 dark:hover:bg-zinc-800 transition cursor-pointer flex items-center gap-1"
-                      title={`Launch ${firstBranch.branch_name} Branch Ops`}
-                    >
-                      <span className="material-symbols-outlined text-sm">store</span>
-                      <span className="hidden sm:inline">Branch Ops</span>
-                    </button>
-                  )}
                 </div>
               </div>
             )

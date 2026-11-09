@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAppTheme } from '../../providers/theme-context'
@@ -96,11 +96,11 @@ export default function MerchantPortalLayout({
       {/* ROOT SIDE MENU (Exact same structure & styles as Super Admin Sidebar) */}
       <aside
         className={`fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-slate-100 bg-slate-50 py-4 transition-all duration-300 dark:border-zinc-800 dark:bg-zinc-900 ${
-          isMobileSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full'
-        } lg:translate-x-0 ${isSidebarCollapsed ? 'lg:w-20' : 'lg:w-64'}`}
+          isMobileSidebarOpen ? 'translate-x-0 w-72' : '-translate-x-full'
+        } lg:translate-x-0 ${isSidebarCollapsed ? 'lg:w-20' : 'lg:w-72'}`}
       >
         {/* Top Header inside Root Side Menu */}
-        <div className={`${isCompact ? 'mb-4 px-2 text-center' : 'mb-5 px-5'}`}>
+        <div className={`${isCompact ? 'mb-4 px-2 text-center' : 'mb-6 px-5'}`}>
           {isCompact ? (
             <div className="flex flex-col items-center gap-1.5" title={portalType === 'branch' ? branch?.branch_name : merchant?.name}>
               <div className="flex h-11 w-11 items-center justify-center">
@@ -117,11 +117,11 @@ export default function MerchantPortalLayout({
               </div>
               <div className="min-w-0 flex-1">
                 <h1 className="truncate font-['Plus_Jakarta_Sans'] text-base font-extrabold tracking-tight text-slate-900 dark:text-white">
-                  {portalType === 'branch' ? branch?.branch_name || 'Branch Ops' : merchant?.name || 'Merchant Hub'}
+                  Shima Delivery
                 </h1>
                 <div className="mt-0.5 flex items-center gap-1.5">
                   <p className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 truncate">
-                    {portalType === 'branch' ? merchant?.name || 'Branch Portal' : 'Merchant Partner'}
+                    {portalType === 'branch' ? 'Branch Console' : 'Merchant Console'}
                   </p>
                   <div
                     className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
@@ -144,95 +144,66 @@ export default function MerchantPortalLayout({
         </div>
 
         {/* Navigation Items (Super Admin Style Nav) */}
-        <nav className={`flex-1 space-y-1.5 overflow-y-auto ${isCompact ? 'px-2' : 'px-4'}`}>
-          {!isCompact && (
-            <div className="px-4 pb-1 pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-              {portalType === 'branch' ? 'Branch Operations' : 'Merchant Workspace'}
-            </div>
-          )}
-
-          {sidebarItems.map((item) => {
+        <nav className={`flex-1 space-y-1 overflow-y-auto ${isCompact ? 'px-2' : 'px-4'}`}>
+          {sidebarItems.map((item, index) => {
             const isActive = activeTab === item.id
+            const prevItem = sidebarItems[index - 1]
+            const showSection =
+              !isCompact && item.section && (!prevItem || prevItem.section !== item.section)
             return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  setActiveTab(item.id)
-                  setIsMobileSidebarOpen(false)
-                }}
-                className={`group flex w-full items-center ${
-                  isCompact ? 'justify-center' : 'justify-between gap-3'
-                } px-4 py-2.5 text-left transition-all duration-200 cursor-pointer ${
-                  isActive
-                    ? 'rounded-xl border-r-4 border-[#FF6B35] bg-orange-50 font-bold text-[#FF6B35] dark:bg-orange-950/30 dark:text-orange-400'
-                    : 'font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'
-                }`}
-                title={item.label}
-              >
-                <div className={`flex items-center ${isCompact ? '' : 'gap-3'} min-w-0`}>
-                  <span
-                    className={`material-symbols-outlined text-[22px] transition-transform group-hover:scale-105 ${
-                      isActive ? 'text-[#FF6B35] dark:text-orange-400' : 'text-slate-400 dark:text-zinc-500'
-                    }`}
-                  >
+              <Fragment key={item.id}>
+                {showSection && (
+                  <div className="px-4 pb-1 pt-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 first:pt-1 dark:text-zinc-500">
+                    {item.section}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(item.id)
+                    setIsMobileSidebarOpen(false)
+                  }}
+                  className={`group flex w-full items-center ${
+                    isCompact ? 'justify-center' : 'gap-3'
+                  } px-4 py-2.5 text-left transition-all duration-200 cursor-pointer ${
+                    isActive
+                      ? 'rounded-xl border-r-4 border-[#FF6B35] bg-orange-50 font-bold text-[#FF6B35] dark:bg-orange-950/30 dark:text-orange-400'
+                      : 'font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'
+                  }`}
+                  title={item.label}
+                >
+                  <span className="material-symbols-outlined text-[22px] transition-transform group-hover:scale-105">
                     {item.icon}
                   </span>
                   {!isCompact && (
-                    <span className="font-['Plus_Jakarta_Sans'] text-sm tracking-wide truncate">
-                      {item.label}
+                    <span className="flex flex-1 items-center justify-between gap-2 min-w-0">
+                      <span className="font-['Plus_Jakarta_Sans'] text-sm tracking-wide truncate">
+                        {item.label}
+                      </span>
+                      {item.badge !== null && item.badge !== undefined && item.badge > 0 && (
+                        <span
+                          className={`inline-flex shrink-0 items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            isActive
+                              ? 'bg-[#FF6B35] text-white'
+                              : 'bg-slate-200 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300'
+                          }`}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
                     </span>
                   )}
-                </div>
-
-                {!isCompact && item.badge !== null && item.badge !== undefined && item.badge > 0 && (
-                  <span
-                    className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      isActive
-                        ? 'bg-[#FF6B35] text-white'
-                        : 'bg-slate-200 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300'
-                    }`}
-                  >
-                    {item.badge}
-                  </span>
-                )}
-              </button>
+                </button>
+              </Fragment>
             )
           })}
         </nav>
-
-        {/* Footer Area inside Root Side Menu */}
-        <div className={`border-t border-slate-200/80 pt-3 space-y-1 dark:border-zinc-800 ${isCompact ? 'px-2' : 'px-4'}`}>
-          <button
-            type="button"
-            onClick={() => navigate('/portal/select-merchant')}
-            className={`flex w-full items-center ${
-              isCompact ? 'justify-center' : 'gap-2.5'
-            } rounded-xl px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-[#FF6B35] dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-orange-400 transition cursor-pointer`}
-            title="Switch Merchant Partner"
-          >
-            <span className="material-symbols-outlined text-lg">storefront</span>
-            {!isCompact && <span>Switch Merchant</span>}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className={`flex w-full items-center ${
-              isCompact ? 'justify-center' : 'gap-2.5'
-            } rounded-xl px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-[#FF6B35] dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-orange-400 transition cursor-pointer`}
-            title="Return to Gateway Hub"
-          >
-            <span className="material-symbols-outlined text-lg">apps</span>
-            {!isCompact && <span>Gateway Portal</span>}
-          </button>
-        </div>
       </aside>
 
       {/* HEADER BAR (Offset to align with root side menu, exactly like Super Admin Header) */}
       <header
         className={`fixed left-0 right-0 top-0 z-40 flex h-16 w-full items-center justify-between bg-white/90 px-4 shadow-[0_4px_20px_rgba(28,27,27,0.04)] backdrop-blur-xl transition-all duration-300 dark:bg-zinc-950/90 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] sm:px-6 lg:px-8 ${
-          isSidebarCollapsed ? 'lg:left-20 lg:w-[calc(100%-5rem)]' : 'lg:left-64 lg:w-[calc(100%-16rem)]'
+          isSidebarCollapsed ? 'lg:left-20 lg:w-[calc(100%-5rem)]' : 'lg:left-72 lg:w-[calc(100%-18rem)]'
         }`}
       >
         {/* Left: Hamburger controls & Breadcrumbs */}
@@ -261,10 +232,6 @@ export default function MerchantPortalLayout({
           </button>
 
           <nav aria-label="Breadcrumb" className="hidden sm:flex items-center gap-2 truncate text-xs sm:text-sm">
-            <span className="font-semibold text-slate-500 dark:text-zinc-400">Portal</span>
-            <span className="material-symbols-outlined text-base text-slate-400 dark:text-zinc-500">
-              chevron_right
-            </span>
             <span className="font-semibold text-slate-600 dark:text-zinc-300">
               {breadcrumbMiddle}
             </span>
@@ -434,7 +401,7 @@ export default function MerchantPortalLayout({
       {/* MAIN CONTENT AREA (Offset to match Super Admin margin-left for root sidebar) */}
       <main
         className={`px-4 pb-16 pt-20 transition-all duration-300 sm:px-6 lg:px-8 ${
-          isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'
+          isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'
         }`}
       >
         {children}
