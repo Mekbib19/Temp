@@ -150,7 +150,7 @@ export default function MerchantSelectorPage() {
       </header>
 
       {/* Main Content Area */}
-      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
+      <main className="w-full px-4 sm:px-6 lg:px-8 pt-24 pb-16">
         {/* Hero Section */}
         <div className="mb-8">
           <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 dark:bg-orange-950/40 px-3 py-1 text-xs font-bold text-[#FF6B35] border border-orange-200/60 dark:border-orange-900/40 mb-3 shadow-2xs">

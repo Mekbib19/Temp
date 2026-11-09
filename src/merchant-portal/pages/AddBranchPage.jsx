@@ -191,7 +191,7 @@ export default function AddBranchPage() {
       operatorRole="Merchant Partner (Owner)"
       operatorEmail={merchant?.email || 'owner@merchant.et'}
     >
-      <div className="space-y-6 max-w-5xl mx-auto pb-16 font-['Plus_Jakarta_Sans']">
+      <div className="w-full space-y-6 pb-16 font-['Plus_Jakarta_Sans']">
         {/* Top Header Action Bar */}
         <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center border-b border-slate-200/80 pb-5 dark:border-zinc-800">
           <div className="flex items-center gap-3">

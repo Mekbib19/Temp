@@ -84,17 +84,8 @@ export default function BranchOpsPage() {
   const [orders, setOrders] = useState(() => generateOrdersForBranch(merchant, branch))
   const [menuItems, setMenuItems] = useState(() => getMenuItemsForBranch(branch?.id, merchant?.id, merchant))
   const [branchReviews, setBranchReviews] = useState(() => getBranchReviews(branch?.id || 'b-wh-01'))
-  const [branchOpenState, setBranchOpenState] = useState(() => branch?.is_open !== false)
 
-  const isBranchOpen = branchOpenState
-
-  const handleToggleBranchStatus = () => {
-    setBranchOpenState((prev) => {
-      const next = !prev
-      showToast(`Branch ${branch?.branch_name || 'Store'} is now ${next ? 'Accepting Orders' : 'Paused'}`)
-      return next
-    })
-  }
+  const isBranchOpen = branch?.is_open !== false
 
   // Staff list for that branch manager
   const [staffList] = useState(() => [
@@ -340,7 +331,6 @@ export default function BranchOpsPage() {
       merchant={merchant}
       branch={branch}
       isBranchOpen={isBranchOpen}
-      onToggleStatus={handleToggleBranchStatus}
       breadcrumbMiddle={merchant.name}
       breadcrumbCurrent={branch.branch_name}
       operatorName={staffList[0]?.name || 'Dawit Haile'}
@@ -355,102 +345,50 @@ export default function BranchOpsPage() {
         </div>
       )}
 
-      {/* Top Action Bar for Branch Ops */}
-      <section className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      {/* Compact Branch Header */}
+      <section className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div>
           <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
               {branch.branch_name}
             </h1>
-
-            {/* Operating Status Indicator */}
-            <button
-              type="button"
-              onClick={handleToggleBranchStatus}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-bold cursor-pointer transition ${
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-bold ${
                 isBranchOpen
                   ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-950/40 dark:text-emerald-400'
                   : 'bg-rose-50 text-rose-700 ring-1 ring-rose-600/20 dark:bg-rose-950/40 dark:text-rose-400'
               }`}
-              title="Click to toggle store live status"
             >
-              <span className={`h-2 w-2 rounded-full ${isBranchOpen ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-              <span>{isBranchOpen ? 'Open Now' : 'Closed'}</span>
-            </button>
+              <span className={`h-1.5 w-1.5 rounded-full ${isBranchOpen ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+              <span>{isBranchOpen ? 'Accepting Orders' : 'Store Paused'}</span>
+            </span>
           </div>
 
           <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-zinc-400">
-            Branch Operations Hub &bull; {branch.address} &bull; Tel: {branch.phone}
+            {branch.address} &bull; {branch.opening_hours || '07:30 AM'} - {branch.closing_hours || '09:30 PM'} &bull;{' '}
+            <span className="font-bold text-amber-500">4.8 ★ ({branchReviews.length} Reviews)</span>
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-xl bg-orange-50 px-3 py-1.5 text-xs font-extrabold text-[#FF6B35] dark:bg-orange-950/40 dark:text-orange-400">
-            <span className="material-symbols-outlined text-base">
-              {activeTab === 'overview' && 'analytics'}
-              {activeTab === 'orders' && 'receipt_long'}
-              {activeTab === 'menu_items' && 'restaurant_menu'}
-              {activeTab === 'ratings' && 'hotel_class'}
-              {activeTab === 'staff' && 'badge'}
-              {activeTab === 'settings' && 'settings'}
-            </span>
-            <span>
-              {activeTab === 'overview' && 'Overview'}
-              {activeTab === 'orders' && `Orders (${orders.length})`}
-              {activeTab === 'menu_items' && `Menu Catalog (${menuItems.length})`}
-              {activeTab === 'ratings' && `Reviews (${branchReviews.length})`}
-              {activeTab === 'staff' && `Staff (${staffList.length})`}
-              {activeTab === 'settings' && 'Settings'}
-            </span>
+        <span className="inline-flex items-center gap-1.5 self-start rounded-xl bg-orange-50 px-3 py-1.5 text-xs font-extrabold text-[#FF6B35] dark:bg-orange-950/40 dark:text-orange-400 sm:self-auto">
+          <span className="material-symbols-outlined text-base">
+            {activeTab === 'overview' && 'analytics'}
+            {activeTab === 'orders' && 'receipt_long'}
+            {activeTab === 'menu_items' && 'restaurant_menu'}
+            {activeTab === 'ratings' && 'hotel_class'}
+            {activeTab === 'staff' && 'badge'}
+            {activeTab === 'settings' && 'settings'}
           </span>
-        </div>
+          <span>
+            {activeTab === 'overview' && 'Overview'}
+            {activeTab === 'orders' && `Orders (${orders.length})`}
+            {activeTab === 'menu_items' && `Menu Catalog (${menuItems.length})`}
+            {activeTab === 'ratings' && `Reviews (${branchReviews.length})`}
+            {activeTab === 'staff' && `Staff (${staffList.length})`}
+            {activeTab === 'settings' && 'Settings'}
+          </span>
+        </span>
       </section>
-
-      {/* Hero Card - 100% Super Admin Styled */}
-      <div className="mb-6 overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="relative h-40 w-full overflow-hidden bg-gradient-to-r from-orange-500 via-amber-500 to-rose-500 sm:h-48">
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-          <div className="absolute right-4 top-4 flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/90 backdrop-blur-md px-3 py-1 text-xs font-bold text-slate-800 dark:bg-zinc-900/90 dark:text-zinc-200">
-              <span className="material-symbols-outlined text-sm text-[#FF6B35]">location_on</span>
-              {branch.is_main_branch ? 'Main Headquarters Branch' : 'Satellite Location'}
-            </span>
-          </div>
-        </div>
-
-        <div className="relative px-6 pb-6 pt-0 sm:px-8">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-end">
-            <div className="-mt-14 relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-lg dark:border-zinc-900 sm:h-28 sm:w-28">
-              <img src={merchant.logo} alt={branch.branch_name} className="h-full w-full object-cover" />
-              <div className="absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded-lg bg-[#FF6B35] text-white shadow-xs">
-                <span className="material-symbols-outlined text-[10px]">pin_drop</span>
-              </div>
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-                  {branch.branch_name}
-                </h2>
-                <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                  {isBranchOpen ? 'Accepting Orders' : 'Store Paused'}
-                </span>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                <span>{branch.address}</span>
-                <span aria-hidden="true">&bull;</span>
-                <span>{branch.opening_hours || '07:30 AM'} - {branch.closing_hours || '09:30 PM'}</span>
-                <span aria-hidden="true">&bull;</span>
-                <span className="font-bold text-amber-500 flex items-center gap-0.5">
-                  <span className="material-symbols-outlined text-sm">star</span>
-                  4.8 ★ ({branchReviews.length} Verified Reviews)
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* 4 Metric Stats Cards - Matching Super Admin */}
       <section className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">

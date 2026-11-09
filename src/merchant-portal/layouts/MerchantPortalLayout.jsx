@@ -24,7 +24,6 @@ export default function MerchantPortalLayout({
   merchant = null,
   branch = null,
   isBranchOpen = true,
-  onToggleStatus = () => {},
   breadcrumbMiddle = 'Merchant Portal',
   breadcrumbCurrent = 'Overview',
   operatorName = null,
@@ -434,13 +433,11 @@ export default function MerchantPortalLayout({
 
       {/* MAIN CONTENT AREA (Offset to match Super Admin margin-left for root sidebar) */}
       <main
-        className={`px-4 pb-16 transition-all duration-300 sm:px-6 lg:px-8 pt-20 ${
+        className={`px-4 pb-16 pt-20 transition-all duration-300 sm:px-6 lg:px-8 ${
           isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'
         }`}
       >
-        <div className="w-full max-w-7xl mx-auto">
-          {children}
-        </div>
+        {children}
       </main>
     </div>
   )
