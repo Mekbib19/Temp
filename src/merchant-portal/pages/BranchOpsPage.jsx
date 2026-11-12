@@ -26,6 +26,42 @@ const DAYS_OF_WEEK = [
   { key: 'sunday', label: 'Sun', full: 'Sunday' },
 ]
 
+const STAFF_ROLE_OPTIONS = [
+  'Branch Operations Lead',
+  'Shift Supervisor',
+  'Head Kitchen Chef',
+  'Fulfillment & Dispatch Lead',
+  'Packaging & QA Specialist',
+  'Cashier / Front Desk',
+  'Delivery Coordinator',
+]
+
+const STAFF_SHIFT_OPTIONS = [
+  '07:30 AM - 04:30 PM',
+  '08:00 AM - 05:00 PM',
+  '02:00 PM - 10:00 PM',
+  '10:00 PM - 06:00 AM',
+]
+
+const STAFF_STATUS_OPTIONS = ['On Duty', 'Off Duty', 'On Leave']
+
+const createStaffFormDefaults = () => ({
+  name: '',
+  role: 'Shift Supervisor',
+  phone: '',
+  email: '',
+  shift: '08:00 AM - 05:00 PM',
+  status: 'On Duty',
+  isManager: false,
+  notes: '',
+})
+
+const formFieldClass =
+  'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 shadow-2xs outline-none transition focus:border-[#FF6B35] focus:ring-1 focus:ring-[#FF6B35]/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'
+
+const formLabelClass =
+  'mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500'
+
 const createDefaultSchedule = () => ({
   monday: { is_open: true, open_time: '07:30', close_time: '21:30' },
   tuesday: { is_open: true, open_time: '07:30', close_time: '21:30' },
@@ -162,50 +198,77 @@ export default function BranchOpsPage() {
   }, [orders, branch, branchReviews.length])
 
   // Staff list for that branch manager
-  const [staffList] = useState(() => [
-    {
-      id: 'st-1',
-      name: branch?.manager_name || 'Dawit Haile',
-      role: 'Branch Operations Lead',
-      phone: branch?.manager_phone || branch?.phone || '+251 91 222 3344',
-      email: 'dawit.h@wholeharvest.com',
-      shift: '07:30 AM - 04:30 PM',
-      status: 'On Duty',
-      isManager: true,
-    },
-    {
-      id: 'st-2',
-      name: 'Bethlehem Tsegaye',
-      role: 'Head Kitchen Chef',
-      phone: '+251 92 334 1122',
-      email: 'bethlehem.t@wholeharvest.com',
-      shift: '07:00 AM - 03:30 PM',
-      status: 'On Duty',
-    },
-    {
-      id: 'st-3',
-      name: 'Kassahun Bekele',
-      role: 'Fulfillment & Dispatch Lead',
-      phone: '+251 94 887 6655',
-      email: 'kassahun.b@wholeharvest.com',
-      shift: '02:00 PM - 10:00 PM',
-      status: 'On Duty',
-    },
-    {
-      id: 'st-4',
-      name: 'Hanan Mohammed',
-      role: 'Packaging & QA Specialist',
-      phone: '+251 93 555 8899',
-      email: 'hanan.m@wholeharvest.com',
-      shift: '08:30 AM - 05:30 PM',
-      status: 'Off Duty',
-    },
-  ])
+  const [staffList, setStaffList] = useState(() => {
+    const defaultStaff = [
+      {
+        id: 'st-1',
+        name: branch?.manager_name || 'Dawit Haile',
+        role: 'Branch Operations Lead',
+        phone: branch?.manager_phone || branch?.phone || '+251 91 222 3344',
+        email: 'dawit.h@wholeharvest.com',
+        shift: '07:30 AM - 04:30 PM',
+        status: 'On Duty',
+        isManager: true,
+      },
+      {
+        id: 'st-2',
+        name: 'Bethlehem Tsegaye',
+        role: 'Head Kitchen Chef',
+        phone: '+251 92 334 1122',
+        email: 'bethlehem.t@wholeharvest.com',
+        shift: '07:00 AM - 03:30 PM',
+        status: 'On Duty',
+      },
+      {
+        id: 'st-3',
+        name: 'Kassahun Bekele',
+        role: 'Fulfillment & Dispatch Lead',
+        phone: '+251 94 887 6655',
+        email: 'kassahun.b@wholeharvest.com',
+        shift: '02:00 PM - 10:00 PM',
+        status: 'On Duty',
+      },
+      {
+        id: 'st-4',
+        name: 'Hanan Mohammed',
+        role: 'Packaging & QA Specialist',
+        phone: '+251 93 555 8899',
+        email: 'hanan.m@wholeharvest.com',
+        shift: '08:30 AM - 05:30 PM',
+        status: 'Off Duty',
+      },
+    ]
+
+    if (typeof window === 'undefined') return defaultStaff
+    try {
+      const stored = window.localStorage.getItem(`shima_branch_staff_${branch?.id || 'default'}`)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch (err) {
+      console.error('Failed to load branch staff:', err)
+    }
+    return defaultStaff
+  })
+
+  const persistStaffList = (nextStaff) => {
+    setStaffList(nextStaff)
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(
+        `shima_branch_staff_${branch?.id || 'default'}`,
+        JSON.stringify(nextStaff)
+      )
+    } catch (err) {
+      console.error('Failed to save branch staff:', err)
+    }
+  }
 
   // Root side menu navigation items (The 6 operational sections)
   const sidebarItems = useMemo(
     () => [
-      { id: 'overview', label: 'Overview & Statistics', icon: 'analytics', badge: null },
+      { id: 'overview', label: 'Overview', icon: 'analytics', badge: null },
       { id: 'orders', label: 'Recent Orders', icon: 'receipt_long', badge: orders.length },
       { id: 'menu_items', label: 'Menu Items', icon: 'restaurant_menu', badge: menuItems.length },
       { id: 'ratings', label: 'Ratings & Reviews', icon: 'hotel_class', badge: branchReviews.length },
@@ -214,6 +277,99 @@ export default function BranchOpsPage() {
     ],
     [orders.length, menuItems.length, branchReviews.length, staffList.length]
   )
+
+  // Header title mirrors the selected side menu item
+  const activeSectionTitle =
+    {
+      overview: 'Overview',
+      orders: 'Recent Orders',
+      menu_items: 'Menu Items',
+      ratings: 'Ratings & Reviews',
+      staff: 'Manager & Staff',
+      settings: 'Settings',
+    }[activeTab] || 'Overview'
+
+  // Short branch name without the merchant prefix (e.g. "Branch #1")
+  const branchDisplayName = useMemo(() => {
+    if (!branch?.branch_name) return 'Branch'
+    const prefix = `${merchant?.name} - `
+    return branch.branch_name.startsWith(prefix)
+      ? branch.branch_name.slice(prefix.length)
+      : branch.branch_name
+  }, [branch, merchant])
+
+  // Staff management state
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false)
+  const [editingStaffId, setEditingStaffId] = useState(null)
+  const [selectedStaff, setSelectedStaff] = useState(null)
+  const [staffForm, setStaffForm] = useState(createStaffFormDefaults)
+
+  const staffStats = useMemo(() => {
+    const total = staffList.length
+    const onDuty = staffList.filter((s) => s.status === 'On Duty').length
+    const managers = staffList.filter((s) => s.isManager).length
+    return { total, onDuty, offDuty: total - onDuty, managers }
+  }, [staffList])
+
+  const handleStaffFieldChange = (field, value) => {
+    setStaffForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const openAddStaffModal = () => {
+    setEditingStaffId(null)
+    setStaffForm(createStaffFormDefaults())
+    setIsStaffModalOpen(true)
+  }
+
+  const openEditStaffModal = (staff) => {
+    setEditingStaffId(staff.id)
+    setStaffForm({
+      name: staff.name || '',
+      role: staff.role || 'Shift Supervisor',
+      phone: staff.phone || '',
+      email: staff.email || '',
+      shift: staff.shift || '08:00 AM - 05:00 PM',
+      status: staff.status || 'On Duty',
+      isManager: Boolean(staff.isManager),
+      notes: staff.notes || '',
+    })
+    setSelectedStaff(null)
+    setIsStaffModalOpen(true)
+  }
+
+  const closeStaffModal = () => {
+    setIsStaffModalOpen(false)
+    setEditingStaffId(null)
+    setStaffForm(createStaffFormDefaults())
+  }
+
+  const handleSaveStaff = (event) => {
+    event.preventDefault()
+    const name = staffForm.name.trim()
+    if (!name) {
+      showToast('Please enter the staff member name')
+      return
+    }
+
+    if (editingStaffId) {
+      persistStaffList(
+        staffList.map((member) =>
+          member.id === editingStaffId ? { ...member, ...staffForm, name } : member
+        )
+      )
+      showToast(`${name}'s staff details updated`)
+    } else {
+      const newStaff = {
+        id: `st-${Date.now()}`,
+        ...staffForm,
+        name,
+      }
+      persistStaffList([newStaff, ...staffList])
+      showToast(`${name} assigned to ${branchDisplayName}`)
+    }
+
+    closeStaffModal()
+  }
 
   // Orders Filter & Search (Matching Super Admin Order Management Engine)
   const [orderSearchQuery, setOrderSearchQuery] = useState('')
@@ -230,6 +386,54 @@ export default function BranchOpsPage() {
     kitchen_prep_buffer: branch?.kitchen_prep_buffer || '15 - 20 mins',
     min_order_amount: branch?.min_order_amount || 150,
   }))
+
+  const settingsSummary = useMemo(() => {
+    const schedule = isEditingSettings
+      ? settingsForm.schedule
+      : branch?.schedule && typeof branch.schedule === 'object'
+        ? branch.schedule
+        : createDefaultSchedule()
+
+    const toMinutes = (value) => {
+      if (!value) return 0
+      const [hours, minutes] = String(value).split(':').map(Number)
+      return (Number(hours) || 0) * 60 + (Number(minutes) || 0)
+    }
+
+    const openDays = DAYS_OF_WEEK.filter((day) => schedule?.[day.key]?.is_open !== false).length
+    const weeklyMinutes = DAYS_OF_WEEK.reduce((total, day) => {
+      const dayData = schedule?.[day.key]
+      if (!dayData || dayData.is_open === false) return total
+      let minutes = toMinutes(dayData.close_time) - toMinutes(dayData.open_time)
+      if (minutes < 0) minutes += 24 * 60
+      return total + minutes
+    }, 0)
+
+    return {
+      openDays,
+      weeklyHours: Math.round((weeklyMinutes / 60) * 10) / 10,
+      minOrder: isEditingSettings
+        ? settingsForm.min_order_amount ?? 150
+        : branch?.min_order_amount ?? 150,
+      prepBuffer: isEditingSettings
+        ? settingsForm.kitchen_prep_buffer || '15 - 20 mins'
+        : branch?.kitchen_prep_buffer || '15 - 20 mins',
+    }
+  }, [branch, isEditingSettings, settingsForm])
+
+  const startEditingSettings = () => {
+    setSettingsForm({
+      schedule:
+        branch?.schedule && typeof branch.schedule === 'object'
+          ? { ...branch.schedule }
+          : createDefaultSchedule(),
+      accepts_orders: branch?.accepts_orders !== false,
+      direct_pickup: branch?.direct_pickup !== false,
+      kitchen_prep_buffer: branch?.kitchen_prep_buffer || '15 - 20 mins',
+      min_order_amount: branch?.min_order_amount || 150,
+    })
+    setIsEditingSettings(true)
+  }
 
   const handleSaveSettings = () => {
     Object.assign(branch, {
@@ -465,6 +669,126 @@ export default function BranchOpsPage() {
     []
   )
 
+  // Staff columns for the built-in DataTable grid
+  const staffColumns = useMemo(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'Staff Member',
+        cell: (info) => {
+          const row = info.row.original
+          return (
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 font-bold text-[#FF6B35] dark:bg-orange-950/40">
+                {(row.name || 'ST').slice(0, 2).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="truncate text-xs font-bold text-slate-900 dark:text-zinc-100">{row.name}</p>
+                  {row.isManager && (
+                    <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[9px] font-bold text-[#FF6B35] dark:bg-orange-950/60 dark:text-orange-400">
+                      Lead Manager
+                    </span>
+                  )}
+                </div>
+                <p className="truncate text-[11px] text-slate-400 dark:text-zinc-500">
+                  {row.email || 'No email on file'}
+                </p>
+              </div>
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: 'role',
+        header: 'Role & Shift',
+        cell: (info) => {
+          const row = info.row.original
+          return (
+            <div className="text-xs">
+              <p className="font-semibold text-slate-800 dark:text-zinc-200">{info.getValue()}</p>
+              <p className="mt-0.5 text-[11px] text-slate-400 dark:text-zinc-500">{row.shift}</p>
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: 'phone',
+        header: 'Contact',
+        cell: (info) => {
+          const row = info.row.original
+          return (
+            <div className="text-xs">
+              <p className="font-semibold text-slate-800 dark:text-zinc-200">{info.getValue() || 'Not provided'}</p>
+              <p className="mt-0.5 truncate text-[11px] text-slate-400 dark:text-zinc-500">{row.email || '—'}</p>
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        meta: {
+          headerClassName: 'text-center',
+          cellClassName: 'text-center',
+        },
+        cell: (info) => {
+          const status = info.getValue()
+          return (
+            <div className="flex justify-center">
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                  status === 'On Duty'
+                    ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-950/40 dark:text-emerald-400'
+                    : status === 'On Leave'
+                      ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20 dark:bg-amber-950/40 dark:text-amber-400'
+                      : 'bg-slate-100 text-slate-600 ring-1 ring-slate-500/20 dark:bg-zinc-800 dark:text-zinc-400'
+                }`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    status === 'On Duty' ? 'bg-emerald-500' : status === 'On Leave' ? 'bg-amber-500' : 'bg-slate-400'
+                  }`}
+                />
+                {status}
+              </span>
+            </div>
+          )
+        },
+      },
+      {
+        id: 'actions',
+        header: 'Action',
+        enableSorting: false,
+        meta: {
+          headerClassName: 'text-right',
+          cellClassName: 'text-right',
+        },
+        cell: ({ row }) => (
+          <div className="flex justify-end gap-1.5">
+            <button
+              type="button"
+              onClick={() => setSelectedStaff(row.original)}
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:text-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-xs">visibility</span>
+              <span>Details</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => openEditStaffModal(row.original)}
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition hover:border-[#FF6B35] hover:text-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-xs">edit</span>
+              <span>Edit</span>
+            </button>
+          </div>
+        ),
+      },
+    ],
+    []
+  )
+
   if (!merchant || !branch) {
     return (
       <MerchantPortalLayout portalType="branch">
@@ -472,6 +796,135 @@ export default function BranchOpsPage() {
           <p className="text-lg font-bold text-slate-800 dark:text-white">Branch Not Found</p>
         </div>
       </MerchantPortalLayout>
+    )
+  }
+
+  // Renders a single editable operating-hours day tile
+  const renderScheduleDay = (d) => {
+    const activeScheduleSource = isEditingSettings
+      ? settingsForm.schedule
+      : branch.schedule || {}
+
+    const dayData = activeScheduleSource?.[d.key] || {
+      is_open: true,
+      open_time: branch.opening_hours || '07:30',
+      close_time: branch.closing_hours || '21:30',
+    }
+    const isOpen = Boolean(dayData.is_open)
+
+    return (
+      <div
+        key={d.key}
+        className={`flex flex-col justify-between rounded-xl border p-3.5 text-center transition ${
+          isOpen
+            ? 'border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/40 dark:bg-emerald-950/20'
+            : 'border-slate-200 bg-slate-100/50 opacity-60 dark:border-zinc-800 dark:bg-zinc-800/20'
+        }`}
+      >
+        <div>
+          <span className="block text-xs font-bold text-slate-800 dark:text-zinc-200">
+            {d.full}
+          </span>
+
+          {isEditingSettings ? (
+            <button
+              type="button"
+              onClick={() => {
+                setSettingsForm((prev) => ({
+                  ...prev,
+                  schedule: {
+                    ...prev.schedule,
+                    [d.key]: {
+                      ...dayData,
+                      is_open: !isOpen,
+                    },
+                  },
+                }))
+              }}
+              className={`mt-1.5 inline-block cursor-pointer rounded px-2.5 py-0.5 text-[10px] font-bold transition hover:opacity-80 ${
+                isOpen
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                  : 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
+              }`}
+            >
+              {isOpen ? 'Open' : 'Closed'}
+            </button>
+          ) : (
+            <span
+              className={`mt-1.5 inline-block rounded px-2 py-0.5 text-[10px] font-bold ${
+                isOpen
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                  : 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
+              }`}
+            >
+              {isOpen ? 'Open' : 'Closed'}
+            </span>
+          )}
+        </div>
+
+        <div className="mt-3">
+          {isOpen ? (
+            isEditingSettings ? (
+              <div className="space-y-1.5 text-left">
+                <div>
+                  <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                    From
+                  </span>
+                  <input
+                    type="time"
+                    value={dayData.open_time}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setSettingsForm((prev) => ({
+                        ...prev,
+                        schedule: {
+                          ...prev.schedule,
+                          [d.key]: {
+                            ...dayData,
+                            open_time: val,
+                          },
+                        },
+                      }))
+                    }}
+                    className="w-full rounded border border-slate-200 bg-white px-1.5 py-1 font-mono text-[11px] font-semibold text-slate-700 shadow-2xs focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  />
+                </div>
+                <div>
+                  <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                    To
+                  </span>
+                  <input
+                    type="time"
+                    value={dayData.close_time}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setSettingsForm((prev) => ({
+                        ...prev,
+                        schedule: {
+                          ...prev.schedule,
+                          [d.key]: {
+                            ...dayData,
+                            close_time: val,
+                          },
+                        },
+                      }))
+                    }}
+                    className="w-full rounded border border-slate-200 bg-white px-1.5 py-1 font-mono text-[11px] font-semibold text-slate-700 shadow-2xs focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  />
+                </div>
+              </div>
+            ) : (
+              <p className="mt-2 font-mono text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
+                {dayData.open_time} - {dayData.close_time}
+              </p>
+            )
+          ) : (
+            <p className="py-2 text-[11px] font-medium text-slate-400 dark:text-zinc-500">
+              Closed
+            </p>
+          )}
+        </div>
+      </div>
     )
   }
 
@@ -504,7 +957,7 @@ export default function BranchOpsPage() {
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="font-['Plus_Jakarta_Sans'] text-2xl font-extrabold tracking-tight text-slate-900 dark:text-zinc-100 sm:text-3xl">
-                {branch.branch_name}
+                {activeSectionTitle}
               </h1>
 
               {/* Operating Status Badge */}
@@ -575,7 +1028,13 @@ export default function BranchOpsPage() {
               )}
             </div>
             <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-zinc-400">
-              Part of <Link to={`/portal/merchants/${merchant.id}`} className="font-bold text-slate-700 hover:text-[#FF6B35] dark:text-zinc-300">{merchant.name}</Link> &bull; Operations, Geolocation &amp; Order Dispatch Console
+              <span
+                className="font-bold text-slate-700 dark:text-zinc-300"
+                title={branch.branch_name}
+              >
+                {branchDisplayName}
+              </span>
+              {' '}&bull;{' '}Part of <Link to={`/portal/merchants/${merchant.id}`} className="font-bold text-slate-700 hover:text-[#FF6B35] dark:text-zinc-300">{merchant.name}</Link>
             </p>
           </div>
         </div>
@@ -1285,39 +1744,105 @@ export default function BranchOpsPage() {
 
         {/* TAB 5: STAFF & SHIFT ROSTER */}
         {activeTab === 'staff' && (
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-base font-extrabold text-slate-900 dark:text-white">Branch Staff & Shift Roster</h2>
-                <p className="text-xs text-slate-500">Active personnel handling food preparation and courier dispatch</p>
-              </div>
-            </div>
-            <div className="divide-y divide-slate-100 dark:divide-zinc-800">
-              {staffList.map((s) => (
-                <div key={s.id} className="py-3 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 font-bold text-[#FF6B35] dark:bg-orange-950/40">
-                      {s.name.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-bold text-xs text-slate-900 dark:text-white">{s.name}</p>
-                        {s.isManager && (
-                          <span className="rounded bg-orange-100 dark:bg-orange-950/60 px-1.5 py-0.2 text-[9px] font-bold text-[#FF6B35]">
-                            Lead Manager
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-slate-500">{s.role} &bull; {s.shift}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                      {s.status}
-                    </span>
-                  </div>
+          <div className="space-y-5 animate-in fade-in duration-200">
+            {/* Staff numerical summary cards */}
+            <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    Total Staff
+                  </span>
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
+                    <span className="material-symbols-outlined text-base">groups</span>
+                  </span>
                 </div>
-              ))}
+                <p className="mt-2 text-xl font-extrabold text-slate-900 dark:text-zinc-100">
+                  {staffStats.total}
+                </p>
+                <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+                  Assigned to this branch
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    On Duty
+                  </span>
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
+                    <span className="material-symbols-outlined text-base">check_circle</span>
+                  </span>
+                </div>
+                <p className="mt-2 text-xl font-extrabold text-emerald-600 dark:text-emerald-400">
+                  {staffStats.onDuty}
+                </p>
+                <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+                  Currently on active shift
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    Off Duty
+                  </span>
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400">
+                    <span className="material-symbols-outlined text-base">schedule</span>
+                  </span>
+                </div>
+                <p className="mt-2 text-xl font-extrabold text-slate-900 dark:text-zinc-100">
+                  {staffStats.offDuty}
+                </p>
+                <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+                  Off shift or on leave
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    Lead Managers
+                  </span>
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400">
+                    <span className="material-symbols-outlined text-base">workspace_premium</span>
+                  </span>
+                </div>
+                <p className="mt-2 text-xl font-extrabold text-slate-900 dark:text-zinc-100">
+                  {staffStats.managers}
+                </p>
+                <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+                  Branch leadership team
+                </p>
+              </div>
+            </section>
+
+            {/* Staff roster */}
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-extrabold text-slate-900 dark:text-white">Branch Staff & Shift Roster</h2>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400">
+                    Assign, edit, and manage personnel for{' '}
+                    <span className="font-semibold text-slate-700 dark:text-zinc-300">{branchDisplayName}</span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={openAddStaffModal}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f] cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-base">person_add</span>
+                  <span>Add New Staff</span>
+                </button>
+              </div>
+
+              <DataTable
+                columns={staffColumns}
+                data={staffList}
+                enablePagination={true}
+                pageSize={10}
+                itemName="staff"
+              />
             </div>
           </div>
         )}
@@ -1325,206 +1850,174 @@ export default function BranchOpsPage() {
         {/* TAB 6: OPERATIONAL SETTINGS - Exact replica of Super Admin Day & Time Edit Cards */}
         {activeTab === 'settings' && (
           <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Weekly Operating Hours Schedule */}
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4 dark:border-zinc-800">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/40">
-                    <span className="material-symbols-outlined text-lg">schedule</span>
-                  </span>
-                  <div>
-                    <h3 className="text-base font-extrabold text-slate-900 dark:text-zinc-100">
-                      Weekly Operating Hours Schedule
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-zinc-400">
-                      Configured daily opening and closing hours for {branch.branch_name}
-                    </p>
+            {/* Settings numerical summary cards */}
+            <div className="space-y-3">
+              <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      Operating Days
+                    </span>
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400">
+                      <span className="material-symbols-outlined text-base">calendar_month</span>
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xl font-extrabold text-slate-900 dark:text-zinc-100">
+                    {settingsSummary.openDays} / 7
+                  </p>
+                  <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+                    Days open per week
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      Weekly Hours
+                    </span>
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
+                      <span className="material-symbols-outlined text-base">schedule</span>
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xl font-extrabold text-slate-900 dark:text-zinc-100">
+                    {settingsSummary.weeklyHours} hrs
+                  </p>
+                  <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+                    Total scheduled open hours
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      Minimum Order
+                    </span>
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
+                      <span className="material-symbols-outlined text-base">shopping_bag</span>
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xl font-extrabold text-slate-900 dark:text-zinc-100">
+                    ETB {settingsSummary.minOrder}
+                  </p>
+                  <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+                    Checkout floor price
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      Prep Buffer
+                    </span>
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400">
+                      <span className="material-symbols-outlined text-base">timer</span>
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xl font-extrabold text-slate-900 dark:text-zinc-100">
+                    {settingsSummary.prepBuffer}
+                  </p>
+                  <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+                    Default kitchen prep SLA
+                  </p>
+                </div>
+              </section>
+            </div>
+
+            {/* Split layout: weekly operating hours (left) + operational controls (right) */}
+            <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
+              {/* Left column: weekly schedule split into weekday and weekend cards */}
+              <div id="branch-settings-details" className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/40">
+                      <span className="material-symbols-outlined text-lg">schedule</span>
+                    </span>
+                    <div>
+                      <h3 className="text-base font-extrabold text-slate-900 dark:text-zinc-100">
+                        Weekly Operating Hours Schedule
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-zinc-400">
+                        Configured daily opening and closing hours for {branch.branch_name}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      {isBranchOpen ? 'Branch Open Today' : 'Closed Today'}
+                    </span>
+
+                    {/* Edit Mode Toggle Button */}
+                    {!isEditingSettings ? (
+                      <button
+                        type="button"
+                        onClick={startEditingSettings}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition hover:border-[#FF6B35] hover:text-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-sm">edit</span>
+                        <span>Edit Settings</span>
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingSettings(false)}
+                          className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveSettings}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f] cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-sm">check</span>
+                          <span>Save Changes</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                    {isBranchOpen ? 'Branch Open Today' : 'Closed Today'}
-                  </span>
-
-                  {/* Edit Mode Toggle Button */}
-                  {!isEditingSettings ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSettingsForm({
-                          schedule: branch?.schedule && typeof branch.schedule === 'object' ? { ...branch.schedule } : createDefaultSchedule(),
-                          accepts_orders: branch?.accepts_orders !== false,
-                          direct_pickup: branch?.direct_pickup !== false,
-                          kitchen_prep_buffer: branch?.kitchen_prep_buffer || '15 - 20 mins',
-                          min_order_amount: branch?.min_order_amount || 150,
-                        })
-                        setIsEditingSettings(true)
-                      }}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition hover:border-[#FF6B35] hover:text-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-sm">edit</span>
-                      <span>Edit Settings</span>
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingSettings(false)}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSaveSettings}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f] cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-sm">check</span>
-                        <span>Save Changes</span>
-                      </button>
+                {/* Weekdays card */}
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-extrabold text-slate-900 dark:text-zinc-100">Weekdays</h4>
+                      <p className="text-[11px] text-slate-500 dark:text-zinc-400">Monday to Friday service hours</p>
                     </div>
-                  )}
+                    <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-zinc-800 dark:text-zinc-300">
+                      Mon &ndash; Fri
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                    {DAYS_OF_WEEK.filter((d) => !['saturday', 'sunday'].includes(d.key)).map(renderScheduleDay)}
+                  </div>
+                </div>
+
+                {/* Weekend card */}
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-extrabold text-slate-900 dark:text-zinc-100">Weekend</h4>
+                      <p className="text-[11px] text-slate-500 dark:text-zinc-400">Saturday and Sunday service hours</p>
+                    </div>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-zinc-800 dark:text-zinc-300">
+                      Sat &ndash; Sun
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {DAYS_OF_WEEK.filter((d) => ['saturday', 'sunday'].includes(d.key)).map(renderScheduleDay)}
+                  </div>
                 </div>
               </div>
 
-              {/* 7 Daily Cards matching Super Admin day cards */}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-7">
-                {DAYS_OF_WEEK.map((d) => {
-                  const activeScheduleSource = isEditingSettings
-                    ? settingsForm.schedule
-                    : branch.schedule || {}
-
-                  const dayData = activeScheduleSource?.[d.key] || {
-                    is_open: true,
-                    open_time: branch.opening_hours || '07:30',
-                    close_time: branch.closing_hours || '21:30',
-                  }
-                  const isOpen = Boolean(dayData.is_open)
-
-                  return (
-                    <div
-                      key={d.key}
-                      className={`flex flex-col justify-between rounded-xl border p-3.5 text-center transition ${
-                        isOpen
-                          ? 'border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/40 dark:bg-emerald-950/20'
-                          : 'border-slate-200 bg-slate-100/50 opacity-60 dark:border-zinc-800 dark:bg-zinc-800/20'
-                      }`}
-                    >
-                      <div>
-                        <span className="block text-xs font-bold text-slate-800 dark:text-zinc-200">
-                          {d.full}
-                        </span>
-
-                        {isEditingSettings ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSettingsForm((prev) => ({
-                                ...prev,
-                                schedule: {
-                                  ...prev.schedule,
-                                  [d.key]: {
-                                    ...dayData,
-                                    is_open: !isOpen,
-                                  },
-                                },
-                              }))
-                            }}
-                            className={`mt-1.5 inline-block cursor-pointer rounded px-2.5 py-0.5 text-[10px] font-bold transition hover:opacity-80 ${
-                              isOpen
-                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
-                                : 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
-                            }`}
-                          >
-                            {isOpen ? 'Open' : 'Closed'}
-                          </button>
-                        ) : (
-                          <span
-                            className={`mt-1.5 inline-block rounded px-2 py-0.5 text-[10px] font-bold ${
-                              isOpen
-                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
-                                : 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
-                            }`}
-                          >
-                            {isOpen ? 'Open' : 'Closed'}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="mt-3">
-                        {isOpen ? (
-                          isEditingSettings ? (
-                            <div className="space-y-1.5 text-left">
-                              <div>
-                                <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                                  From
-                                </span>
-                                <input
-                                  type="time"
-                                  value={dayData.open_time}
-                                  onChange={(e) => {
-                                    const val = e.target.value
-                                    setSettingsForm((prev) => ({
-                                      ...prev,
-                                      schedule: {
-                                        ...prev.schedule,
-                                        [d.key]: {
-                                          ...dayData,
-                                          open_time: val,
-                                        },
-                                      },
-                                    }))
-                                  }}
-                                  className="w-full rounded border border-slate-200 bg-white px-1.5 py-1 font-mono text-[11px] font-semibold text-slate-700 shadow-2xs focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                                />
-                              </div>
-                              <div>
-                                <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                                  To
-                                </span>
-                                <input
-                                  type="time"
-                                  value={dayData.close_time}
-                                  onChange={(e) => {
-                                    const val = e.target.value
-                                    setSettingsForm((prev) => ({
-                                      ...prev,
-                                      schedule: {
-                                        ...prev.schedule,
-                                        [d.key]: {
-                                          ...dayData,
-                                          close_time: val,
-                                        },
-                                      },
-                                    }))
-                                  }}
-                                  className="w-full rounded border border-slate-200 bg-white px-1.5 py-1 font-mono text-[11px] font-semibold text-slate-700 shadow-2xs focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            <p className="mt-2 font-mono text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
-                              {dayData.open_time} - {dayData.close_time}
-                            </p>
-                          )
-                        ) : (
-                          <p className="py-2 text-[11px] font-medium text-slate-400 dark:text-zinc-500">
-                            Closed
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Operational & Dispatch Controls */}
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {/* Card 1: Order Dispatch & Delivery Settings */}
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+              {/* Right column: order capacity & thresholds + dispatch settings */}
+              <div className="flex flex-col gap-6">
+                {/* Operational & Dispatch Controls */}
+                {/* Card 1: Order Dispatch & Delivery Settings */}
+              <div className="order-2 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
                 <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3 dark:border-zinc-800">
                   <span className="material-symbols-outlined text-base text-[#FF6B35]">
                     tune
@@ -1652,7 +2145,7 @@ export default function BranchOpsPage() {
               </div>
 
               {/* Card 2: Order Capacity & Value Limits */}
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="order-1 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
                 <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3 dark:border-zinc-800">
                   <span className="material-symbols-outlined text-base text-emerald-600">
                     shopping_bag
@@ -1725,6 +2218,7 @@ export default function BranchOpsPage() {
                     </span>
                   </div>
                 </div>
+              </div>
               </div>
             </div>
           </div>
@@ -1839,6 +2333,271 @@ export default function BranchOpsPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Staff Detail Modal */}
+      {selectedStaff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start justify-between border-b border-slate-100 pb-4 dark:border-zinc-800">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50 font-bold text-[#FF6B35] dark:bg-orange-950/40">
+                  {selectedStaff.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white">{selectedStaff.name}</h3>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">{selectedStaff.role}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedStaff(null)}
+                className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-zinc-800 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 py-4">
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                  selectedStaff.status === 'On Duty'
+                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                    : selectedStaff.status === 'On Leave'
+                      ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'
+                      : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
+                }`}
+              >
+                {selectedStaff.status}
+              </span>
+              {selectedStaff.isManager && (
+                <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-[10px] font-bold text-[#FF6B35] dark:bg-orange-950/60 dark:text-orange-400">
+                  Lead Manager
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-zinc-800 dark:text-zinc-300">
+                <span className="material-symbols-outlined text-xs">storefront</span>
+                {branchDisplayName}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 dark:border-zinc-800 dark:bg-zinc-850/50">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Phone</span>
+                <p className="mt-0.5 font-bold text-slate-800 dark:text-zinc-200">{selectedStaff.phone || 'Not provided'}</p>
+              </div>
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 dark:border-zinc-800 dark:bg-zinc-850/50">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email</span>
+                <p className="mt-0.5 truncate font-bold text-slate-800 dark:text-zinc-200">{selectedStaff.email || 'Not provided'}</p>
+              </div>
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 dark:border-zinc-800 dark:bg-zinc-850/50">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Shift</span>
+                <p className="mt-0.5 font-bold text-slate-800 dark:text-zinc-200">{selectedStaff.shift}</p>
+              </div>
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 dark:border-zinc-800 dark:bg-zinc-850/50">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Role</span>
+                <p className="mt-0.5 font-bold text-slate-800 dark:text-zinc-200">{selectedStaff.role}</p>
+              </div>
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 sm:col-span-2 dark:border-zinc-800 dark:bg-zinc-850/50">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Assigned Branch</span>
+                <p className="mt-0.5 font-bold text-slate-800 dark:text-zinc-200">{branch?.branch_name || branchDisplayName}</p>
+              </div>
+              {selectedStaff.notes && (
+                <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 sm:col-span-2 dark:border-zinc-800 dark:bg-zinc-850/50">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Notes</span>
+                  <p className="mt-0.5 font-medium leading-relaxed text-slate-700 dark:text-zinc-300">{selectedStaff.notes}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2 border-t border-slate-100 pt-4 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setSelectedStaff(null)}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => openEditStaffModal(selectedStaff)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f] cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">edit</span>
+                <span>Edit Staff</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add / Edit Staff Modal */}
+      {isStaffModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <form
+            onSubmit={handleSaveStaff}
+            className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 animate-in fade-in zoom-in-95 duration-150"
+          >
+            <div className="flex items-start justify-between border-b border-slate-100 pb-4 dark:border-zinc-800">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40">
+                  <span className="material-symbols-outlined text-lg">
+                    {editingStaffId ? 'manage_accounts' : 'person_add'}
+                  </span>
+                </span>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white">
+                    {editingStaffId ? 'Edit Branch Staff' : 'Add New Branch Staff'}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400">
+                    {editingStaffId
+                      ? 'Update assignment, role, and shift details.'
+                      : `Assign a new team member to ${branchDisplayName}.`}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeStaffModal}
+                className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-zinc-800 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 py-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className={formLabelClass} htmlFor="staff-name">Full Name</label>
+                <input
+                  id="staff-name"
+                  type="text"
+                  value={staffForm.name}
+                  onChange={(e) => handleStaffFieldChange('name', e.target.value)}
+                  placeholder="e.g. Abebe Kebede"
+                  className={formFieldClass}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className={formLabelClass} htmlFor="staff-role">Role</label>
+                <select
+                  id="staff-role"
+                  value={staffForm.role}
+                  onChange={(e) => handleStaffFieldChange('role', e.target.value)}
+                  className={formFieldClass}
+                >
+                  {[...new Set([staffForm.role, ...STAFF_ROLE_OPTIONS])].filter(Boolean).map((role) => (
+                    <option key={role} value={role}>{role}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={formLabelClass} htmlFor="staff-status">Status</label>
+                <select
+                  id="staff-status"
+                  value={staffForm.status}
+                  onChange={(e) => handleStaffFieldChange('status', e.target.value)}
+                  className={formFieldClass}
+                >
+                  {[...new Set([staffForm.status, ...STAFF_STATUS_OPTIONS])].filter(Boolean).map((status) => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={formLabelClass} htmlFor="staff-phone">Phone Number</label>
+                <input
+                  id="staff-phone"
+                  type="tel"
+                  value={staffForm.phone}
+                  onChange={(e) => handleStaffFieldChange('phone', e.target.value)}
+                  placeholder="+251 91 123 4567"
+                  className={formFieldClass}
+                />
+              </div>
+
+              <div>
+                <label className={formLabelClass} htmlFor="staff-email">Email Address</label>
+                <input
+                  id="staff-email"
+                  type="email"
+                  value={staffForm.email}
+                  onChange={(e) => handleStaffFieldChange('email', e.target.value)}
+                  placeholder="staff@branch.et"
+                  className={formFieldClass}
+                />
+              </div>
+
+              <div>
+                <label className={formLabelClass} htmlFor="staff-shift">Shift</label>
+                <select
+                  id="staff-shift"
+                  value={staffForm.shift}
+                  onChange={(e) => handleStaffFieldChange('shift', e.target.value)}
+                  className={formFieldClass}
+                >
+                  {[...new Set([staffForm.shift, ...STAFF_SHIFT_OPTIONS])].filter(Boolean).map((shift) => (
+                    <option key={shift} value={shift}>{shift}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={formLabelClass}>Assigned Branch</label>
+                <div className="flex h-[34px] items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                  <span className="material-symbols-outlined text-sm text-[#FF6B35]">storefront</span>
+                  <span className="truncate" title={branch?.branch_name || branchDisplayName}>
+                    {branchDisplayName}
+                  </span>
+                </div>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 text-xs font-semibold text-slate-700 dark:border-zinc-800 dark:bg-zinc-850/50 dark:text-zinc-200">
+                  <input
+                    type="checkbox"
+                    checked={staffForm.isManager}
+                    onChange={(e) => handleStaffFieldChange('isManager', e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-[#FF6B35] focus:ring-[#FF6B35]"
+                  />
+                  Assign as branch lead / manager
+                </label>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className={formLabelClass} htmlFor="staff-notes">Notes</label>
+                <textarea
+                  id="staff-notes"
+                  rows={3}
+                  value={staffForm.notes}
+                  onChange={(e) => handleStaffFieldChange('notes', e.target.value)}
+                  placeholder="Optional shift notes, certifications, or responsibilities..."
+                  className={formFieldClass}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-4 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={closeStaffModal}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f] cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">check</span>
+                <span>{editingStaffId ? 'Save Changes' : 'Add Staff'}</span>
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </MerchantPortalLayout>
