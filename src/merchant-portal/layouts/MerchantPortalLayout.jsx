@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAppTheme } from '../../providers/theme-context'
@@ -96,8 +96,8 @@ export default function MerchantPortalLayout({
       {/* ROOT SIDE MENU (Exact same structure & styles as Super Admin Sidebar) */}
       <aside
         className={`fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-slate-100 bg-slate-50 py-4 transition-all duration-300 dark:border-zinc-800 dark:bg-zinc-900 ${
-          isMobileSidebarOpen ? 'translate-x-0 w-72' : '-translate-x-full'
-        } lg:translate-x-0 ${isSidebarCollapsed ? 'lg:w-20' : 'lg:w-72'}`}
+          isMobileSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full'
+        } lg:translate-x-0 ${isSidebarCollapsed ? 'lg:w-20' : 'lg:w-64'}`}
       >
         {/* Top Header inside Root Side Menu */}
         <div className={`${isCompact ? 'mb-4 px-2 text-center' : 'mb-6 px-5'}`}>
@@ -143,58 +143,49 @@ export default function MerchantPortalLayout({
           )}
         </div>
 
-        {/* Navigation Items (Super Admin Style Nav) */}
+        {/* Navigation Items (Clean, No Redundant Category Header Texts) */}
         <nav className={`flex-1 space-y-1 overflow-y-auto ${isCompact ? 'px-2' : 'px-4'}`}>
-          {sidebarItems.map((item, index) => {
+          {sidebarItems.map((item) => {
             const isActive = activeTab === item.id
-            const prevItem = sidebarItems[index - 1]
-            const showSection =
-              !isCompact && item.section && (!prevItem || prevItem.section !== item.section)
             return (
-              <Fragment key={item.id}>
-                {showSection && (
-                  <div className="px-4 pb-1 pt-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 first:pt-1 dark:text-zinc-500">
-                    {item.section}
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab(item.id)
-                    setIsMobileSidebarOpen(false)
-                  }}
-                  className={`group flex w-full items-center ${
-                    isCompact ? 'justify-center' : 'gap-3'
-                  } px-4 py-2.5 text-left transition-all duration-200 cursor-pointer ${
-                    isActive
-                      ? 'rounded-xl border-r-4 border-[#FF6B35] bg-orange-50 font-bold text-[#FF6B35] dark:bg-orange-950/30 dark:text-orange-400'
-                      : 'font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'
-                  }`}
-                  title={item.label}
-                >
-                  <span className="material-symbols-outlined text-[22px] transition-transform group-hover:scale-105">
-                    {item.icon}
-                  </span>
-                  {!isCompact && (
-                    <span className="flex flex-1 items-center justify-between gap-2 min-w-0">
-                      <span className="font-['Plus_Jakarta_Sans'] text-sm tracking-wide truncate">
-                        {item.label}
-                      </span>
-                      {item.badge !== null && item.badge !== undefined && item.badge > 0 && (
-                        <span
-                          className={`inline-flex shrink-0 items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                            isActive
-                              ? 'bg-[#FF6B35] text-white'
-                              : 'bg-slate-200 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300'
-                          }`}
-                        >
-                          {item.badge}
-                        </span>
-                      )}
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  setActiveTab(item.id)
+                  setIsMobileSidebarOpen(false)
+                }}
+                className={`group flex w-full items-center ${
+                  isCompact ? 'justify-center' : 'gap-3'
+                } px-4 py-2.5 text-left transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? 'rounded-xl border-r-4 border-[#FF6B35] bg-orange-50 font-bold text-[#FF6B35] dark:bg-orange-950/30 dark:text-orange-400'
+                    : 'font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'
+                }`}
+                title={item.label}
+              >
+                <span className="material-symbols-outlined text-[22px] transition-transform group-hover:scale-105">
+                  {item.icon}
+                </span>
+                {!isCompact && (
+                  <span className="flex flex-1 items-center justify-between gap-2 min-w-0">
+                    <span className="font-['Plus_Jakarta_Sans'] text-sm tracking-wide truncate">
+                      {item.label}
                     </span>
-                  )}
-                </button>
-              </Fragment>
+                    {item.badge !== null && item.badge !== undefined && item.badge > 0 && (
+                      <span
+                        className={`inline-flex shrink-0 items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          isActive
+                            ? 'bg-[#FF6B35] text-white'
+                            : 'bg-slate-200 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300'
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </span>
+                )}
+              </button>
             )
           })}
         </nav>
@@ -203,7 +194,7 @@ export default function MerchantPortalLayout({
       {/* HEADER BAR (Offset to align with root side menu, exactly like Super Admin Header) */}
       <header
         className={`fixed left-0 right-0 top-0 z-40 flex h-16 w-full items-center justify-between bg-white/90 px-4 shadow-[0_4px_20px_rgba(28,27,27,0.04)] backdrop-blur-xl transition-all duration-300 dark:bg-zinc-950/90 dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] sm:px-6 lg:px-8 ${
-          isSidebarCollapsed ? 'lg:left-20 lg:w-[calc(100%-5rem)]' : 'lg:left-72 lg:w-[calc(100%-18rem)]'
+          isSidebarCollapsed ? 'lg:left-20 lg:w-[calc(100%-5rem)]' : 'lg:left-64 lg:w-[calc(100%-16rem)]'
         }`}
       >
         {/* Left: Hamburger controls & Breadcrumbs */}
@@ -231,17 +222,25 @@ export default function MerchantPortalLayout({
             </span>
           </button>
 
-          <nav aria-label="Breadcrumb" className="hidden sm:flex items-center gap-2 truncate text-xs sm:text-sm">
-            <span className="font-semibold text-slate-600 dark:text-zinc-300">
-              {breadcrumbMiddle}
-            </span>
-            <span className="material-symbols-outlined text-base text-slate-400 dark:text-zinc-500">
-              chevron_right
-            </span>
-            <span className="truncate font-bold text-slate-900 dark:text-zinc-100">
-              {breadcrumbCurrent}
-            </span>
-          </nav>
+          {(() => {
+            const activeItem = sidebarItems.find((item) => item.id === activeTab)
+            const currentLabel = activeItem?.label || breadcrumbCurrent || 'Overview'
+            const middleLabel = breadcrumbMiddle || (portalType === 'branch' ? branch?.branch_name : merchant?.name) || 'Console'
+
+            return (
+              <nav aria-label="Breadcrumb" className="hidden sm:flex items-center gap-2 truncate text-xs sm:text-sm">
+                <span className="font-semibold text-slate-600 dark:text-zinc-300 truncate max-w-[220px]">
+                  {middleLabel}
+                </span>
+                <span className="material-symbols-outlined text-base text-slate-400 dark:text-zinc-500">
+                  chevron_right
+                </span>
+                <span className="truncate font-bold text-slate-900 dark:text-zinc-100">
+                  {currentLabel}
+                </span>
+              </nav>
+            )
+          })()}
         </div>
 
         {/* Right: Language, Theme, Notifications, User Profile */}
@@ -401,10 +400,12 @@ export default function MerchantPortalLayout({
       {/* MAIN CONTENT AREA (Offset to match Super Admin margin-left for root sidebar) */}
       <main
         className={`px-4 pb-16 pt-20 transition-all duration-300 sm:px-6 lg:px-8 ${
-          isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'
+          isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'
         }`}
       >
-        {children}
+        <div className="w-full space-y-6">
+          {children}
+        </div>
       </main>
     </div>
   )

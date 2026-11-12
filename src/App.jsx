@@ -54,8 +54,11 @@ function App() {
         <Route path="/portal/merchants/:merchantId/branches/:branchId" element={<BranchOpsPage />} />
         <Route path="/portal/branches" element={<BranchOpsPage />} />
         <Route path="/portal/branches/new" element={<AddBranchPage />} />
-        <Route path="/portal/branch" element={<BranchOpsPage />} />
         <Route path="/portal/branches/:branchId" element={<BranchOpsPage />} />
+        <Route path="/portal/merchants/:merchantId/branches/:branchId/menu-items/new" element={<MenuCategoryDetailsPage />} />
+        <Route path="/portal/merchants/:merchantId/branches/:branchId/menu-items/:itemId" element={<MenuCategoryDetailsPage />} />
+        <Route path="/portal/branches/:branchId/menu-items/new" element={<MenuCategoryDetailsPage />} />
+        <Route path="/portal/branches/:branchId/menu-items/:itemId" element={<MenuCategoryDetailsPage />} />
 
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/riders" element={<RiderManagementPage />} />

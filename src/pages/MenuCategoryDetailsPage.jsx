@@ -1,6 +1,8 @@
 import { useState, useMemo, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
+import MerchantPortalLayout from '../merchant-portal/layouts/MerchantPortalLayout'
+import { loadStoredMerchants, getMerchantById } from '../data/demoMerchants'
 import {
   loadStoredMenuCategories,
   generateUUID,
@@ -399,12 +401,43 @@ function getFoodsForCategory(cat) {
   return buildPrototypeCardsForCategory(cat)
 }
 
-export default function MenuCategoryDetailsPage() {
-  const { categoryId, itemId } = useParams()
+export default function MenuCategoryDetailsPage({
+  embedded = false,
+  embeddedItemId = null,
+  embeddedBranchId = null,
+  embeddedMerchantId = null,
+  onEmbeddedClose = null,
+  onEmbeddedSave = null,
+}) {
+  const { categoryId, itemId: routeItemId, merchantId: routeMerchantId, branchId: routeBranchId } = useParams()
   const [searchParams] = useSearchParams()
-  const branchId = searchParams.get('branchId') || ''
-  const merchantId = searchParams.get('merchantId') || ''
+
+  const itemId = embeddedItemId !== null && embeddedItemId !== undefined ? embeddedItemId : routeItemId
+  const branchId = embeddedBranchId || searchParams.get('branchId') || routeBranchId || ''
+  const merchantId = embeddedMerchantId || searchParams.get('merchantId') || routeMerchantId || ''
   const navigate = useNavigate()
+
+  const isFromPortal = embedded || searchParams.get('from') === 'portal' || searchParams.get('source') === 'portal' || window.location.pathname.startsWith('/portal')
+
+  const merchantsList = useMemo(() => loadStoredMerchants(), [])
+  const resolvedMerchant = useMemo(() => {
+    if (merchantId) {
+      const found = merchantsList.find((m) => m.id === merchantId || m.merchant_id === merchantId)
+      if (found) return found
+    }
+    const withBranches = merchantsList.find((m) => Array.isArray(m.branches) && m.branches.length > 0)
+    return withBranches || getMerchantById('m-002') || merchantsList[0]
+  }, [merchantId, merchantsList])
+
+  const resolvedBranch = useMemo(() => {
+    if (!resolvedMerchant) return null
+    const bList = Array.isArray(resolvedMerchant.branches) ? resolvedMerchant.branches : []
+    if (branchId) {
+      const found = bList.find((b, idx) => String(b.id) === String(branchId) || String(idx) === String(branchId))
+      if (found) return found
+    }
+    return bList[0] || null
+  }, [resolvedMerchant, branchId])
 
   const isNew = itemId === 'new' || (!itemId && !categoryId)
   const lookupId = isNew ? (categoryId || 'burgers') : (itemId || categoryId)
@@ -667,10 +700,25 @@ export default function MenuCategoryDetailsPage() {
 
   // Navigation Back Handler
   const handleBack = () => {
+    if (embedded) {
+      if (typeof onEmbeddedClose === 'function') {
+        onEmbeddedClose()
+      }
+      return
+    }
+    const isPortalMode = isFromPortal || searchParams.get('from') === 'portal' || searchParams.get('source') === 'portal' || window.location.pathname.startsWith('/portal')
     if (merchantId && branchId) {
-      navigate(`/merchants/${merchantId}/branches/${branchId}`)
+      if (isPortalMode) {
+        navigate(`/portal/merchants/${merchantId}/branches/${branchId}`)
+      } else {
+        navigate(`/merchants/${merchantId}/branches/${branchId}`)
+      }
     } else if (merchantId) {
-      navigate(`/merchants/${merchantId}`)
+      if (isPortalMode) {
+        navigate(`/portal/merchants/${merchantId}`)
+      } else {
+        navigate(`/merchants/${merchantId}`)
+      }
     } else if (window.history.length > 1) {
       navigate(-1)
     } else {
@@ -1246,17 +1294,20 @@ export default function MenuCategoryDetailsPage() {
 
     showToast(`"${savedItemData.name}" and extra customizations saved successfully!`)
     setTimeout(() => {
+      if (embedded) {
+        if (typeof onEmbeddedSave === 'function') {
+          onEmbeddedSave(savedItemData)
+        } else if (typeof onEmbeddedClose === 'function') {
+          onEmbeddedClose()
+        }
+        return
+      }
       handleBack()
     }, 600)
   }
 
-  return (
-    <MainLayout
-      activeMenuKey="merchantManagement"
-      breadcrumbParent="Merchants"
-      breadcrumbMiddle="Menu Items"
-      breadcrumbCurrent={category?.name ? `${category.name} Customizations` : 'Menu Item Customizations'}
-    >
+  const pageContent = (
+    <>
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-2xl bg-slate-900 px-5 py-3 text-xs font-semibold text-white shadow-2xl ring-1 ring-white/10 dark:bg-white dark:text-zinc-900">
@@ -2806,6 +2857,40 @@ export default function MenuCategoryDetailsPage() {
           </div>
         </div>
       )}
+    </>
+  )
+
+  if (embedded) {
+    return (
+      <div className="relative animate-in fade-in duration-200">
+        {pageContent}
+      </div>
+    )
+  }
+
+  if (isFromPortal) {
+    return (
+      <MerchantPortalLayout
+        portalType="branch"
+        activeTab="menu_items"
+        merchant={resolvedMerchant}
+        branch={resolvedBranch}
+        breadcrumbMiddle={resolvedMerchant?.name || 'Merchant'}
+        breadcrumbCurrent={isNew ? 'Add Menu Item & Customizations' : `${itemName || 'Menu Item'} Customizations`}
+      >
+        {pageContent}
+      </MerchantPortalLayout>
+    )
+  }
+
+  return (
+    <MainLayout
+      activeMenuKey="merchantManagement"
+      breadcrumbParent="Merchants"
+      breadcrumbMiddle="Menu Items"
+      breadcrumbCurrent={category?.name ? `${category.name} Customizations` : 'Menu Item Customizations'}
+    >
+      {pageContent}
     </MainLayout>
   )
 }

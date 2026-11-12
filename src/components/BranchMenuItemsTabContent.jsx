@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import Pagination from './Pagination'
+import MenuCategoryDetailsPage from '../pages/MenuCategoryDetailsPage'
 import {
   saveMenuItem,
   deleteMenuItem,
@@ -176,7 +177,6 @@ export default function BranchMenuItemsTabContent({
   showToast,
   initialCategory = 'all',
 }) {
-  const navigate = useNavigate()
   const [internalItems, setInternalItems] = useState(() => {
     if (Array.isArray(propMenuItems) && propMenuItems.length > 0) return propMenuItems
     return getMenuItemsForBranch(branch?.id, merchant?.id, merchant) || []
@@ -222,6 +222,7 @@ export default function BranchMenuItemsTabContent({
   const [editingItem, setEditingItem] = useState(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [deleteCandidate, setDeleteCandidate] = useState(null)
+  const [embeddedEditor, setEmbeddedEditor] = useState(null)
 
   // Filter items
   const filteredItems = useMemo(() => {
@@ -256,6 +257,24 @@ export default function BranchMenuItemsTabContent({
       return true
     })
   }, [menuItems, selectedCategory, searchQuery, stockFilter])
+
+  // Pagination states matching Super Admin catalog standards
+  const [currentPage, setCurrentPage] = useState(1)
+  const [rowsPerPage, setRowsPerPage] = useState(8)
+
+  const [prevFilterKey, setPrevFilterKey] = useState('')
+  const filterKey = `${selectedCategory}__${searchQuery}__${stockFilter}`
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey)
+    setCurrentPage(1)
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / rowsPerPage))
+  const safeCurrentPage = Math.min(currentPage, totalPages)
+  const paginatedItems = useMemo(() => {
+    const startIndex = (safeCurrentPage - 1) * rowsPerPage
+    return filteredItems.slice(startIndex, startIndex + rowsPerPage)
+  }, [filteredItems, safeCurrentPage, rowsPerPage])
 
 
 
@@ -293,7 +312,30 @@ export default function BranchMenuItemsTabContent({
     setMenuItems((prev) => prev.filter((i) => i.id !== deleteCandidate.id))
     showToast?.(`Item "${deleteCandidate.name}" removed from branch catalog.`, 'info')
     setDeleteCandidate(null)
-    if (inspectItem?.id === deleteCandidate.id) setInspectItem(null)
+    if (inspectItem?.id === deleteCandidate?.id) setInspectItem(null)
+  }
+
+  if (embeddedEditor) {
+    return (
+      <MenuCategoryDetailsPage
+        embedded={true}
+        embeddedItemId={embeddedEditor.itemId}
+        embeddedBranchId={branch?.id}
+        embeddedMerchantId={merchant?.id}
+        onEmbeddedClose={() => setEmbeddedEditor(null)}
+        onEmbeddedSave={(savedItem) => {
+          setMenuItems((prev) => {
+            const idx = prev.findIndex((i) => i.id === savedItem.id)
+            if (idx >= 0) {
+              return prev.map((i) => (i.id === savedItem.id ? savedItem : i))
+            }
+            return [savedItem, ...prev]
+          })
+          setEmbeddedEditor(null)
+          showToast?.(`"${savedItem.name}" saved to branch catalog successfully.`, 'success')
+        }}
+      />
+    )
   }
 
   return (
@@ -410,14 +452,10 @@ export default function BranchMenuItemsTabContent({
           </button>
         )}
 
-        {/* Add Menu Item Button - Opens full merged page */}
+        {/* Add Menu Item Button - Opens full merged page right on merchant branch page */}
         <button
           type="button"
-          onClick={() => {
-            const bId = branch?.id || ''
-            const mId = merchant?.id || ''
-            navigate(`/menu-items/new?merchantId=${mId}&branchId=${bId}`)
-          }}
+          onClick={() => setEmbeddedEditor({ itemId: 'new' })}
           className="inline-flex h-11 items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 text-xs font-bold text-white shadow-sm transition hover:bg-[#e0531f] active:scale-95 md:ml-auto"
         >
           <span className="material-symbols-outlined text-base">add</span>
@@ -451,11 +489,7 @@ export default function BranchMenuItemsTabContent({
             )}
             <button
               type="button"
-              onClick={() => {
-                const bId = branch?.id || ''
-                const mId = merchant?.id || ''
-                navigate(`/menu-items/new?merchantId=${mId}&branchId=${bId}`)
-              }}
+              onClick={() => setEmbeddedEditor({ itemId: 'new' })}
               className="rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white hover:bg-[#e0531f]"
             >
               Add First Item
@@ -465,23 +499,13 @@ export default function BranchMenuItemsTabContent({
       ) : viewMode === 'grid' ? (
         /* GRID VIEW - COMPACT RESPONSIVE MENU ITEM CARDS */
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-          {filteredItems.map((item) => (
+          {paginatedItems.map((item) => (
             <MenuItemCard
               key={item.id}
               item={item}
               onToggleAvailability={handleToggleAvailability}
-              onEdit={(it) => {
-                const catId = it.menu_category_id || 'mcat-food-001'
-                const bId = branch?.id || ''
-                const mId = merchant?.id || ''
-                navigate(`/menu-items/${it.id || catId}?merchantId=${mId}&branchId=${bId}`)
-              }}
-              onAddCustomization={(it) => {
-                const catId = it.menu_category_id || 'mcat-food-001'
-                const bId = branch?.id || ''
-                const mId = merchant?.id || ''
-                navigate(`/menu-items/${it.id || catId}?merchantId=${mId}&branchId=${bId}`)
-              }}
+              onEdit={(it) => setEmbeddedEditor({ itemId: it.id, item: it })}
+              onAddCustomization={(it) => setEmbeddedEditor({ itemId: it.id, item: it })}
               onDelete={(it) => setDeleteCandidate(it)}
               onImagePreview={(url) => setPreviewModalImage(url)}
             />
@@ -505,7 +529,7 @@ export default function BranchMenuItemsTabContent({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                {filteredItems.map((item) => (
+                {paginatedItems.map((item) => (
                   <tr
                     key={item.id}
                     className="transition hover:bg-slate-50/70 dark:hover:bg-zinc-850/40"
@@ -582,12 +606,7 @@ export default function BranchMenuItemsTabContent({
                       <div className="flex items-center justify-end gap-1">
                         <button
                           type="button"
-                          onClick={() => {
-                            const catId = item.menu_category_id || (item.category_type?.toLowerCase().includes('burger') ? 'mcat-food-001' : 'mcat-food-001')
-                            const bId = branch?.id || ''
-                            const mId = merchant?.id || ''
-                            navigate(`/menu-items/${item.id || catId}?merchantId=${mId}&branchId=${bId}`)
-                          }}
+                          onClick={() => setEmbeddedEditor({ itemId: item.id, item })}
                           className="rounded-lg p-1.5 text-slate-500 hover:bg-orange-50 hover:text-[#FF6B35] dark:hover:bg-zinc-800"
                           title="View & customize menu item extra options"
                         >
@@ -595,12 +614,7 @@ export default function BranchMenuItemsTabContent({
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            const catId = item.menu_category_id || (item.category_type?.toLowerCase().includes('burger') ? 'mcat-food-001' : 'mcat-food-001')
-                            const bId = branch?.id || ''
-                            const mId = merchant?.id || ''
-                            navigate(`/menu-items/${item.id || catId}?merchantId=${mId}&branchId=${bId}`)
-                          }}
+                          onClick={() => setEmbeddedEditor({ itemId: item.id, item })}
                           className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-zinc-800"
                           title="Edit Item & Extra Customizations"
                         >
@@ -621,6 +635,22 @@ export default function BranchMenuItemsTabContent({
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Pagination controls matching Super Admin */}
+      {filteredItems.length > 0 && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={safeCurrentPage}
+            totalPages={totalPages}
+            rowsPerPage={rowsPerPage}
+            onPageChange={(p) => setCurrentPage(p)}
+            onRowsPerPageChange={(size) => {
+              setRowsPerPage(size)
+              setCurrentPage(1)
+            }}
+          />
         </div>
       )}
 
@@ -829,11 +859,9 @@ export default function BranchMenuItemsTabContent({
               <button
                 type="button"
                 onClick={() => {
-                  const catId = inspectItem.menu_category_id || (inspectItem.category_type?.toLowerCase().includes('burger') ? 'mcat-food-001' : 'mcat-food-001')
-                  const bId = branch?.id || ''
-                  const mId = merchant?.id || ''
+                  const it = inspectItem
                   setInspectItem(null)
-                  navigate(`/menu-items/${inspectItem.id || catId}?merchantId=${mId}&branchId=${bId}`)
+                  setEmbeddedEditor({ itemId: it.id, item: it })
                 }}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-orange-50 px-4 py-2 text-xs font-bold text-[#FF6B35] hover:bg-orange-100 dark:bg-orange-950/40"
               >
@@ -845,11 +873,9 @@ export default function BranchMenuItemsTabContent({
                 <button
                   type="button"
                   onClick={() => {
-                    const catId = inspectItem.menu_category_id || (inspectItem.category_type?.toLowerCase().includes('burger') ? 'mcat-food-001' : 'mcat-food-001')
-                    const bId = branch?.id || ''
-                    const mId = merchant?.id || ''
+                    const it = inspectItem
                     setInspectItem(null)
-                    navigate(`/menu-items/${inspectItem.id || catId}?merchantId=${mId}&branchId=${bId}`)
+                    setEmbeddedEditor({ itemId: it.id, item: it })
                   }}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f]"
                 >

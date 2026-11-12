@@ -28,6 +28,14 @@ const createDefaultSchedule = () => ({
   sunday: { is_open: true, open_time: '09:00', close_time: '21:00' },
 })
 
+const ADDIS_PRESETS = [
+  { label: 'Bole Medhanialem', lat: 9.0016, lng: 38.7842, address: 'Bole Road, Near Medhanialem Mall, Addis Ababa' },
+  { label: 'Old Airport Flagship', lat: 8.9950, lng: 38.7410, address: '1100 Green Blvd, West End, Old Airport, Addis Ababa' },
+  { label: 'Kazanchis Corridor', lat: 9.0195, lng: 38.7698, address: 'Kazanchis Commercial Avenue, Kirkos, Addis Ababa' },
+  { label: 'Piassa Heritage', lat: 9.0345, lng: 38.7525, address: 'De Gaulle Square, Piassa, Arada, Addis Ababa' },
+  { label: 'Sarbet & Bisrate', lat: 8.9980, lng: 38.7360, address: 'South Africa Street, Bisrate Gabriel, Addis Ababa' },
+]
+
 export default function AddBranchPage() {
   const { merchantId } = useParams()
   const navigate = useNavigate()
@@ -64,7 +72,6 @@ export default function AddBranchPage() {
   })
 
   const [formErrors, setFormErrors] = useState({})
-  const [showGpsMap, setShowGpsMap] = useState(false)
   const [isFullscreenMap, setIsFullscreenMap] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -164,17 +171,16 @@ export default function AddBranchPage() {
 
   const sidebarItems = useMemo(
     () => [
-      { id: 'branches', label: 'Branches', icon: 'store', badge: existingBranches.length, section: 'Branches' },
-      { id: 'details', label: 'Brand & Compliance', icon: 'verified', badge: null, section: 'Branding' },
-      { id: 'orders', label: 'Consolidated Orders', icon: 'receipt_long', badge: null, section: 'Order Management' },
+      { id: 'overview', label: 'Overview', icon: 'dashboard', badge: null },
+      { id: 'branches', label: 'Branches', icon: 'store', badge: existingBranches.length },
+      { id: 'analysis', label: 'Analysis', icon: 'insights', badge: null },
+      { id: 'settings', label: 'Settings', icon: 'settings', badge: null },
     ],
     [existingBranches.length]
   )
 
   const handleSidebarTabChange = (tabId) => {
-    if (tabId === 'branches' || tabId === 'details' || tabId === 'orders') {
-      navigate(`/portal/merchants/${merchant?.id || ''}`)
-    }
+    navigate(`/portal/merchants/${merchant?.id || ''}?tab=${tabId}`)
   }
 
   return (
@@ -237,6 +243,78 @@ export default function AddBranchPage() {
           </div>
         </section>
 
+        {/* 4 Overview Quick Cards */}
+        <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                Operating Outlets
+              </span>
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40">
+                <span className="material-symbols-outlined text-base">storefront</span>
+              </span>
+            </div>
+            <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">
+              {existingBranches.length} {existingBranches.length === 1 ? 'Outlet' : 'Outlets'}
+            </p>
+            <p className="mt-0.5 text-[11px] font-semibold text-slate-500 dark:text-zinc-400">
+              Registering Branch #{existingBranches.length + 1}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                Outlet Classification
+              </span>
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40">
+                <span className="material-symbols-outlined text-base">domain</span>
+              </span>
+            </div>
+            <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">
+              {formData.is_main_branch ? 'Main Flagship' : 'Satellite Branch'}
+            </p>
+            <div className="mt-0.5 flex items-center gap-1.5 text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+              <span>{formData.is_main_branch ? 'HQ Hub & Flagship Kitchen' : 'Hyperlocal Delivery Node'}</span>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                Seating Capacity
+              </span>
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40">
+                <span className="material-symbols-outlined text-base">chair</span>
+              </span>
+            </div>
+            <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">
+              {(Number(formData.indoor_seats) || 0) + (Number(formData.outdoor_seats) || 0)} Total Seats
+            </p>
+            <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+              {formData.indoor_seats || 0} Indoor &bull; {formData.outdoor_seats || 0} Outdoor
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                GPS Position Status
+              </span>
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-600 dark:bg-purple-950/40">
+                <span className="material-symbols-outlined text-base">pin_drop</span>
+              </span>
+            </div>
+            <p className="mt-2 text-2xl font-black font-mono text-slate-900 dark:text-white">
+              {Number(formData.latitude).toFixed(4)}, {Number(formData.longitude).toFixed(4)}
+            </p>
+            <p className="mt-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+              Geo-referenced &bull; Dispatch Ready
+            </p>
+          </div>
+        </section>
+
         {/* Fullscreen Map Modal */}
         {isFullscreenMap && (
           <div className="fixed inset-0 z-50 flex flex-col bg-slate-900/90 backdrop-blur-md p-4 sm:p-8">
@@ -271,334 +349,463 @@ export default function AddBranchPage() {
           </div>
         )}
 
-        {/* Form Card 1: Branch Details & Identification */}
-        <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-zinc-800">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40 font-bold">
-                <span className="material-symbols-outlined text-lg">storefront</span>
-              </span>
-              <div>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">Branch Identity</h2>
-                <p className="text-xs text-slate-500 dark:text-zinc-400">Basic brand and operational identifiers</p>
+        {/* 2-Column Split: Form Inputs on Left + Vertical Separator + Live Map & Branch Preview on Right */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 items-start">
+          {/* Left Column: Form Cards */}
+          <div className="space-y-6 lg:col-span-7 xl:col-span-8">
+            {/* Form Card 1: Branch Details & Identification */}
+            <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-7 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3.5 dark:border-zinc-800">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40 font-bold">
+                    <span className="material-symbols-outlined text-lg">storefront</span>
+                  </span>
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900 dark:text-white">Branch Identity</h2>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400">Basic brand and operational identifiers</p>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_main_branch}
+                    onChange={(e) => handleFieldChange('is_main_branch', e.target.checked)}
+                    className="h-4 w-4 rounded text-[#FF6B35] focus:ring-[#FF6B35]"
+                  />
+                  <span className="text-xs font-bold text-slate-700 dark:text-zinc-200">Set as Flagship Branch</span>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                    Branch Outlet Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.branch_name}
+                    onChange={(e) => handleFieldChange('branch_name', e.target.value)}
+                    placeholder="e.g. Bole Medhanialem Flagship"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-[#FF6B35] focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  />
+                  {formErrors.branch_name && (
+                    <p className="mt-1 text-[11px] font-semibold text-rose-500">{formErrors.branch_name}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                    Branch Contact Hotline
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.phone}
+                    onChange={(e) => handleFieldChange('phone', e.target.value)}
+                    placeholder="+251 91 123 4567"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-[#FF6B35] focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                    Physical Street Address <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => handleFieldChange('address', e.target.value)}
+                    placeholder="e.g. Bole Sub-City, Namibia Street, Addis Ababa"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-[#FF6B35] focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  />
+                  {formErrors.address && (
+                    <p className="mt-1 text-[11px] font-semibold text-rose-500">{formErrors.address}</p>
+                  )}
+                </div>
               </div>
             </div>
 
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.is_main_branch}
-                onChange={(e) => handleFieldChange('is_main_branch', e.target.checked)}
-                className="h-4 w-4 rounded text-[#FF6B35] focus:ring-[#FF6B35]"
-              />
-              <span className="text-xs font-bold text-slate-700 dark:text-zinc-200">Set as Flagship / Main Branch</span>
-            </label>
-          </div>
+            {/* Form Card 2: GPS Pinpoint Coordinates & Presets */}
+            <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-7 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3.5 dark:border-zinc-800">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40 font-bold">
+                    <span className="material-symbols-outlined text-lg">pin_drop</span>
+                  </span>
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900 dark:text-white">GPS Coordinates &amp; Location</h2>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400">Position coordinates for customer routing &amp; live map</p>
+                  </div>
+                </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
-                Branch Outlet Name <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.branch_name}
-                onChange={(e) => handleFieldChange('branch_name', e.target.value)}
-                placeholder="e.g. Bole Medhanialem Flagship"
-                className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-[#FF6B35] focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-              />
-              {formErrors.branch_name && (
-                <p className="mt-1 text-[11px] font-semibold text-rose-500">{formErrors.branch_name}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
-                Branch Contact Hotline
-              </label>
-              <input
-                type="text"
-                value={formData.phone}
-                onChange={(e) => handleFieldChange('phone', e.target.value)}
-                placeholder="+251 91 123 4567"
-                className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-[#FF6B35] focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
-                Physical Street Address <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.address}
-                onChange={(e) => handleFieldChange('address', e.target.value)}
-                placeholder="e.g. Bole Sub-City, Namibia Street, Addis Ababa"
-                className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-[#FF6B35] focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-              />
-              {formErrors.address && (
-                <p className="mt-1 text-[11px] font-semibold text-rose-500">{formErrors.address}</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Form Card 2: GPS Pinpoint Coordinates & Interactive Map */}
-        <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4 dark:border-zinc-800">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40 font-bold">
-                <span className="material-symbols-outlined text-lg">pin_drop</span>
-              </span>
-              <div>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">GPS Coordinates & Navigation</h2>
-                <p className="text-xs text-slate-500 dark:text-zinc-400">Ensures accurate courier dispatch and customer routing</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowGpsMap((prev) => !prev)}
-                className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold shadow-xs transition cursor-pointer ${
-                  showGpsMap
-                    ? 'bg-[#FF6B35] text-white'
-                    : 'border border-orange-200 bg-orange-50 text-[#FF6B35] hover:bg-orange-100 dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-400'
-                }`}
-              >
-                <span className="material-symbols-outlined text-sm">
-                  {showGpsMap ? 'location_off' : 'pin_drop'}
-                </span>
-                <span>{showGpsMap ? 'Hide GPS Map' : 'Show GPS Map'}</span>
-              </button>
-
-              {showGpsMap && (
                 <button
                   type="button"
                   onClick={() => setIsFullscreenMap(true)}
-                  className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:text-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 cursor-pointer"
-                  title="Expand to Full Screen"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-2xs hover:border-[#FF6B35] hover:text-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 transition cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-sm">open_in_full</span>
+                  <span className="material-symbols-outlined text-sm">fullscreen</span>
+                  <span>Full Screen Map</span>
                 </button>
-              )}
-            </div>
-          </div>
-
-          {/* Interactive Map Embed */}
-          {showGpsMap && (
-            <div className="overflow-hidden rounded-2xl border border-orange-200 bg-slate-50 p-2 dark:border-zinc-800 dark:bg-zinc-950/60 animate-in fade-in duration-200">
-              <div className="h-64 sm:h-80 w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-zinc-850">
-                <iframe
-                  title="GPS Pinpoint Map"
-                  width="100%"
-                  height="100%"
-                  loading="lazy"
-                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number(formData.longitude) - 0.008},${Number(formData.latitude) - 0.005},${Number(formData.longitude) + 0.008},${Number(formData.latitude) + 0.005}&layer=mapnik&marker=${formData.latitude},${formData.longitude}`}
-                  className="h-full w-full border-none"
-                />
               </div>
-              <div className="p-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400">
-                <span>Coordinates: {formData.latitude}, {formData.longitude}</span>
-                <span className="text-[#FF6B35] font-semibold">Addis Ababa Hyperlocal Grid</span>
+
+              {/* Addis Ababa Quick District Presets */}
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500 block mb-2">
+                  Quick District Presets:
+                </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {ADDIS_PRESETS.map((preset) => {
+                    const isSelected =
+                      Math.abs(Number(formData.latitude) - preset.lat) < 0.001 &&
+                      Math.abs(Number(formData.longitude) - preset.lng) < 0.001
+                    return (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => {
+                          handleFieldChange('latitude', preset.lat)
+                          handleFieldChange('longitude', preset.lng)
+                          if (!formData.address || formData.address.includes('Addis Ababa')) {
+                            handleFieldChange('address', preset.address)
+                          }
+                        }}
+                        className={`rounded-xl px-2.5 py-1 text-xs font-semibold transition cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#FF6B35] text-white shadow-xs'
+                            : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                    Latitude Coordinates <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={formData.latitude}
+                    onChange={(e) => handleFieldChange('latitude', e.target.value)}
+                    placeholder="9.0016"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 font-mono text-xs font-bold text-slate-800 focus:border-[#FF6B35] focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  />
+                  {formErrors.latitude && (
+                    <p className="mt-1 text-[11px] font-semibold text-rose-500">{formErrors.latitude}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                    Longitude Coordinates <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={formData.longitude}
+                    onChange={(e) => handleFieldChange('longitude', e.target.value)}
+                    placeholder="38.7842"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 font-mono text-xs font-bold text-slate-800 focus:border-[#FF6B35] focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  />
+                  {formErrors.longitude && (
+                    <p className="mt-1 text-[11px] font-semibold text-rose-500">{formErrors.longitude}</p>
+                  )}
+                </div>
               </div>
             </div>
-          )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
-                Latitude <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={formData.latitude}
-                onChange={(e) => handleFieldChange('latitude', e.target.value)}
-                placeholder="9.0016"
-                className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-[#FF6B35] focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-              />
-              {formErrors.latitude && (
-                <p className="mt-1 text-[11px] font-semibold text-rose-500">{formErrors.latitude}</p>
-              )}
+            {/* Form Card 3: Branch Management & Capacities */}
+            <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-7 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 space-y-5">
+              <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3.5 dark:border-zinc-800">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40 font-bold">
+                  <span className="material-symbols-outlined text-lg">badge</span>
+                </span>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white">Branch Leadership &amp; Capacity</h2>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400">Designated manager and seating specifications</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                    Branch Manager Name
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.manager_name}
+                    onChange={(e) => handleFieldChange('manager_name', e.target.value)}
+                    placeholder="e.g. Dawit Haile"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-[#FF6B35] focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                    Manager Direct Phone
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.manager_phone}
+                    onChange={(e) => handleFieldChange('manager_phone', e.target.value)}
+                    placeholder="+251 91 876 5432"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-[#FF6B35] focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                    Indoor Seating Capacity
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.indoor_seats}
+                    onChange={(e) => handleFieldChange('indoor_seats', e.target.value)}
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-[#FF6B35] focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
+                    Outdoor Seating Capacity
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.outdoor_seats}
+                    onChange={(e) => handleFieldChange('outdoor_seats', e.target.value)}
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-[#FF6B35] focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
-                Longitude <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={formData.longitude}
-                onChange={(e) => handleFieldChange('longitude', e.target.value)}
-                placeholder="38.7842"
-                className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-[#FF6B35] focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-              />
-              {formErrors.longitude && (
-                <p className="mt-1 text-[11px] font-semibold text-rose-500">{formErrors.longitude}</p>
-              )}
-            </div>
-          </div>
-        </div>
+            {/* Form Card 4: Weekly Operating Schedule */}
+            <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-7 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 space-y-5">
+              <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3.5 dark:border-zinc-800">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40 font-bold">
+                  <span className="material-symbols-outlined text-lg">schedule</span>
+                </span>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white">Operating Schedule</h2>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400">Weekly opening and closing service hours</p>
+                </div>
+              </div>
 
-        {/* Form Card 3: Branch Management & Capacities */}
-        <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 space-y-6">
-          <div className="flex items-center gap-2.5 border-b border-slate-100 pb-4 dark:border-zinc-800">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40 font-bold">
-              <span className="material-symbols-outlined text-lg">badge</span>
-            </span>
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Branch Leadership & Capacity</h2>
-              <p className="text-xs text-slate-500 dark:text-zinc-400">Designated manager and seating specifications</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
-                Branch Manager Name
-              </label>
-              <input
-                type="text"
-                value={formData.manager_name}
-                onChange={(e) => handleFieldChange('manager_name', e.target.value)}
-                placeholder="e.g. Dawit Haile"
-                className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-[#FF6B35] focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
-                Manager Direct Phone
-              </label>
-              <input
-                type="text"
-                value={formData.manager_phone}
-                onChange={(e) => handleFieldChange('manager_phone', e.target.value)}
-                placeholder="+251 91 876 5432"
-                className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-[#FF6B35] focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
-                Indoor Seating Capacity
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={formData.indoor_seats}
-                onChange={(e) => handleFieldChange('indoor_seats', e.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-[#FF6B35] focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300">
-                Outdoor Seating Capacity
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={formData.outdoor_seats}
-                onChange={(e) => handleFieldChange('outdoor_seats', e.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:border-[#FF6B35] focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Form Card 4: Weekly Operating Schedule */}
-        <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 space-y-6">
-          <div className="flex items-center gap-2.5 border-b border-slate-100 pb-4 dark:border-zinc-800">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40 font-bold">
-              <span className="material-symbols-outlined text-lg">schedule</span>
-            </span>
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Operating Schedule</h2>
-              <p className="text-xs text-slate-500 dark:text-zinc-400">Weekly opening and closing service hours</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {DAYS_OF_WEEK.map((day) => {
-              const dayInfo = formData.schedule?.[day.key] || {
-                is_open: true,
-                open_time: '08:00',
-                close_time: '22:00',
-              }
-              return (
-                <div
-                  key={day.key}
-                  className={`rounded-2xl border p-3.5 transition-all ${
-                    dayInfo.is_open
-                      ? 'border-slate-200 bg-slate-50/50 dark:border-zinc-800 dark:bg-zinc-850/50'
-                      : 'border-slate-200/50 bg-slate-100/40 opacity-60 dark:border-zinc-800/50 dark:bg-zinc-900/40'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2.5">
-                    <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">{day.label}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleDayToggle(day.key)}
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-bold cursor-pointer transition ${
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {DAYS_OF_WEEK.map((day) => {
+                  const dayInfo = formData.schedule?.[day.key] || {
+                    is_open: true,
+                    open_time: '08:00',
+                    close_time: '22:00',
+                  }
+                  return (
+                    <div
+                      key={day.key}
+                      className={`rounded-2xl border p-3.5 transition-all ${
                         dayInfo.is_open
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400'
-                          : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-400'
+                          ? 'border-slate-200 bg-slate-50/50 dark:border-zinc-800 dark:bg-zinc-850/50'
+                          : 'border-slate-200/50 bg-slate-100/40 opacity-60 dark:border-zinc-800/50 dark:bg-zinc-900/40'
                       }`}
                     >
-                      {dayInfo.is_open ? 'Open' : 'Closed'}
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">{day.label}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleDayToggle(day.key)}
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold cursor-pointer transition ${
+                            dayInfo.is_open
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400'
+                              : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-400'
+                          }`}
+                        >
+                          {dayInfo.is_open ? 'Open' : 'Closed'}
+                        </button>
+                      </div>
+
+                      {dayInfo.is_open && (
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <span className="text-[10px] text-slate-400 block mb-0.5">Opens</span>
+                            <input
+                              type="time"
+                              value={dayInfo.open_time}
+                              onChange={(e) => handleDayTimeChange(day.key, 'open_time', e.target.value)}
+                              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                            />
+                          </div>
+                          <span className="text-slate-400 text-xs mt-3">&ndash;</span>
+                          <div className="flex-1">
+                            <span className="text-[10px] text-slate-400 block mb-0.5">Closes</span>
+                            <input
+                              type="time"
+                              value={dayInfo.close_time}
+                              onChange={(e) => handleDayTimeChange(day.key, 'close_time', e.target.value)}
+                              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Bottom Action Bar */}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200/80 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => navigate(`/portal/merchants/${merchant?.id || ''}`)}
+                className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 cursor-pointer transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#FF6B35] px-6 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#e0531f] transition cursor-pointer disabled:opacity-60"
+              >
+                <span className="material-symbols-outlined text-base">check</span>
+                <span>{isSubmitting ? 'Registering Branch...' : 'Register Branch Outlet'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Right Column: Live Branch Preview Card & Interactive Map with Vertical Separator */}
+          <div className="lg:col-span-5 xl:col-span-4 lg:border-l lg:border-slate-200/80 lg:dark:border-zinc-800 lg:pl-8">
+            <div className="sticky top-24 space-y-5">
+              {/* Header of Preview */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-100 text-[#FF6B35] dark:bg-orange-950/60 font-bold">
+                    <span className="material-symbols-outlined text-base">visibility</span>
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">Live Branch Preview</h3>
+                    <p className="text-[11px] text-slate-400">Customer &amp; rider perspective</p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Live Sync
+                </span>
+              </div>
+
+              {/* The Preview Card */}
+              <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-md dark:border-zinc-800 dark:bg-zinc-900">
+                {/* Map Preview */}
+                <div className="relative h-48 w-full bg-slate-100 dark:bg-zinc-850 overflow-hidden">
+                  <iframe
+                    title="Live Branch Map Preview"
+                    width="100%"
+                    height="100%"
+                    loading="lazy"
+                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number(formData.longitude || 38.7842) - 0.008},${Number(formData.latitude || 9.0016) - 0.005},${Number(formData.longitude || 38.7842) + 0.008},${Number(formData.latitude || 9.0016) + 0.005}&layer=mapnik&marker=${formData.latitude || 9.0016},${formData.longitude || 38.7842}`}
+                    className="h-full w-full border-none pointer-events-none"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+
+                  {/* Top Badges */}
+                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-slate-800 shadow-sm backdrop-blur-sm dark:bg-zinc-900/95 dark:text-zinc-200">
+                      <span className="material-symbols-outlined text-xs text-[#FF6B35]">location_on</span>
+                      <span>{formData.is_main_branch ? 'Main Flagship' : 'Satellite Branch'}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsFullscreenMap(true)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/95 text-slate-700 shadow-sm hover:text-[#FF6B35] dark:bg-zinc-900/95 dark:text-zinc-200 cursor-pointer"
+                      title="Expand Full Screen Map"
+                    >
+                      <span className="material-symbols-outlined text-sm">fullscreen</span>
                     </button>
                   </div>
 
-                  {dayInfo.is_open && (
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1">
-                        <span className="text-[10px] text-slate-400 block mb-0.5">Opens</span>
-                        <input
-                          type="time"
-                          value={dayInfo.open_time}
-                          onChange={(e) => handleDayTimeChange(day.key, 'open_time', e.target.value)}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                        />
-                      </div>
-                      <span className="text-slate-400 text-xs mt-3">&ndash;</span>
-                      <div className="flex-1">
-                        <span className="text-[10px] text-slate-400 block mb-0.5">Closes</span>
-                        <input
-                          type="time"
-                          value={dayInfo.close_time}
-                          onChange={(e) => handleDayTimeChange(day.key, 'close_time', e.target.value)}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                        />
-                      </div>
-                    </div>
-                  )}
+                  {/* Bottom Coordinates Pin Info */}
+                  <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-[11px] font-semibold text-white drop-shadow-sm">
+                    <span className="font-mono text-[10px] bg-black/50 px-2 py-0.5 rounded-md backdrop-blur-xs">
+                      {formData.latitude}, {formData.longitude}
+                    </span>
+                    <span className="bg-emerald-600/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">
+                      Open for Delivery
+                    </span>
+                  </div>
                 </div>
-              )
-            })}
-          </div>
-        </div>
 
-        {/* Bottom Submission Bar */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200/80 dark:border-zinc-800">
-          <button
-            type="button"
-            onClick={() => navigate(`/portal/merchants/${merchant?.id || ''}`)}
-            className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 cursor-pointer transition"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#FF6B35] px-6 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#e0531f] transition cursor-pointer disabled:opacity-60"
-          >
-            <span className="material-symbols-outlined text-base">check</span>
-            <span>{isSubmitting ? 'Registering Branch...' : 'Register Branch Outlet'}</span>
-          </button>
+                {/* Card Content Details */}
+                <div className="p-5 space-y-4">
+                  {/* Branch Name & Merchant */}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-base font-extrabold text-slate-900 dark:text-zinc-100 truncate">
+                        {formData.branch_name || 'Branch Outlet Name'}
+                      </h4>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                      Part of <span className="font-bold text-slate-700 dark:text-zinc-300">{merchant?.name || 'Merchant Brand'}</span>
+                    </p>
+                  </div>
+
+                  {/* Info Rows */}
+                  <div className="space-y-2.5 border-t border-slate-100 pt-3 dark:border-zinc-800 text-xs">
+                    <div className="flex items-start gap-2.5">
+                      <span className="material-symbols-outlined text-base text-slate-400 shrink-0 mt-0.5">place</span>
+                      <span className="text-slate-700 dark:text-zinc-300 font-medium leading-snug">
+                        {formData.address || 'Physical address not specified yet'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <span className="material-symbols-outlined text-base text-slate-400 shrink-0">call</span>
+                      <span className="text-slate-700 dark:text-zinc-300 font-semibold font-mono text-[11px]">
+                        {formData.phone || '+251 -- --- ----'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <span className="material-symbols-outlined text-base text-slate-400 shrink-0">badge</span>
+                      <span className="text-slate-700 dark:text-zinc-300">
+                        Manager: <span className="font-bold">{formData.manager_name || 'Store Lead'}</span>
+                        {formData.manager_phone ? ` (${formData.manager_phone})` : ''}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <span className="material-symbols-outlined text-base text-slate-400 shrink-0">chair</span>
+                      <span className="text-slate-700 dark:text-zinc-300">
+                        Capacity: <span className="font-bold text-slate-900 dark:text-white">{formData.indoor_seats || 0}</span> Indoor &bull;{' '}
+                        <span className="font-bold text-slate-900 dark:text-white">{formData.outdoor_seats || 0}</span> Outdoor
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <span className="material-symbols-outlined text-base text-slate-400 shrink-0">schedule</span>
+                      <span className="text-slate-700 dark:text-zinc-300">
+                        Today: <span className="font-mono font-bold text-slate-900 dark:text-white">{formData.schedule?.monday?.open_time || '08:00'} - {formData.schedule?.monday?.close_time || '22:00'}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Quick Dispatch Badge */}
+                  <div className="rounded-xl bg-orange-50/80 p-3 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/40 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[#FF6B35] text-base">moped</span>
+                      <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">Shima Courier Dispatch</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-[#FF6B35] uppercase tracking-wider">Ready to Assign</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </MerchantPortalLayout>

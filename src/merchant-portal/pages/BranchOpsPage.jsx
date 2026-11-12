@@ -1,13 +1,20 @@
 import { useState, useMemo, useCallback } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import MerchantPortalLayout from '../layouts/MerchantPortalLayout'
 import DataTable from '../../components/DataTable'
 import CustomerRatingReviews from '../../components/CustomerRatingReviews'
 import BranchMenuItemsTabContent from '../../components/BranchMenuItemsTabContent'
-import { getMerchantById, loadStoredMerchants } from '../../data/demoMerchants'
+import { getMerchantById, loadStoredMerchants, saveStoredMerchants } from '../../data/demoMerchants'
 import { generateOrdersForBranch } from '../../data/demoOrders'
 import { getMenuItemsForBranch, getCategoriesForBranch } from '../../data/demoMenuItems'
 import { getBranchReviews, saveBranchReviews } from '../../data/demoRatingsReviews'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuPortal,
+} from '../../components/ui/dropdown-menu'
 
 const DAYS_OF_WEEK = [
   { key: 'monday', label: 'Mon', full: 'Monday' },
@@ -19,8 +26,47 @@ const DAYS_OF_WEEK = [
   { key: 'sunday', label: 'Sun', full: 'Sunday' },
 ]
 
+const createDefaultSchedule = () => ({
+  monday: { is_open: true, open_time: '07:30', close_time: '21:30' },
+  tuesday: { is_open: true, open_time: '07:30', close_time: '21:30' },
+  wednesday: { is_open: true, open_time: '07:30', close_time: '21:30' },
+  thursday: { is_open: true, open_time: '07:30', close_time: '21:30' },
+  friday: { is_open: true, open_time: '07:30', close_time: '22:30' },
+  saturday: { is_open: true, open_time: '08:00', close_time: '22:30' },
+  sunday: { is_open: true, open_time: '08:00', close_time: '21:00' },
+})
+
+const orderStatusConfig = {
+  kitchen: {
+    label: 'In Kitchen',
+    badgeClass: 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20 dark:bg-amber-950/40 dark:text-amber-400',
+    dotClass: 'bg-amber-500 animate-pulse',
+  },
+  ready: {
+    label: 'Ready for Pickup',
+    badgeClass: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-950/40 dark:text-emerald-400',
+    dotClass: 'bg-emerald-500',
+  },
+  delivery: {
+    label: 'Out for Delivery',
+    badgeClass: 'bg-blue-50 text-blue-700 ring-1 ring-blue-600/20 dark:bg-blue-950/40 dark:text-blue-400',
+    dotClass: 'bg-blue-500',
+  },
+  delivered: {
+    label: 'Delivered',
+    badgeClass: 'bg-slate-100 text-slate-700 ring-1 ring-slate-600/20 dark:bg-zinc-800 dark:text-zinc-300',
+    dotClass: 'bg-slate-400',
+  },
+  cancelled: {
+    label: 'Cancelled',
+    badgeClass: 'bg-rose-50 text-rose-700 ring-1 ring-rose-600/20 dark:bg-rose-950/40 dark:text-rose-400',
+    dotClass: 'bg-rose-500',
+  },
+}
+
 export default function BranchOpsPage() {
   const params = useParams()
+  const navigate = useNavigate()
 
   const [activeTab, setActiveTab] = useState('overview')
   const [toastMessage, setToastMessage] = useState(null)
@@ -85,8 +131,16 @@ export default function BranchOpsPage() {
   const [menuItems, setMenuItems] = useState(() => getMenuItemsForBranch(branch?.id, merchant?.id, merchant))
   const [branchReviews, setBranchReviews] = useState(() => getBranchReviews(branch?.id || 'b-wh-01'))
   const [initialMenuCategory, setInitialMenuCategory] = useState('all')
+  const [branchOpenState, setBranchOpenState] = useState(() => branch?.is_open !== false)
+  const isBranchOpen = branchOpenState
 
-  const isBranchOpen = branch?.is_open !== false
+  const handleToggleBranchStatus = () => {
+    setBranchOpenState((prev) => {
+      const next = !prev
+      showToast(`Branch ${branch?.branch_name || 'Branch'} status updated to ${next ? 'Open Now' : 'Closed'}`)
+      return next
+    })
+  }
 
   const branchStats = useMemo(() => {
     const revenue = orders.reduce((acc, order) => {
@@ -151,20 +205,65 @@ export default function BranchOpsPage() {
   // Root side menu navigation items (The 6 operational sections)
   const sidebarItems = useMemo(
     () => [
-      { id: 'overview', label: 'Overview & Statistics', icon: 'analytics', badge: null, section: 'Overview' },
-      { id: 'orders', label: 'Recent Orders', icon: 'receipt_long', badge: orders.length, section: 'Order Management' },
-      { id: 'menu_items', label: 'Menu Items', icon: 'restaurant_menu', badge: menuItems.length, section: 'Menu Catalog' },
-      { id: 'ratings', label: 'Ratings & Reviews', icon: 'hotel_class', badge: branchReviews.length, section: 'Reviews' },
-      { id: 'staff', label: 'Manager & Staff', icon: 'badge', badge: staffList.length, section: 'Team' },
-      { id: 'settings', label: 'Settings', icon: 'settings', badge: null, section: 'Settings' },
+      { id: 'overview', label: 'Overview & Statistics', icon: 'analytics', badge: null },
+      { id: 'orders', label: 'Recent Orders', icon: 'receipt_long', badge: orders.length },
+      { id: 'menu_items', label: 'Menu Items', icon: 'restaurant_menu', badge: menuItems.length },
+      { id: 'ratings', label: 'Ratings & Reviews', icon: 'hotel_class', badge: branchReviews.length },
+      { id: 'staff', label: 'Manager & Staff', icon: 'badge', badge: staffList.length },
+      { id: 'settings', label: 'Settings', icon: 'settings', badge: null },
     ],
     [orders.length, menuItems.length, branchReviews.length, staffList.length]
   )
 
-  // Orders Filter & Search
+  // Orders Filter & Search (Matching Super Admin Order Management Engine)
   const [orderSearchQuery, setOrderSearchQuery] = useState('')
   const [orderStatusFilter, setOrderStatusFilter] = useState('All Statuses')
+  const [orderChannelFilter, setOrderChannelFilter] = useState('All Channels')
   const [selectedOrder, setSelectedOrder] = useState(null)
+
+  // Operating Hours & Dispatch Settings State (Matching Super Admin Day & Time Cards)
+  const [isEditingSettings, setIsEditingSettings] = useState(false)
+  const [settingsForm, setSettingsForm] = useState(() => ({
+    schedule: branch?.schedule && typeof branch.schedule === 'object' ? branch.schedule : createDefaultSchedule(),
+    accepts_orders: branch?.accepts_orders !== false,
+    direct_pickup: branch?.direct_pickup !== false,
+    kitchen_prep_buffer: branch?.kitchen_prep_buffer || '15 - 20 mins',
+    min_order_amount: branch?.min_order_amount || 150,
+  }))
+
+  const handleSaveSettings = () => {
+    Object.assign(branch, {
+      schedule: settingsForm.schedule,
+      accepts_orders: settingsForm.accepts_orders,
+      direct_pickup: settingsForm.direct_pickup,
+      kitchen_prep_buffer: settingsForm.kitchen_prep_buffer,
+      min_order_amount: settingsForm.min_order_amount,
+      opening_hours: settingsForm.schedule?.monday?.open_time || branch.opening_hours || '07:30 AM',
+      closing_hours: settingsForm.schedule?.monday?.close_time || branch.closing_hours || '09:30 PM',
+    })
+    if (merchant) {
+      try {
+        const stored = loadStoredMerchants()
+        const updated = stored.map((m) => {
+          if (m.id === merchant.id) {
+            const updatedBranches = (m.branches || []).map((b) => {
+              if (String(b.id) === String(branch?.id)) {
+                return { ...b, ...branch }
+              }
+              return b
+            })
+            return { ...m, branches: updatedBranches }
+          }
+          return m
+        })
+        saveStoredMerchants(updated)
+      } catch (err) {
+        console.error(err)
+      }
+    }
+    setIsEditingSettings(false)
+    showToast('Branch operational settings & weekly schedule updated successfully!')
+  }
 
   const filteredOrders = useMemo(() => {
     return orders.filter((o) => {
@@ -174,18 +273,24 @@ export default function BranchOpsPage() {
         if (s.includes('ready') && o.statusVariant !== 'ready') return false
         if (s.includes('delivery') && o.statusVariant !== 'delivery') return false
         if (s.includes('delivered') && o.statusVariant !== 'delivered') return false
+        if (s.includes('cancelled') && o.statusVariant !== 'cancelled') return false
+      }
+      if (orderChannelFilter !== 'All Channels') {
+        const rowType = (o.type || 'Delivery').toLowerCase()
+        if (rowType !== orderChannelFilter.toLowerCase()) return false
       }
       if (orderSearchQuery.trim()) {
         const q = orderSearchQuery.toLowerCase()
         return (
           o.id.toLowerCase().includes(q) ||
-          o.customer.name.toLowerCase().includes(q) ||
-          o.items.toLowerCase().includes(q)
+          (o.customer?.name || '').toLowerCase().includes(q) ||
+          (o.customer?.phone || '').toLowerCase().includes(q) ||
+          (o.items || '').toLowerCase().includes(q)
         )
       }
       return true
     })
-  }, [orders, orderStatusFilter, orderSearchQuery])
+  }, [orders, orderStatusFilter, orderChannelFilter, orderSearchQuery])
 
   const handleUpdateOrderStatus = useCallback((orderId, nextVariant) => {
     const statusMapping = {
@@ -193,6 +298,7 @@ export default function BranchOpsPage() {
       ready: { status: 'Ready for Pickup', statusVariant: 'ready' },
       delivery: { status: 'Out for Delivery', statusVariant: 'delivery' },
       delivered: { status: 'Delivered', statusVariant: 'delivered' },
+      cancelled: { status: 'Cancelled', statusVariant: 'cancelled' },
     }
     const update = statusMapping[nextVariant]
     if (!update) return
@@ -212,11 +318,19 @@ export default function BranchOpsPage() {
       status: 'In Kitchen',
       statusVariant: 'kitchen',
       type: 'Delivery',
+      typeIcon: 'delivery_dining',
+      date: 'Today, Just Now',
+      relativeTime: 'Just Now',
       time: 'Just now',
       items: '2x Organic Highland Avocado Bowl, Fresh Cold-Pressed Juice',
       itemsCount: 3,
       amount: 'ETB 580',
+      total: 'ETB 580',
       paymentMethod: 'Telebirr (Paid)',
+      payment: 'Telebirr (Paid)',
+      deliveryAddress: `Addis Ababa Central, Near ${branch?.branch_name || 'Flagship Outlet'}`,
+      notes: 'Please expedite delivery, customer is waiting.',
+      courier: 'Assigned to Next Available Courier',
     }
     setOrders((prev) => [newOrder, ...prev])
     showToast(`New live order ${newOrder.id} received in branch queue!`)
@@ -226,110 +340,129 @@ export default function BranchOpsPage() {
     return getCategoriesForBranch(merchant, menuItems)
   }, [merchant, menuItems])
 
-  // Order columns for DataTable
+  // Order columns for DataTable - Exact matching Super Admin Orders Data Grid
   const orderColumns = useMemo(
     () => [
       {
-        accessorKey: 'id',
-        header: 'Order Ref',
-        cell: (info) => (
-          <div className="font-mono font-bold text-slate-900 dark:text-zinc-100 text-xs">
-            {info.getValue()}
-          </div>
-        ),
-      },
-      {
-        accessorKey: 'customer.name',
+        accessorKey: 'customer',
         header: 'Customer',
         cell: (info) => {
           const row = info.row.original
+          const customer = row.customer || {}
+          const name = customer.name || 'Customer'
+          const initials = customer.initials || name.substring(0, 2).toUpperCase()
           return (
-            <div>
-              <p className="font-bold text-slate-800 dark:text-zinc-200 text-xs">{row.customer.name}</p>
-              <p className="text-[10px] text-slate-400">{row.customer.phone}</p>
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-100 text-[11px] font-bold text-[#FF6B35] dark:bg-orange-950/60 dark:text-orange-300">
+                {initials}
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-900 dark:text-zinc-100">{name}</p>
+                <p className="text-[11px] text-slate-400">{customer.phone || '+251 91 123 4567'}</p>
+              </div>
             </div>
           )
         },
       },
       {
+        accessorKey: 'type',
+        header: 'Channel',
+        cell: (info) => {
+          const row = info.row.original
+          const type = info.getValue() || row.type || 'Delivery'
+          const icon = row.typeIcon || (type === 'Pickup' ? 'storefront' : type === 'Dine-In' ? 'restaurant' : 'delivery_dining')
+          return (
+            <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-zinc-800 dark:text-zinc-300">
+              <span className="material-symbols-outlined text-xs text-[#FF6B35]">
+                {icon}
+              </span>
+              {type}
+            </span>
+          )
+        },
+      },
+      {
         accessorKey: 'items',
-        header: 'Items Ordered',
+        header: 'Items Summary',
         cell: (info) => (
-          <span className="text-xs text-slate-600 dark:text-zinc-300 font-medium truncate max-w-[220px] block">
+          <span className="max-w-xs text-xs text-slate-700 dark:text-zinc-300 line-clamp-1 block font-medium" title={info.getValue()}>
             {info.getValue()}
           </span>
         ),
       },
       {
+        accessorKey: 'time',
+        header: 'Timestamp',
+        cell: (info) => {
+          const row = info.row.original
+          return (
+            <div className="text-xs">
+              <p className="font-semibold text-slate-800 dark:text-zinc-200">{row.date || 'Today, 12:45 PM'}</p>
+              <p className="text-[11px] text-slate-400">{info.getValue() || row.relativeTime || 'Just Now'}</p>
+            </div>
+          )
+        },
+      },
+      {
         accessorKey: 'amount',
-        header: 'Amount',
-        cell: (info) => (
-          <span className="font-mono font-bold text-slate-900 dark:text-zinc-100 text-xs">
-            {info.getValue()}
-          </span>
-        ),
+        header: 'Total & Payment',
+        meta: {
+          headerClassName: 'text-right',
+          cellClassName: 'text-right',
+        },
+        cell: (info) => {
+          const row = info.row.original
+          return (
+            <div className="text-right text-xs">
+              <p className="font-bold text-slate-900 dark:text-zinc-100">{info.getValue() || row.total || 'ETB 380'}</p>
+              <p className="text-[11px] text-slate-400">{row.paymentMethod || row.payment || 'Telebirr (Paid)'}</p>
+            </div>
+          )
+        },
       },
       {
         accessorKey: 'status',
         header: 'Status',
+        meta: {
+          headerClassName: 'text-center',
+          cellClassName: 'text-center',
+        },
         cell: (info) => {
           const row = info.row.original
-          const colors = {
-            kitchen: 'bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-950/40 dark:text-amber-400',
-            ready: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-950/40 dark:text-emerald-400',
-            delivery: 'bg-blue-50 text-blue-700 ring-blue-600/20 dark:bg-blue-950/40 dark:text-blue-400',
-            delivered: 'bg-slate-100 text-slate-700 ring-slate-600/20 dark:bg-zinc-800 dark:text-zinc-300',
-          }
+          const status = orderStatusConfig[row.statusVariant] || orderStatusConfig.kitchen
           return (
-            <span
-              className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold ring-1 ${
-                colors[row.statusVariant] || colors.delivered
-              }`}
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-current" />
-              {row.status}
-            </span>
+            <div className="flex justify-center">
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${status.badgeClass}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${status.dotClass}`} />
+                {row.status || status.label}
+              </span>
+            </div>
           )
         },
       },
       {
         id: 'actions',
         header: 'Action',
-        cell: (info) => {
-          const row = info.row.original
-          return (
-            <div className="flex items-center gap-1.5 justify-end">
-              {row.statusVariant === 'kitchen' && (
-                <button
-                  type="button"
-                  onClick={() => handleUpdateOrderStatus(row.id, 'ready')}
-                  className="rounded-lg bg-emerald-600 px-2 py-1 text-[10px] font-bold text-white transition hover:bg-emerald-700 cursor-pointer"
-                >
-                  Mark Ready
-                </button>
-              )}
-              {row.statusVariant === 'ready' && (
-                <button
-                  type="button"
-                  onClick={() => handleUpdateOrderStatus(row.id, 'delivery')}
-                  className="rounded-lg bg-blue-600 px-2 py-1 text-[10px] font-bold text-white transition hover:bg-blue-700 cursor-pointer"
-                >
-                  Hand to Courier
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setSelectedOrder(row)}
-                className="rounded-lg border border-slate-200 px-2 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800 cursor-pointer"
-              >
-                Inspect
-              </button>
-            </div>
-          )
+        enableSorting: false,
+        meta: {
+          headerClassName: 'text-right',
+          cellClassName: 'text-right',
         },
+        cell: ({ row }) => (
+          <div className="flex justify-end gap-1.5">
+            <button
+              type="button"
+              onClick={() => setSelectedOrder(row.original)}
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:text-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:text-white cursor-pointer"
+            >
+              <span>View Ticket</span>
+              <span className="material-symbols-outlined text-xs">arrow_forward</span>
+            </button>
+          </div>
+        ),
       },
     ],
-    [handleUpdateOrderStatus]
+    []
   )
 
   if (!merchant || !branch) {
@@ -352,7 +485,7 @@ export default function BranchOpsPage() {
       branch={branch}
       isBranchOpen={isBranchOpen}
       breadcrumbMiddle={merchant.name}
-      breadcrumbCurrent={branch.branch_name}
+      breadcrumbCurrent={sidebarItems.find((i) => i.id === activeTab)?.label || 'Overview'}
       operatorName={staffList[0]?.name || 'Dawit Haile'}
       operatorRole="Branch Operations Manager"
       operatorEmail={branch.email || 'dawit.h@wholeharvest.com'}
@@ -365,29 +498,86 @@ export default function BranchOpsPage() {
         </div>
       )}
 
-      {/* Compact Branch Header */}
-      <section className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-              {branch.branch_name}
-            </h1>
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-bold ${
-                isBranchOpen
-                  ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-950/40 dark:text-emerald-400'
-                  : 'bg-rose-50 text-rose-700 ring-1 ring-rose-600/20 dark:bg-rose-950/40 dark:text-rose-400'
-              }`}
-            >
-              <span className={`h-1.5 w-1.5 rounded-full ${isBranchOpen ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-              <span>{isBranchOpen ? 'Accepting Orders' : 'Store Paused'}</span>
-            </span>
-          </div>
+      {/* Top Header Action Bar */}
+      <section className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-3">
+          <div>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="font-['Plus_Jakarta_Sans'] text-2xl font-extrabold tracking-tight text-slate-900 dark:text-zinc-100 sm:text-3xl">
+                {branch.branch_name}
+              </h1>
 
-          <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-zinc-400">
-            {branch.address} &bull; {branch.opening_hours || '07:30 AM'} - {branch.closing_hours || '09:30 PM'} &bull;{' '}
-            <span className="font-bold text-amber-500">4.8 ★ ({branchReviews.length} Reviews)</span>
-          </p>
+              {/* Operating Status Badge */}
+              <button
+                type="button"
+                onClick={handleToggleBranchStatus}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition cursor-pointer ${
+                  isBranchOpen
+                    ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400'
+                    : 'bg-slate-100 text-slate-600 ring-1 ring-slate-400/20 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400'
+                }`}
+                title="Click to toggle store live status"
+              >
+                <span className={`h-2 w-2 rounded-full ${isBranchOpen ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                {isBranchOpen ? 'Open Now' : 'Closed'}
+              </button>
+
+              {/* Main Branch Tag */}
+              {branch.is_main_branch && (
+                <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
+                  Primary Branch
+                </span>
+              )}
+
+              {/* Branch Switcher Dropdown */}
+              {branches.length > 1 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-2xs transition hover:border-[#FF6B35] hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-sm text-[#FF6B35]">store</span>
+                      <span>Switch ({branches.length})</span>
+                      <span className="material-symbols-outlined text-xs text-slate-400">expand_more</span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuContent align="start" className="min-w-[240px] p-1.5 shadow-xl">
+                      <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                        Select Operating Branch
+                      </div>
+                      {branches.map((b, idx) => {
+                        const isCurrent = String(b.id) === String(branch.id)
+                        return (
+                          <DropdownMenuItem
+                            key={b.id || idx}
+                            onClick={() => navigate(`/portal/branches/${b.id || idx}`)}
+                            className={`flex items-center justify-between rounded-lg px-2.5 py-2 text-xs cursor-pointer ${
+                              isCurrent
+                                ? 'bg-orange-50 font-bold text-[#FF6B35] dark:bg-orange-950/40 dark:text-orange-400'
+                                : 'text-slate-700 hover:bg-slate-50 dark:text-zinc-200 dark:hover:bg-zinc-750'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="material-symbols-outlined text-sm">storefront</span>
+                              <span>{b.branch_name}</span>
+                            </div>
+                            {isCurrent && (
+                              <span className="material-symbols-outlined text-xs text-[#FF6B35]">check</span>
+                            )}
+                          </DropdownMenuItem>
+                        )
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenuPortal>
+                </DropdownMenu>
+              )}
+            </div>
+            <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-zinc-400">
+              Part of <Link to={`/portal/merchants/${merchant.id}`} className="font-bold text-slate-700 hover:text-[#FF6B35] dark:text-zinc-300">{merchant.name}</Link> &bull; Operations, Geolocation &amp; Order Dispatch Console
+            </p>
+          </div>
         </div>
 
         <span className="inline-flex items-center gap-1.5 self-start rounded-xl bg-orange-50 px-3 py-1.5 text-xs font-extrabold text-[#FF6B35] dark:bg-orange-950/40 dark:text-orange-400 sm:self-auto">
@@ -410,109 +600,113 @@ export default function BranchOpsPage() {
         </span>
       </section>
 
-      {/* 4 Metric Stats Cards - Matching Super Admin */}
-      <section className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-              Operating Status
-            </span>
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40">
-              <span className="material-symbols-outlined text-base">storefront</span>
-            </span>
-          </div>
-          <p className="mt-2 text-xl font-extrabold text-emerald-600 dark:text-emerald-400">
-            {isBranchOpen ? 'Open Now' : 'Closed'}
-          </p>
-          <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
-            {branch.opening_hours || '07:30 AM'} - {branch.closing_hours || '09:30 PM'}
-          </p>
-        </div>
-
-        <div
-          onClick={() => setActiveTab('menu_items')}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') setActiveTab('menu_items')
-          }}
-          className="cursor-pointer rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs transition hover:border-[#FF6B35] dark:border-zinc-850 dark:bg-zinc-900"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-              Menu Catalog
-            </span>
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-600 dark:bg-purple-950/40">
-              <span className="material-symbols-outlined text-base">restaurant_menu</span>
-            </span>
-          </div>
-          <p className="mt-2 text-xl font-extrabold text-[#FF6B35] dark:text-orange-400 flex items-center gap-1.5">
-            <span>{menuItems.length} Items</span>
-            <span className="material-symbols-outlined text-xs">arrow_forward</span>
-          </p>
-          <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
-            {menuItems.filter((i) => i.is_available).length} in stock &bull; Click to view
-          </p>
-        </div>
-
-        <div
-          onClick={() => setActiveTab('orders')}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') setActiveTab('orders')
-          }}
-          className="cursor-pointer rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs transition hover:border-[#FF6B35] dark:border-zinc-850 dark:bg-zinc-900"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-              Recent Orders
-            </span>
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40">
-              <span className="material-symbols-outlined text-base">receipt_long</span>
-            </span>
-          </div>
-          <p className="mt-2 text-xl font-extrabold text-[#FF6B35] dark:text-orange-400 flex items-center gap-1.5">
-            <span>{orders.length} Orders</span>
-            <span className="material-symbols-outlined text-xs">arrow_forward</span>
-          </p>
-          <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
-            Click to manage queue
-          </p>
-        </div>
-
-        <div
-          onClick={() => setActiveTab('settings')}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') setActiveTab('settings')
-          }}
-          className="cursor-pointer rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs transition hover:border-[#FF6B35] dark:border-zinc-850 dark:bg-zinc-900"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-              Branch Settings
-            </span>
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300">
-              <span className="material-symbols-outlined text-base">settings</span>
-            </span>
-          </div>
-          <p className="mt-2 text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
-            <span>Operational</span>
-            <span className="material-symbols-outlined text-xs">arrow_forward</span>
-          </p>
-          <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
-            Schedule & dispatch controls
-          </p>
-        </div>
-      </section>
-
       {/* Main Content Area driven by Root Side Menu */}
       <div className="space-y-6">
         {/* TAB 1: OVERVIEW & REAL-TIME STATS */}
         {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 animate-in fade-in duration-200">
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* 4 Metric Stats Quick Cards - Matching Super Admin */}
+            <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    Operating Status
+                  </span>
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40">
+                    <span className="material-symbols-outlined text-base">storefront</span>
+                  </span>
+                </div>
+                <p className="mt-2 text-xl font-extrabold text-emerald-600 dark:text-emerald-400">
+                  {isBranchOpen ? 'Open Now' : 'Closed'}
+                </p>
+                <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+                  {branch.opening_hours || '07:30 AM'} - {branch.closing_hours || '09:30 PM'}
+                </p>
+              </div>
+
+              <div
+                onClick={() => setActiveTab('menu_items')}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') setActiveTab('menu_items')
+                }}
+                className="cursor-pointer rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs transition hover:border-[#FF6B35] dark:border-zinc-800 dark:bg-zinc-900"
+                title="Click to view menu catalog"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    Menu Catalog
+                  </span>
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-600 dark:bg-purple-950/40">
+                    <span className="material-symbols-outlined text-base">restaurant_menu</span>
+                  </span>
+                </div>
+                <p className="mt-2 text-xl font-extrabold text-[#FF6B35] dark:text-orange-400 flex items-center gap-1.5">
+                  <span>{menuItems.length} Products</span>
+                  <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                </p>
+                <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+                  {merchantCategories.length} Categories configured
+                </p>
+              </div>
+
+              <div
+                onClick={() => setActiveTab('ratings')}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') setActiveTab('ratings')
+                }}
+                className="cursor-pointer rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs transition hover:border-amber-400 dark:border-zinc-800 dark:bg-zinc-900"
+                title="Click to view customer ratings & reviews"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    Satisfaction
+                  </span>
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-500 dark:bg-amber-950/40">
+                    <span className="material-symbols-outlined text-base">star</span>
+                  </span>
+                </div>
+                <p className="mt-2 text-xl font-extrabold text-slate-900 dark:text-zinc-100 flex items-center gap-1.5">
+                  <span>4.9 / 5.0</span>
+                  <span className="material-symbols-outlined text-xs text-amber-500">arrow_forward</span>
+                </p>
+                <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+                  From {branchReviews.length} ratings &bull; View reviews &rarr;
+                </p>
+              </div>
+
+              <div
+                onClick={() => setActiveTab('orders')}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') setActiveTab('orders')
+                }}
+                className="cursor-pointer rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs transition hover:border-emerald-500 dark:border-zinc-800 dark:bg-zinc-900"
+                title="Click to view live branch orders"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    Active Orders
+                  </span>
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40">
+                    <span className="material-symbols-outlined text-base">receipt_long</span>
+                  </span>
+                </div>
+                <p className="mt-2 text-xl font-extrabold text-[#FF6B35] dark:text-orange-400 flex items-center gap-1.5">
+                  <span>{orders.length} Orders</span>
+                  <span className="material-symbols-outlined text-xs text-blue-500">arrow_forward</span>
+                </p>
+                <p className="mt-0.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+                  Live kitchen &amp; delivery queue
+                </p>
+              </div>
+            </section>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
             {/* Left: Admin Dashboard & Statistics */}
             <div className="space-y-6 lg:col-span-8">
               {/* Top 4 Real-time Branch Metric Cards */}
@@ -918,48 +1112,136 @@ export default function BranchOpsPage() {
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* TAB 2: RECENT ORDERS QUEUE */}
+        {/* TAB 2: RECENT ORDERS QUEUE - Matching Super Admin Orders Style */}
         {activeTab === 'orders' && (
           <div className="space-y-4 animate-in fade-in duration-200">
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
-              <div className="flex items-center gap-3 flex-1 min-w-[240px]">
-                <span className="material-symbols-outlined text-slate-400">search</span>
+            {/* Header Section */}
+            <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40">
+                    <span className="material-symbols-outlined text-lg">receipt_long</span>
+                  </span>
+                  <div>
+                    <h3 className="text-base font-extrabold text-slate-900 dark:text-zinc-100">
+                      Recent Branch Orders Queue
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400">
+                      Live order stream and fulfillment queue for {branch.branch_name}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  {orders.length} Live Orders
+                </span>
+                <button
+                  type="button"
+                  onClick={handleSimulateNewOrder}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-orange-50 px-3.5 py-2 text-xs font-bold text-[#FF6B35] ring-1 ring-orange-200 transition hover:bg-orange-100 dark:bg-orange-950/40 dark:ring-orange-900/60 dark:text-orange-400 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">add_shopping_cart</span>
+                  <span>Simulate Live Order</span>
+                </button>
+              </div>
+            </section>
+
+            {/* Filter Bar - Order Management Style with Matching Size Filters Icon and Search Engine */}
+            <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200/80 bg-slate-100/90 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
+              <div className="flex h-11 items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <span className="material-symbols-outlined text-lg text-slate-400">filter_list</span>
+                <span className="text-sm font-semibold text-slate-600 dark:text-zinc-300">Filters</span>
+              </div>
+              <div className="mx-2 hidden h-6 w-px bg-slate-300/80 md:block dark:bg-zinc-600" />
+
+              {/* Search Engine - Matching Size with Filters Card */}
+              <div className="relative h-11 min-w-[260px] flex-1">
+                <span className="material-symbols-outlined pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-lg text-slate-400">
+                  search
+                </span>
                 <input
                   type="text"
                   value={orderSearchQuery}
                   onChange={(e) => setOrderSearchQuery(e.target.value)}
                   placeholder="Search order ID, customer name, items..."
-                  className="w-full text-xs bg-transparent focus:outline-none dark:text-white"
+                  className="h-11 w-full rounded-xl border border-slate-200/80 bg-white pl-10 pr-9 text-sm font-medium text-slate-800 placeholder-slate-400 shadow-sm transition focus:border-[#FF6B35] focus:outline-none focus:ring-1 focus:ring-[#FF6B35]/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:placeholder-zinc-500"
                 />
+                {orderSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setOrderSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-base">close</span>
+                  </button>
+                )}
               </div>
-              <div className="flex items-center gap-2">
+
+              {/* Order Status Select */}
+              <div className="flex min-w-[150px] flex-col gap-1">
+                <label className="px-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Order Status
+                </label>
                 <select
                   value={orderStatusFilter}
                   onChange={(e) => setOrderStatusFilter(e.target.value)}
-                  className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold dark:border-zinc-700 dark:bg-zinc-850 dark:text-zinc-200"
+                  className="cursor-pointer border-none bg-transparent p-0 text-sm font-semibold text-slate-900 focus:ring-0 dark:text-zinc-100"
                 >
                   <option>All Statuses</option>
                   <option>In Kitchen</option>
                   <option>Ready for Pickup</option>
                   <option>Out for Delivery</option>
                   <option>Delivered</option>
+                  <option>Cancelled</option>
                 </select>
-                <button
-                  type="button"
-                  onClick={handleSimulateNewOrder}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-[#e0531f] transition cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-sm">add_alert</span>
-                  <span>Simulate Incoming Order</span>
-                </button>
               </div>
+
+              {/* Channel / Type Select */}
+              <div className="flex min-w-[130px] flex-col gap-1">
+                <label className="px-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Channel
+                </label>
+                <select
+                  value={orderChannelFilter}
+                  onChange={(e) => setOrderChannelFilter(e.target.value)}
+                  className="cursor-pointer border-none bg-transparent p-0 text-sm font-semibold text-slate-900 focus:ring-0 dark:text-zinc-100"
+                >
+                  <option>All Channels</option>
+                  <option>Delivery</option>
+                  <option>Pickup</option>
+                  <option>Dine-In</option>
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setOrderSearchQuery('')
+                  setOrderStatusFilter('All Statuses')
+                  setOrderChannelFilter('All Channels')
+                }}
+                className="rounded-lg px-4 py-2 text-sm font-bold text-[#FF6B35] transition-colors hover:bg-orange-500/10 md:ml-auto dark:text-orange-400 cursor-pointer"
+              >
+                Clear All Filters
+              </button>
             </div>
 
-            <div className="rounded-2xl border border-slate-200/80 bg-white overflow-hidden shadow-2xs dark:border-zinc-850 dark:bg-zinc-900">
-              <DataTable columns={orderColumns} data={filteredOrders} enablePagination={true} pageSize={8} />
-            </div>
+            {/* Orders Table Container matching standard DataTable */}
+            <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <DataTable
+                columns={orderColumns}
+                data={filteredOrders}
+                enablePagination={true}
+                pageSize={10}
+                itemName="orders"
+              />
+            </section>
           </div>
         )}
 
@@ -1040,39 +1322,409 @@ export default function BranchOpsPage() {
           </div>
         )}
 
-        {/* TAB 6: OPERATIONAL SETTINGS */}
+        {/* TAB 6: OPERATIONAL SETTINGS - Exact replica of Super Admin Day & Time Edit Cards */}
         {activeTab === 'settings' && (
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs dark:border-zinc-850 dark:bg-zinc-900 space-y-6 animate-in fade-in duration-200">
-            <div>
-              <h2 className="text-base font-extrabold text-slate-900 dark:text-white">Operating Hours & SLA Controls</h2>
-              <p className="text-xs text-slate-500">Kitchen operating schedule and fulfillment buffers</p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="rounded-xl border border-slate-100 p-4 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-850/40">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Opening Hours</span>
-                <p className="text-base font-bold text-slate-900 dark:text-white mt-1">
-                  {branch.opening_hours || '07:30 AM'} - {branch.closing_hours || '09:30 PM'}
-                </p>
-              </div>
-              <div className="rounded-xl border border-slate-100 p-4 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-850/40">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Kitchen Prep Buffer</span>
-                <p className="text-base font-bold text-slate-900 dark:text-white mt-1">15 - 20 mins</p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-800 dark:text-zinc-200">Weekly Schedule</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {DAYS_OF_WEEK.map((d) => (
-                  <div
-                    key={d.key}
-                    className="rounded-xl border border-slate-200/80 p-2.5 text-center dark:border-zinc-800 bg-white dark:bg-zinc-900"
-                  >
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">{d.label}</span>
-                    <p className="text-xs font-bold text-slate-800 dark:text-zinc-200 mt-1">07:30 - 21:30</p>
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Weekly Operating Hours Schedule */}
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4 dark:border-zinc-800">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/40">
+                    <span className="material-symbols-outlined text-lg">schedule</span>
+                  </span>
+                  <div>
+                    <h3 className="text-base font-extrabold text-slate-900 dark:text-zinc-100">
+                      Weekly Operating Hours Schedule
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400">
+                      Configured daily opening and closing hours for {branch.branch_name}
+                    </p>
                   </div>
-                ))}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    {isBranchOpen ? 'Branch Open Today' : 'Closed Today'}
+                  </span>
+
+                  {/* Edit Mode Toggle Button */}
+                  {!isEditingSettings ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSettingsForm({
+                          schedule: branch?.schedule && typeof branch.schedule === 'object' ? { ...branch.schedule } : createDefaultSchedule(),
+                          accepts_orders: branch?.accepts_orders !== false,
+                          direct_pickup: branch?.direct_pickup !== false,
+                          kitchen_prep_buffer: branch?.kitchen_prep_buffer || '15 - 20 mins',
+                          min_order_amount: branch?.min_order_amount || 150,
+                        })
+                        setIsEditingSettings(true)
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition hover:border-[#FF6B35] hover:text-[#FF6B35] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-sm">edit</span>
+                      <span>Edit Settings</span>
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingSettings(false)}
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveSettings}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B35] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-[#e0531f] cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-sm">check</span>
+                        <span>Save Changes</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 7 Daily Cards matching Super Admin day cards */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-7">
+                {DAYS_OF_WEEK.map((d) => {
+                  const activeScheduleSource = isEditingSettings
+                    ? settingsForm.schedule
+                    : branch.schedule || {}
+
+                  const dayData = activeScheduleSource?.[d.key] || {
+                    is_open: true,
+                    open_time: branch.opening_hours || '07:30',
+                    close_time: branch.closing_hours || '21:30',
+                  }
+                  const isOpen = Boolean(dayData.is_open)
+
+                  return (
+                    <div
+                      key={d.key}
+                      className={`flex flex-col justify-between rounded-xl border p-3.5 text-center transition ${
+                        isOpen
+                          ? 'border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/40 dark:bg-emerald-950/20'
+                          : 'border-slate-200 bg-slate-100/50 opacity-60 dark:border-zinc-800 dark:bg-zinc-800/20'
+                      }`}
+                    >
+                      <div>
+                        <span className="block text-xs font-bold text-slate-800 dark:text-zinc-200">
+                          {d.full}
+                        </span>
+
+                        {isEditingSettings ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSettingsForm((prev) => ({
+                                ...prev,
+                                schedule: {
+                                  ...prev.schedule,
+                                  [d.key]: {
+                                    ...dayData,
+                                    is_open: !isOpen,
+                                  },
+                                },
+                              }))
+                            }}
+                            className={`mt-1.5 inline-block cursor-pointer rounded px-2.5 py-0.5 text-[10px] font-bold transition hover:opacity-80 ${
+                              isOpen
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                                : 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
+                            }`}
+                          >
+                            {isOpen ? 'Open' : 'Closed'}
+                          </button>
+                        ) : (
+                          <span
+                            className={`mt-1.5 inline-block rounded px-2 py-0.5 text-[10px] font-bold ${
+                              isOpen
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                                : 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
+                            }`}
+                          >
+                            {isOpen ? 'Open' : 'Closed'}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-3">
+                        {isOpen ? (
+                          isEditingSettings ? (
+                            <div className="space-y-1.5 text-left">
+                              <div>
+                                <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                                  From
+                                </span>
+                                <input
+                                  type="time"
+                                  value={dayData.open_time}
+                                  onChange={(e) => {
+                                    const val = e.target.value
+                                    setSettingsForm((prev) => ({
+                                      ...prev,
+                                      schedule: {
+                                        ...prev.schedule,
+                                        [d.key]: {
+                                          ...dayData,
+                                          open_time: val,
+                                        },
+                                      },
+                                    }))
+                                  }}
+                                  className="w-full rounded border border-slate-200 bg-white px-1.5 py-1 font-mono text-[11px] font-semibold text-slate-700 shadow-2xs focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                                />
+                              </div>
+                              <div>
+                                <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                                  To
+                                </span>
+                                <input
+                                  type="time"
+                                  value={dayData.close_time}
+                                  onChange={(e) => {
+                                    const val = e.target.value
+                                    setSettingsForm((prev) => ({
+                                      ...prev,
+                                      schedule: {
+                                        ...prev.schedule,
+                                        [d.key]: {
+                                          ...dayData,
+                                          close_time: val,
+                                        },
+                                      },
+                                    }))
+                                  }}
+                                  className="w-full rounded border border-slate-200 bg-white px-1.5 py-1 font-mono text-[11px] font-semibold text-slate-700 shadow-2xs focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="mt-2 font-mono text-[11px] font-semibold text-slate-700 dark:text-zinc-300">
+                              {dayData.open_time} - {dayData.close_time}
+                            </p>
+                          )
+                        ) : (
+                          <p className="py-2 text-[11px] font-medium text-slate-400 dark:text-zinc-500">
+                            Closed
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Operational & Dispatch Controls */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {/* Card 1: Order Dispatch & Delivery Settings */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3 dark:border-zinc-800">
+                  <span className="material-symbols-outlined text-base text-[#FF6B35]">
+                    tune
+                  </span>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
+                    Order Dispatch & Delivery Settings
+                  </h3>
+                </div>
+
+                <div className="mt-4 space-y-4 text-xs">
+                  {/* Accept Online Orders */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="block font-bold text-slate-800 dark:text-zinc-200">
+                        Accept Online Orders
+                      </span>
+                      <span className="text-[11px] text-slate-500 dark:text-zinc-400">
+                        Allow customers to checkout from this branch
+                      </span>
+                    </div>
+                    {isEditingSettings ? (
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={settingsForm.accepts_orders}
+                        onClick={() =>
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            accepts_orders: !prev.accepts_orders,
+                          }))
+                        }
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          settingsForm.accepts_orders
+                            ? 'bg-emerald-500'
+                            : 'bg-slate-300 dark:bg-zinc-700'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                            settingsForm.accepts_orders ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    ) : (
+                      <span className="rounded-full bg-emerald-100 px-3 py-1 font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                        {branch.accepts_orders !== false ? 'Enabled' : 'Paused'}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Direct Customer Pickup */}
+                  <div className="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-zinc-800">
+                    <div>
+                      <span className="block font-bold text-slate-800 dark:text-zinc-200">
+                        Direct Customer Pickup
+                      </span>
+                      <span className="text-[11px] text-slate-500 dark:text-zinc-400">
+                        Takeout at branch counter
+                      </span>
+                    </div>
+                    {isEditingSettings ? (
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={settingsForm.direct_pickup}
+                        onClick={() =>
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            direct_pickup: !prev.direct_pickup,
+                          }))
+                        }
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          settingsForm.direct_pickup
+                            ? 'bg-blue-600'
+                            : 'bg-slate-300 dark:bg-zinc-700'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                            settingsForm.direct_pickup ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    ) : (
+                      <span className="rounded-full bg-blue-100 px-3 py-1 font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
+                        {branch.direct_pickup !== false ? 'Active' : 'Disabled'}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Kitchen Prep Buffer */}
+                  <div className="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-zinc-800">
+                    <div>
+                      <span className="block font-bold text-slate-800 dark:text-zinc-200">
+                        Kitchen Prep Buffer
+                      </span>
+                      <span className="text-[11px] text-slate-500 dark:text-zinc-400">
+                        Default kitchen preparation time
+                      </span>
+                    </div>
+                    {isEditingSettings ? (
+                      <select
+                        value={settingsForm.kitchen_prep_buffer}
+                        onChange={(e) =>
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            kitchen_prep_buffer: e.target.value,
+                          }))
+                        }
+                        className="cursor-pointer rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 font-mono text-xs font-semibold text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                      >
+                        <option value="5 - 10 mins">5 - 10 mins</option>
+                        <option value="10 - 15 mins">10 - 15 mins</option>
+                        <option value="15 - 20 mins">15 - 20 mins</option>
+                        <option value="20 - 30 mins">20 - 30 mins</option>
+                        <option value="30+ mins">30+ mins</option>
+                      </select>
+                    ) : (
+                      <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">
+                        {branch.kitchen_prep_buffer || '15 - 20 mins'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Order Capacity & Value Limits */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3 dark:border-zinc-800">
+                  <span className="material-symbols-outlined text-base text-emerald-600">
+                    shopping_bag
+                  </span>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">
+                    Order Capacity &amp; Thresholds
+                  </h3>
+                </div>
+
+                <div className="mt-4 space-y-4 text-xs">
+                  {/* Min Order Value */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="block font-bold text-slate-800 dark:text-zinc-200">
+                        Minimum Order Value
+                      </span>
+                      <span className="text-[11px] text-slate-500 dark:text-zinc-400">
+                        Floor price for branch checkout
+                      </span>
+                    </div>
+                    {isEditingSettings ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-slate-400">ETB</span>
+                        <input
+                          type="number"
+                          value={settingsForm.min_order_amount}
+                          onChange={(e) =>
+                            setSettingsForm((prev) => ({
+                              ...prev,
+                              min_order_amount: Number(e.target.value) || 0,
+                            }))
+                          }
+                          className="w-20 rounded border border-slate-200 bg-white px-2 py-1 font-mono text-xs font-bold text-slate-800 focus:border-[#FF6B35] focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                        />
+                      </div>
+                    ) : (
+                      <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">
+                        ETB {branch.min_order_amount || 150}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Active Order Capacity */}
+                  <div className="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-zinc-800">
+                    <div>
+                      <span className="block font-bold text-slate-800 dark:text-zinc-200">
+                        Concurrent Ticket Cap
+                      </span>
+                      <span className="text-[11px] text-slate-500 dark:text-zinc-400">
+                        Max active orders before auto-throttle
+                      </span>
+                    </div>
+                    <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">
+                      25 simultaneous orders
+                    </span>
+                  </div>
+
+                  {/* Operational Status */}
+                  <div className="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-zinc-800">
+                    <div>
+                      <span className="block font-bold text-slate-800 dark:text-zinc-200">
+                        Branch Service Status
+                      </span>
+                      <span className="text-[11px] text-slate-500 dark:text-zinc-400">
+                        Real-time status visible on Shima App
+                      </span>
+                    </div>
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                      Active &bull; Accepting Orders
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1084,9 +1736,14 @@ export default function BranchOpsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-zinc-800">
-              <div>
-                <span className="font-mono text-xs font-bold text-[#FF6B35]">{selectedOrder.id}</span>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">Order Dispatch Details</h3>
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B35] dark:bg-orange-950/40">
+                  <span className="material-symbols-outlined text-lg">receipt_long</span>
+                </span>
+                <div>
+                  <span className="font-mono text-xs font-bold text-[#FF6B35]">{selectedOrder.id}</span>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white">Order Dispatch Details</h3>
+                </div>
               </div>
               <button
                 type="button"
@@ -1106,8 +1763,8 @@ export default function BranchOpsPage() {
                 </div>
                 <div>
                   <span className="text-[10px] uppercase font-bold text-slate-400">Total Amount</span>
-                  <p className="font-mono font-black text-slate-900 dark:text-white mt-0.5">{selectedOrder.amount}</p>
-                  <p className="text-[11px] text-emerald-600 font-semibold">{selectedOrder.paymentMethod || 'Telebirr (Paid)'}</p>
+                  <p className="font-mono font-black text-slate-900 dark:text-white mt-0.5">{selectedOrder.amount || selectedOrder.total}</p>
+                  <p className="text-[11px] text-emerald-600 font-semibold">{selectedOrder.paymentMethod || selectedOrder.payment || 'Telebirr (Paid)'}</p>
                 </div>
               </div>
 
@@ -1118,15 +1775,19 @@ export default function BranchOpsPage() {
                 </p>
               </div>
 
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-[10px] uppercase font-bold text-slate-400">Dispatch Status</span>
-                <span className="rounded-lg bg-orange-50 px-2.5 py-1 text-xs font-bold text-[#FF6B35] dark:bg-orange-950/40">
-                  {selectedOrder.status}
-                </span>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-2.5 rounded-xl border border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-850/40">
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Fulfillment Type</span>
+                  <p className="font-bold text-slate-800 dark:text-zinc-200 mt-0.5">{selectedOrder.type || 'Delivery'}</p>
+                </div>
+                <div className="p-2.5 rounded-xl border border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-850/40">
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Dispatch Status</span>
+                  <p className="font-bold text-[#FF6B35] mt-0.5">{selectedOrder.status}</p>
+                </div>
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-end gap-2">
+            <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={() => setSelectedOrder(null)}
@@ -1134,24 +1795,48 @@ export default function BranchOpsPage() {
               >
                 Close Ticket
               </button>
-              {selectedOrder.statusVariant === 'kitchen' && (
-                <button
-                  type="button"
-                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'ready')}
-                  className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 cursor-pointer"
-                >
-                  Mark Order Ready
-                </button>
-              )}
-              {selectedOrder.statusVariant === 'ready' && (
-                <button
-                  type="button"
-                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'delivery')}
-                  className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700 cursor-pointer"
-                >
-                  Hand to Courier
-                </button>
-              )}
+
+              <div className="flex flex-wrap items-center gap-2">
+                {selectedOrder.statusVariant !== 'cancelled' && selectedOrder.statusVariant !== 'delivered' && (
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'cancelled')}
+                    className="rounded-xl border border-rose-200 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:border-rose-900/60 dark:text-rose-400 cursor-pointer"
+                  >
+                    Cancel Order
+                  </button>
+                )}
+
+                {selectedOrder.statusVariant === 'kitchen' && (
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'ready')}
+                    className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 cursor-pointer"
+                  >
+                    Mark Order Ready
+                  </button>
+                )}
+
+                {selectedOrder.statusVariant === 'ready' && (
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'delivery')}
+                    className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700 cursor-pointer"
+                  >
+                    Hand to Courier
+                  </button>
+                )}
+
+                {selectedOrder.statusVariant === 'delivery' && (
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'delivered')}
+                    className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 cursor-pointer"
+                  >
+                    Mark Delivered
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
